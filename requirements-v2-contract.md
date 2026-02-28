@@ -772,31 +772,22 @@ Release gate:
 - Breaking behavior changes require major version increment.
 - Any ambiguity discovered during implementation must be resolved by editing this contract before coding continues.
 - Behavior/API/validation decisions must be captured in `docs/decisions.md`.
-<<<<<<< HEAD
-=======
-
-## 23. Immediate Follow-up Artifacts
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 
 ## 23. Immediate Follow-up Artifacts
 
-<<<<<<< HEAD
+## 23. Immediate Follow-up Artifacts
+
 Create and maintain:
 
 - `docs/INDEX.md`
 - `docs/acceptance-matrix-v2.md`
 - `docs/schema-v2.md`
 - `docs/dependency-topology-rules.md`
-=======
 - `docs/acceptance-matrix-v2.md`
 - `docs/schema-v2.md`
 - `docs/dependency-topology-rules.md`
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 - `docs/timing-budget-v2.md`
 - `docs/fault-policy-v2.md`
 - `docs/api-contract-v2.md`
 - `docs/decisions.md`
-<<<<<<< HEAD
 - `docs/hardware-profile-v2.md`
-=======
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
