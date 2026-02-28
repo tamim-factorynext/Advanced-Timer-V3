@@ -52,3 +52,33 @@ Use one short entry per decision with this structure:
 - Impact: Enables deterministic multi-model product line support; removes assumptions that any family must exist; formalizes RTC as schedule-alarm channel capacity rather than a special-case family.
 - References: `docs/hardware-profile-v3.md`, `requirements-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-v3.md` (family presence/capacity), `docs/acceptance-matrix-v3.md` (`AT-HW-005..007`).
 
+## DEC-0003: RTC Stack Baseline (`RTClib` + `RTCMillis` + NTP Sync)
+- Date: 2026-02-28
+- Status: Accepted
+- Context: RTC scheduler behavior must be implemented now without DS3231 hardware dependency, while preserving a clean path to future RTC IC migration.
+- Decision: Use Adafruit `RTClib` as the RTC abstraction baseline; use `RTCMillis` as current runtime clock source, and synchronize wall time from NTP. Future hardware migration target is DS3231 using the same `RTClib` API surface.
+- Impact: Unblocks RTC scheduler implementation immediately with stable library interfaces.
+- Impact: Keeps migration cost low by preserving one RTC library contract across `RTCMillis` and DS3231 backends.
+- Impact: Requires deterministic time-sync handling policy when NTP is unavailable or stale.
+- References: `platformio.ini`, `docs/hardware-profile-v3.md`, `requirements-v3-contract.md` (RTC sections).
+
+## DEC-0004: Initial V3 Bring-Up Capacity for New Families
+- Date: 2026-02-28
+- Status: Accepted
+- Context: Early implementation needs a small, concrete non-empty target for new card families without introducing unused placeholder card slots.
+- Decision: For current bring-up scope, target exactly 2 `RTC` scheduler cards and 2 `MATH` cards; do not reserve additional empty card indices for these families during this phase.
+- Impact: Provides a focused implementation/test surface for new families.
+- Impact: Simplifies acceptance and debug during early V3 card-family rollout.
+- Impact: Does not supersede profile-based `0..N` capacity model; this is an initial bring-up target only.
+- References: `docs/hardware-profile-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/worklog.md`.
+
+## DEC-0005: RTC Schedule Granularity Is Minute-Level Only
+- Date: 2026-02-28
+- Status: Accepted
+- Context: RTC scheduler is an alarm-style trigger and does not need second/millisecond scheduling precision in current V3 scope.
+- Decision: RTC schedule configuration is limited to minute-level precision. `second` and any millisecond-level schedule fields are not supported and must be rejected by validation.
+- Impact: Simplifies scheduler UX and validation semantics.
+- Impact: Avoids false precision and reduces configuration ambiguity.
+- Impact: Trigger matching must evaluate on minute boundaries (`year/month/day/hour/minute/weekday` only).
+- References: `requirements-v3-contract.md` (Section 8.6), `docs/schema-v3.md` (RTC schema and validation), `docs/acceptance-matrix-v3.md` (RTC acceptance cases).
+

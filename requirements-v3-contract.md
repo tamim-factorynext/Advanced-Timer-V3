@@ -470,12 +470,12 @@ RTC is treated as schedule-based alarm functionality; available RTC card instanc
   - `day` (optional)
   - `hour` (required)
   - `minute` (required)
-  - `second` (required)
   - `weekday` (optional)
   - Omitted optional fields are wildcards:
     - if `month` is omitted, the schedule is valid for all months.
     - if `weekday` is omitted, the schedule is valid for all weekdays.
     - if `year` or `day` are omitted, those fields also match all valid values.
+- RTC schedule granularity is minute-level only; second and millisecond schedule fields are not supported.
 - **`triggerDuration`**: The duration for which the RTC output remains asserted after a matching schedule trigger.
 
 ### 8.6.2 Runtime requirements
@@ -490,7 +490,7 @@ RTC is treated as schedule-based alarm functionality; available RTC card instanc
 - The card itself does not manage time synchronization, timezones, or DST; it is only a schedule evaluator.
 - Its `logicalState` is a standard boolean variable that can be used as an input or condition for any other card in the system.
 - The card has no `set` or `reset` conditions; its state is purely a function of its schedule and the current time.
-- A schedule trigger occurs when current clock fields match all configured non-wildcard schedule fields.
+- A schedule trigger occurs when current clock fields match all configured non-wildcard schedule fields at minute-level granularity.
 - On trigger, `logicalState` is asserted for `triggerDuration`; after duration expiry, `logicalState` returns to `false` unless retriggered.
 
 ## 9. Variable Assignment Contract

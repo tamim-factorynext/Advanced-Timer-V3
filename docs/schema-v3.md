@@ -275,7 +275,6 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
     "day": 0,
     "hour": 14,
     "minute": 30,
-    "second": 0,
     "weekday": 0
   },
   "triggerDuration": 6000
@@ -291,8 +290,8 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 - `day`: optional `uint32` (if omitted, wildcard all days).
 - `hour`: required `uint32`.
 - `minute`: required `uint32`.
-- `second`: required `uint32`.
 - `weekday`: optional `uint32` (if omitted, wildcard all weekdays).
+- `second` and millisecond-level schedule fields are not allowed.
 
 Wildcard encoding:
 - Optional fields may be omitted.
@@ -342,11 +341,12 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-019: reject card types disabled by active build hardware profile gates.
 - V-CFG-020: reject card channel/index bindings outside active hardware profile channel arrays.
 - V-CFG-021: reject `RTC` card payload when active build profile does not support RTC.
+- V-CFG-022: reject RTC schedule fields below minute granularity (`second`, `millisecond`, `ms`).
 
 ## 10. Open Decisions To Freeze
 
 - D-SCH-001: RTC value ranges are not yet frozen in contract text.
-  - Proposed: `month 1..12`, `day 1..31`, `hour 0..23`, `minute 0..59`, `second 0..59`, `weekday 1..7`.
+  - Proposed: `month 1..12`, `day 1..31`, `hour 0..23`, `minute 0..59`, `weekday 1..7`.
 - D-SCH-002: RTC retrigger behavior during active `triggerDuration` is not frozen.
   - Options: `IGNORE_WHILE_ACTIVE`, `RESTART_WINDOW`, `EXTEND_WINDOW`.
 - D-MATH-001: Exact overflow/domain behavior for `POW`, `DIV`, and `MOD` should be fixed as deterministic policy.

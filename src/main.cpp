@@ -19,9 +19,11 @@
 
 #include "control/command_dto.h"
 #include "kernel/card_model.h"
+#include "kernel/enum_codec.h"
+#include "portal/routes.h"
 #include "runtime/shared_snapshot.h"
+#include "runtime/snapshot_json.h"
 
-#include <cctype>
 #include <cstring>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -40,7 +42,7 @@ const uint8_t NUM_AI = sizeof(AI_Pins) / sizeof(AI_Pins[0]);
 const uint8_t NUM_SIO = sizeof(SIO_Pins) / sizeof(SIO_Pins[0]);
 
 const uint8_t TOTAL_CARDS = NUM_DI + NUM_DO + NUM_AI + NUM_SIO;
-using SharedRuntimeSnapshot = SharedRuntimeSnapshotT<TOTAL_CARDS>;
+struct SharedRuntimeSnapshot : SharedRuntimeSnapshotT<TOTAL_CARDS> {};
 
 const uint8_t DI_START = 0;
 const uint8_t DO_START = DI_START + NUM_DI;
@@ -75,202 +77,6 @@ const uint32_t USER_WIFI_TIMEOUT_MS = 180000;
   do {                         \
   } while (0)
 #endif
-
-#define LIST_CARD_TYPES(X) \
-  X(DigitalInput)          \
-  X(DigitalOutput)         \
-  X(AnalogInput)           \
-  X(SoftIO)
-
-#define LIST_OPERATORS(X) \
-  X(Op_AlwaysTrue)        \
-  X(Op_AlwaysFalse)       \
-  X(Op_LogicalTrue)       \
-  X(Op_LogicalFalse)      \
-  X(Op_PhysicalOn)        \
-  X(Op_PhysicalOff)       \
-  X(Op_Triggered)         \
-  X(Op_TriggerCleared)    \
-  X(Op_GT)                \
-  X(Op_LT)                \
-  X(Op_EQ)                \
-  X(Op_NEQ)               \
-  X(Op_GTE)               \
-  X(Op_LTE)               \
-  X(Op_Running)           \
-  X(Op_Finished)          \
-  X(Op_Stopped)
-
-#define LIST_MODES(X)   \
-  X(Mode_None)          \
-  X(Mode_DI_Rising)     \
-  X(Mode_DI_Falling)    \
-  X(Mode_DI_Change)     \
-  X(Mode_AI_Continuous) \
-  X(Mode_DO_Normal)     \
-  X(Mode_DO_Immediate)  \
-  X(Mode_DO_Gated)
-
-#define LIST_STATES(X)  \
-  X(State_None)         \
-  X(State_DI_Idle)      \
-  X(State_DI_Filtering) \
-  X(State_DI_Qualified) \
-  X(State_DI_Inhibited) \
-  X(State_AI_Streaming) \
-  X(State_DO_Idle)      \
-  X(State_DO_OnDelay)   \
-  X(State_DO_Active)    \
-  X(State_DO_Finished)
-
-#define LIST_COMBINE(X) \
-  X(Combine_None)       \
-  X(Combine_AND)        \
-  X(Combine_OR)
-
-#define ENUM_TO_STRING_CASE(name) \
-  case name:                      \
-    return #name;
-
-bool enumTokenEquals(const char* s, const char* token) {
-  if (s == nullptr || token == nullptr) return false;
-  // Keep only enum token characters to tolerate hidden bytes (BOM/ZWSP/etc.).
-  char cleaned[64];
-  size_t j = 0;
-  for (size_t i = 0; s[i] != '\0' && j < (sizeof(cleaned) - 1); ++i) {
-    const unsigned char ch = static_cast<unsigned char>(s[i]);
-    if (std::isalnum(ch) || ch == '_') {
-      cleaned[j++] = static_cast<char>(ch);
-    }
-  }
-  cleaned[j] = '\0';
-
-  return strcmp(cleaned, token) == 0;
-}
-
-#define ENUM_TRY_PARSE_IF(name) \
-  if (enumTokenEquals(s, #name)) {  \
-    out = name;                 \
-    return true;                \
-  }
-
-const char* toString(logicCardType value) {
-  switch (value) { LIST_CARD_TYPES(ENUM_TO_STRING_CASE) }
-  return "DigitalInput";
-}
-
-const char* toString(logicOperator value) {
-  switch (value) { LIST_OPERATORS(ENUM_TO_STRING_CASE) }
-  return "Op_AlwaysTrue";
-}
-
-const char* toString(cardMode value) {
-  switch (value) { LIST_MODES(ENUM_TO_STRING_CASE) }
-  return "Mode_None";
-}
-
-const char* toString(cardState value) {
-  switch (value) { LIST_STATES(ENUM_TO_STRING_CASE) }
-  return "State_None";
-}
-
-const char* toString(combineMode value) {
-  switch (value) { LIST_COMBINE(ENUM_TO_STRING_CASE) }
-  return "Combine_None";
-}
-
-const char* toString(runMode value) {
-  switch (value) {
-    case RUN_NORMAL:
-      return "RUN_NORMAL";
-    case RUN_STEP:
-      return "RUN_STEP";
-    case RUN_BREAKPOINT:
-      return "RUN_BREAKPOINT";
-    case RUN_SLOW:
-      return "RUN_SLOW";
-    default:
-      return "RUN_NORMAL";
-  }
-}
-
-const char* toString(inputSourceMode value) {
-  switch (value) {
-    case InputSource_Real:
-      return "REAL";
-    case InputSource_ForcedHigh:
-      return "FORCED_HIGH";
-    case InputSource_ForcedLow:
-      return "FORCED_LOW";
-    case InputSource_ForcedValue:
-      return "FORCED_VALUE";
-    default:
-      return "REAL";
-  }
-}
-
-bool tryParseLogicCardType(const char* s, logicCardType& out) {
-  if (s == nullptr) return false;
-  LIST_CARD_TYPES(ENUM_TRY_PARSE_IF)
-  return false;
-}
-
-bool tryParseLogicOperator(const char* s, logicOperator& out) {
-  if (s == nullptr) return false;
-  LIST_OPERATORS(ENUM_TRY_PARSE_IF)
-  return false;
-}
-
-bool tryParseCardMode(const char* s, cardMode& out) {
-  if (s == nullptr) return false;
-  LIST_MODES(ENUM_TRY_PARSE_IF)
-  return false;
-}
-
-bool tryParseCardState(const char* s, cardState& out) {
-  if (s == nullptr) return false;
-  LIST_STATES(ENUM_TRY_PARSE_IF)
-  return false;
-}
-
-bool tryParseCombineMode(const char* s, combineMode& out) {
-  if (s == nullptr) return false;
-  LIST_COMBINE(ENUM_TRY_PARSE_IF)
-  return false;
-}
-
-logicCardType parseOrDefault(const char* s, logicCardType fallback) {
-  logicCardType value = fallback;
-  if (tryParseLogicCardType(s, value)) return value;
-  return fallback;
-}
-
-logicOperator parseOrDefault(const char* s, logicOperator fallback) {
-  logicOperator value = fallback;
-  if (tryParseLogicOperator(s, value)) return value;
-  return fallback;
-}
-
-cardMode parseOrDefault(const char* s, cardMode fallback) {
-  cardMode value = fallback;
-  if (tryParseCardMode(s, value)) return value;
-  return fallback;
-}
-
-cardState parseOrDefault(const char* s, cardState fallback) {
-  cardState value = fallback;
-  if (tryParseCardState(s, value)) return value;
-  return fallback;
-}
-
-combineMode parseOrDefault(const char* s, combineMode fallback) {
-  combineMode value = fallback;
-  if (tryParseCombineMode(s, value)) return value;
-  return fallback;
-}
-
-#undef ENUM_TO_STRING_CASE
-#undef ENUM_TRY_PARSE_IF
 
 LogicCard logicCards[TOTAL_CARDS] = {};
 bool gPrevSetCondition[TOTAL_CARDS] = {};
@@ -330,25 +136,8 @@ const uint32_t SLOW_SCAN_INTERVAL_MS = 250;
 bool isOutputMasked(uint8_t cardId);
 uint8_t scanOrderCardIdFromCursor(uint16_t cursor);
 bool connectWiFiWithPolicy();
-void initPortalServer();
-void handlePortalServerLoop();
-void initWebSocketServer();
-void handleWebSocketLoop();
-void publishRuntimeSnapshotWebSocket();
 bool applyCommand(JsonObjectConst command);
 void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq);
-void handleHttpSettingsPage();
-void handleHttpConfigPage();
-void handleHttpGetSettings();
-void handleHttpSaveSettingsWiFi();
-void handleHttpSaveSettingsRuntime();
-void handleHttpReconnectWiFi();
-void handleHttpReboot();
-void handleHttpGetActiveConfig();
-void handleHttpStagedSaveConfig();
-void handleHttpStagedValidateConfig();
-void handleHttpCommitConfig();
-void handleHttpRestoreConfig();
 void serializeCardsToArray(const LogicCard* sourceCards, JsonArray& array);
 void initializeCardArraySafeDefaults(LogicCard* cards);
 bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards);

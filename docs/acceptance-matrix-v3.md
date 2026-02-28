@@ -63,6 +63,7 @@ Status: Draft for implementation kickoff
 | AT-RTC-003 | Sec 8.6.1, 8.6.3 | Field-based match with optional month/weekday omitted | Omitted fields act as wildcards; schedule triggers correctly | Yes | Yes | Yes |
 | AT-RTC-004 | Sec 8.6.1, 8.6.3 | Trigger duration timing | logicalState stays true for `triggerDuration` then deasserts | Yes | Yes | Yes |
 | AT-RTC-005 | Sec 8.6.3 | Attempt set/reset on RTC | RTC rejects/ignores set-reset as unsupported | Yes | No | Yes |
+| AT-RTC-006 | Sec 8.6.1 | RTC schedule precision below minute level | Validation rejects `second`/millisecond schedule fields | Yes | No | Yes |
 | AT-HW-001 | Sec 6.4 | Build profile has empty DI channel array | DI card payloads rejected by validation | Yes | No | Yes |
 | AT-HW-002 | Sec 6.4 | Build profile has `hasRtc=false` or RTC gate disabled | RTC card payloads rejected by validation | Yes | No | Yes |
 | AT-HW-003 | Sec 6.4 | AI backend switched (`INTERNAL_ADC` vs `I2C_ADC`) | Card semantics unchanged; backend adapter only changes acquisition path | Yes | Yes | Yes |
@@ -114,7 +115,7 @@ Status: Draft for implementation kickoff
 These tests are defined as acceptance placeholders and should be finalized when syntax-level specs are frozen:
 
 - `AT-MATH-010` (TBD): Full arithmetic operator edge-case tables (overflow, precision, domain rules for `POW`/`MOD`).
-- `AT-RTC-006` (TBD): Exact RTC trigger semantics for repeated matches within an active `triggerDuration` window.
+- `AT-RTC-007` (TBD): Exact RTC trigger semantics for repeated matches within an active `triggerDuration` window.
 
 ## 4. Coverage Check
 

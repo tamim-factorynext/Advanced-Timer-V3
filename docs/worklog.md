@@ -296,3 +296,103 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 - This is a structure-only extraction step aligned with kickoff Phase 1 intent ("interfaces first, no behavior change").
 - Local compile verification remains blocked in this shell because `platformio` / `pio` CLI is not available on PATH.
 
+## 2026-02-28 (Phase 1 Skeleton Refactor: Enum/Parse Codec Extraction)
+
+### Completed
+
+- Extracted enum/string/parse helpers from `src/main.cpp` into kernel module:
+  - `src/kernel/enum_codec.h`
+  - `src/kernel/enum_codec.cpp`
+
+- Updated `src/main.cpp`:
+  - added `#include "kernel/enum_codec.h"`
+  - removed in-file enum codec macros/helpers (`toString`, `tryParse*`, `parseOrDefault` block)
+  - retained existing call sites and behavior.
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `enum_codec.h`.
+
+### Verification
+
+- Build passed using explicit PlatformIO binary path:
+  - `C:\\Users\\Admin\\.platformio\\penv\\Scripts\\platformio.exe run`
+
+## 2026-02-28 (Phase 1 Skeleton Refactor: Snapshot Serialization Declarations)
+
+### Completed
+
+- Added runtime declaration header:
+  - `src/runtime/snapshot_json.h`
+  - Declares:
+    - `copySharedRuntimeSnapshot(...)`
+    - `appendRuntimeSnapshotCard(...)`
+    - `serializeRuntimeSnapshot(...)`
+
+- Updated `src/main.cpp`:
+  - Includes `runtime/snapshot_json.h`.
+  - Switched snapshot alias to concrete struct form:
+    - `struct SharedRuntimeSnapshot : SharedRuntimeSnapshotT<TOTAL_CARDS> {};`
+  - No runtime behavior changes.
+
+- Updated runtime layer inventory:
+  - `src/runtime/README.md` now lists `snapshot_json.h`.
+
+### Verification
+
+- Build passed:
+  - `C:\\Users\\Admin\\.platformio\\penv\\Scripts\\platformio.exe run`
+
+## 2026-02-28 (Architecture Direction Lock-In: RTC + Initial Family Targets)
+
+### Completed
+
+- Captured architectural decisions in `docs/decisions.md`:
+  - `DEC-0003`: RTC implementation baseline is `RTClib` using `RTCMillis` now, NTP time sync, and future DS3231 migration on same library.
+  - `DEC-0004`: initial bring-up target is exactly 2 `RTC` scheduler cards and 2 `MATH` cards, with no extra empty placeholder slots in this phase.
+
+- Updated dependency baseline:
+  - Added `adafruit/RTClib` to `platformio.ini` `lib_deps`.
+
+## 2026-02-28 (RTC Granularity Direction: Minute-Level Only)
+
+### Completed
+
+- Added decision:
+  - `DEC-0005` in `docs/decisions.md`:
+    - RTC schedule configuration is minute-granularity only.
+    - `second` and millisecond-level schedule fields are unsupported and must be rejected.
+
+- Updated contracts:
+  - `requirements-v3-contract.md` Section 8.6:
+    - removed required `second` schedule field.
+    - added minute-level granularity rule.
+  - `docs/schema-v3.md`:
+    - removed `second` from RTC schedule schema.
+    - added validation rule `V-CFG-022` to reject sub-minute schedule fields.
+
+- Updated acceptance mapping:
+  - `docs/acceptance-matrix-v3.md`:
+    - added `AT-RTC-006` for rejecting `second`/millisecond RTC schedule fields.
+    - shifted previous RTC TBD placeholder to `AT-RTC-007`.
+
+## 2026-02-28 (Phase 1 Skeleton Refactor: Portal Route Declarations)
+
+### Completed
+
+- Added portal declaration surface header:
+  - `src/portal/routes.h`
+  - Includes HTTP route handler declarations and WebSocket route declarations only (no implementation move).
+
+- Updated `src/main.cpp`:
+  - includes `portal/routes.h`
+  - removed duplicate portal-route forward declarations from local prototype block.
+  - kept all route implementations in `main.cpp` unchanged.
+
+- Updated portal layer inventory:
+  - `src/portal/README.md` now lists `routes.h`.
+
+### Verification
+
+- Build passed:
+  - `C:\\Users\\Admin\\.platformio\\penv\\Scripts\\platformio.exe run`
+

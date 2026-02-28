@@ -6,3 +6,6 @@ Planned scope:
 - route handlers
 - request/response envelope mapping
 - websocket publish path
+
+Current interfaces:
+- `routes.h`
