@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AdvancedTimer Portal</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --line: #334155;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --ok: #10b981;
+        --warn: #f59e0b;
+        --bad: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background: radial-gradient(circle at top, #1e293b, var(--bg));
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      .header {
+        position: sticky;
+        top: 0;
+        background: rgba(17, 24, 39, 0.95);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 1px solid var(--line);
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: var(--muted);
+      }
+      .chip strong { color: var(--text); }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--panel);
+        margin-bottom: 12px;
+      }
+      h1, h2 {
+        margin: 0 0 10px;
+        font-weight: 600;
+      }
+      h1 { font-size: 20px; }
+      h2 { font-size: 16px; }
+      button, select, input {
+        border: 1px solid var(--line);
+        background: #1f2937;
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover { border-color: #64748b; }
+      .cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        overflow: hidden;
+      }
+      .ctrl {
+        margin-top: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .ctrl label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .ctrl .inline {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .seg {
+        display: inline-flex;
+        gap: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .seg .seg-btn {
+        border: 0;
+        border-right: 1px solid var(--line);
+        border-radius: 0;
+        padding: 6px 10px;
+        background: #1f2937;
+      }
+      .seg .seg-btn:last-child { border-right: 0; }
+      .seg .seg-btn.active {
+        background: #0b2a39;
+        color: #eaf6ff;
+      }
+      .small { color: var(--muted); font-size: 13px; }
+      .status-ok { color: var(--ok); }
+      .status-warn { color: var(--warn); }
+      .status-bad { color: var(--bad); }
+      .indicators {
+        margin-top: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .indicator-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .pill.ok {
+        border-color: rgba(16, 185, 129, 0.5);
+        color: var(--ok);
+      }
+      .pill.warn {
+        border-color: rgba(245, 158, 11, 0.5);
+        color: var(--warn);
+      }
+      .cfg {
+        margin-top: 10px;
+        border-top: 1px dashed var(--line);
+        padding-top: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .cfg-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .cfg-grid .small { font-size: 12px; }
+      .cfg-subtitle {
+        margin-top: 4px;
+      }
+      .cfg-status {
+        min-height: 18px;
+      }
+      @media (max-width: 900px) {
+        .wrap { padding: 10px; }
+        .header {
+          position: static;
+          padding: 8px;
+        }
+        h1 { font-size: 18px; }
+        .chip {
+          padding: 4px 8px;
+          font-size: 12px;
+        }
+        .header .row .chip:nth-child(n+5) {
+          display: none;
+        }
+        .row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .card .inline {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .card .seg {
+          width: 100%;
+          display: flex;
+        }
+        .card .seg .seg-btn {
+          flex: 1 1 auto;
+        }
+        .card input,
+        .card select,
+        .card button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1>AdvancedTimer Portal</h1>
+        <div class="row">
+          <div class="chip">Mode: <strong id="runMode">RUN_NORMAL</strong></div>
+          <div class="chip">Control: <strong>Always Live</strong></div>
+          <div class="chip">Breakpoint: <strong id="bpState">Running</strong></div>
+          <div class="chip">WiFi: <strong id="wifiState">Unknown</strong></div>
+          <div class="chip">WS: <strong id="wsState">Down</strong></div>
+          <div class="chip">Scan Work: <strong id="scanWorkMs">0.00 ms</strong></div>
+          <div class="chip">Snapshot: <strong id="snapshotSeq">0</strong></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Quick Actions</h2>
+        <div class="row">
+          <button id="btnRefresh">Refresh Snapshot</button>
+          <button id="btnStep">Step Once</button>
+          <button id="btnRunNormal">Run Continuous</button>
+          <button id="btnRunSlow">Run Slow</button>
+          <button id="btnRunStep">Run Step Mode</button>
+          <button id="btnRunBreakpoint">Run Breakpoint Mode</button>
+          <button id="btnMaskAll">Toggle Global DO Mask</button>
+          <button id="btnConfig">Config</button>
+          <button id="btnSettings">Settings</button>
+        </div>
+        <p class="small">
+          Input/output controls are always active.
+          Startup defaults are Real inputs and Direct outputs.
+        </p>
+      </div>
+
+      <div class="panel">
+        <h2>Live IO Controls</h2>
+        <div id="cards" class="cards"></div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        runMode: "RUN_NORMAL",
+        wifiOnline: true,
+        wsOnline: false,
+        snapshotSeq: 1,
+        lastCompleteScanMs: 0,
+        globalMask: false,
+        breakpointPaused: false,
+        evalPulseUntilByCard: {},
+        evalCounterByCard: {},
+        configCards: [],
+        configLoaded: false,
+        pendingUiRefresh: false,
+        cards: [
+          { id: 0, type: "DigitalInput", logicalState: false, physicalState: false },
+          { id: 4, type: "AnalogInput", logicalState: false, physicalState: true },
+          { id: 8, type: "DigitalOutput", logicalState: true, physicalState: true }
+        ]
+      };
+
+      const modeByType = {
+        DigitalInput: ["Mode_DI_Rising", "Mode_DI_Falling", "Mode_DI_Change"],
+        AnalogInput: ["Mode_AI_Continuous"],
+        DigitalOutput: ["Mode_DO_Normal", "Mode_DO_Immediate", "Mode_DO_Gated"],
+        SoftIO: ["Mode_DO_Normal", "Mode_DO_Immediate", "Mode_DO_Gated"]
+      };
+      const operators = [
+        "Op_AlwaysTrue", "Op_AlwaysFalse", "Op_LogicalTrue", "Op_LogicalFalse",
+        "Op_PhysicalOn", "Op_PhysicalOff", "Op_Triggered", "Op_TriggerCleared",
+        "Op_GT", "Op_LT", "Op_EQ", "Op_NEQ", "Op_GTE", "Op_LTE",
+        "Op_Running", "Op_Finished", "Op_Stopped"
+      ];
+      const opAlways = ["Op_AlwaysTrue", "Op_AlwaysFalse"];
+      const opNumeric = ["Op_GT", "Op_LT", "Op_EQ", "Op_NEQ", "Op_GTE", "Op_LTE"];
+      const opState = ["Op_LogicalTrue", "Op_LogicalFalse", "Op_PhysicalOn", "Op_PhysicalOff"];
+      const opTrigger = ["Op_Triggered", "Op_TriggerCleared"];
+      const opProcess = ["Op_Running", "Op_Finished", "Op_Stopped"];
+      const combines = ["Combine_None", "Combine_AND", "Combine_OR"];
+      const settingLabelsByType = {
+        DigitalInput: {
+          setting1: "Debounce Time (s)",
+          setting2: "Reserved",
+          setting3: "Reserved"
+        },
+        DigitalOutput: {
+          setting1: "Delay Before ON (s)",
+          setting2: "ON Duration (s)",
+          setting3: "Repeat Count (0 = infinite)"
+        },
+        SoftIO: {
+          setting1: "Delay Before ON (s)",
+          setting2: "ON Duration (s)",
+          setting3: "Repeat Count (0 = infinite)"
+        },
+        AnalogInput: {
+          setting1: "Input Minimum",
+          setting2: "Input Maximum",
+          setting3: "EMA Alpha (0.00..1.00)"
+        }
+      };
+      const modeLabelsByType = {
+        DigitalInput: {
+          Mode_DI_Rising: "DI Rising Edge",
+          Mode_DI_Falling: "DI Falling Edge",
+          Mode_DI_Change: "DI Any Change"
+        },
+        AnalogInput: {
+          Mode_AI_Continuous: "AI Continuous"
+        },
+        DigitalOutput: {
+          Mode_DO_Normal: "DO Normal",
+          Mode_DO_Immediate: "DO Immediate",
+          Mode_DO_Gated: "DO Gated"
+        },
+        SoftIO: {
+          Mode_DO_Normal: "SIO Normal",
+          Mode_DO_Immediate: "SIO Immediate",
+          Mode_DO_Gated: "SIO Gated"
+        }
+      };
+
+      function cardFriendlyName(c) {
+        if (c.type === "DigitalInput") return `Digital Input ${c.index}`;
+        if (c.type === "AnalogInput") return `Analog Input ${c.index}`;
+        if (c.type === "DigitalOutput") return `Digital Output ${c.index}`;
+        if (c.type === "SoftIO") return `Soft IO ${c.index}`;
+        return `Card ${c.id}`;
+      }
+
+      function boolText(v) {
+        return v ? "ON" : "OFF";
+      }
+
+      function inputModeLabel(c) {
+        const src = c.maskForced?.inputSource || "InputSource_Real";
+        if (src === "InputSource_ForcedHigh") return "Forced High";
+        if (src === "InputSource_ForcedLow") return "Forced Low";
+        if (src === "InputSource_ForcedValue") {
+          return `Forced Value (${c.maskForced?.forcedAIValue ?? 0})`;
+        }
+        return "Real";
+      }
+
+      function outputModeLabel(c) {
+        const masked = !!c.maskForced?.outputMasked;
+        return masked ? "Masked" : "Direct";
+      }
+
+      function liveMetricLabel(c) {
+        if (c.type === "AnalogInput") return "Analog Value";
+        if (c.type === "DigitalInput" || c.type === "DigitalOutput" || c.type === "SoftIO") {
+          return "Counter";
+        }
+        return "Value";
+      }
+
+      function setCfgStatus(text, cls = "small") {
+        const el = document.getElementById("cfgStatus");
+        if (!el) return;
+        el.className = `cfg-status ${cls}`;
+        el.textContent = text;
+      }
+
+      function configCardById(cardId) {
+        return state.configCards.find((x) => Number(x.id) === Number(cardId));
+      }
+
+      function modeOptionsHtml(type, selected) {
+        const modes = modeByType[type] || [];
+        return modes.map((m) =>
+          `<option value="${m}" ${m === selected ? "selected" : ""}>${modeLabelsByType[type]?.[m] || m}</option>`
+        ).join("");
+      }
+
+      function allowedOperatorsForTargetType(type) {
+        if (type === "AnalogInput") return [...opAlways, ...opNumeric];
+        if (type === "DigitalInput") return [...opAlways, ...opState, ...opTrigger, ...opNumeric];
+        if (type === "DigitalOutput" || type === "SoftIO") {
+          return [...opAlways, ...opState, ...opTrigger, ...opNumeric, ...opProcess];
+        }
+        return [...opAlways];
+      }
+
+      function operatorLabelForTargetType(targetType, op) {
+        const isAI = targetType === "AnalogInput";
+        const isCounterTarget =
+          targetType === "DigitalInput" ||
+          targetType === "DigitalOutput" ||
+          targetType === "SoftIO";
+        const metric = isAI ? "Analog Value" : (isCounterTarget ? "Counter" : "Value");
+        const labels = {
+          Op_AlwaysTrue: "Always True",
+          Op_AlwaysFalse: "Always False",
+          Op_LogicalTrue: "Logical State is ON",
+          Op_LogicalFalse: "Logical State is OFF",
+          Op_PhysicalOn: "Physical State is ON",
+          Op_PhysicalOff: "Physical State is OFF",
+          Op_Triggered: "Triggered",
+          Op_TriggerCleared: "Trigger Cleared",
+          Op_GT: `${metric} > Threshold`,
+          Op_LT: `${metric} < Threshold`,
+          Op_EQ: `${metric} = Threshold`,
+          Op_NEQ: `${metric} != Threshold`,
+          Op_GTE: `${metric} >= Threshold`,
+          Op_LTE: `${metric} <= Threshold`,
+          Op_Running: "Process Running",
+          Op_Finished: "Process Finished",
+          Op_Stopped: "Process Stopped"
+        };
+        return labels[op] || op;
+      }
+
+      function operatorOptionsHtml(targetType, selected) {
+        const allowed = allowedOperatorsForTargetType(targetType);
+        return allowed.map((op) =>
+          `<option value="${op}" ${op === selected ? "selected" : ""}>${operatorLabelForTargetType(targetType, op)}</option>`
+        ).join("");
+      }
+
+      function combineOptionsHtml(selected) {
+        return combines.map((v) =>
+          `<option value="${v}" ${v === selected ? "selected" : ""}>${v}</option>`
+        ).join("");
+      }
+
+      function refOptionsHtml(selected) {
+        return state.configCards.map((card) => {
+          const id = Number(card.id);
+          return `<option value="${id}" ${id === Number(selected) ? "selected" : ""}>${cardFriendlyName(card)}</option>`;
+        }).join("");
+      }
+
+      function isTimeFieldForCard(card, fieldName) {
+        const isDOorSIO = card.type === "DigitalOutput" || card.type === "SoftIO";
+        if (fieldName === "setting1") return card.type === "DigitalInput" || isDOorSIO;
+        if (fieldName === "setting2") return isDOorSIO;
+        return false;
+      }
+
+      function msToSecondsDisplay(ms) {
+        return (Number(ms || 0) / 1000).toFixed(2);
+      }
+
+      function secondsToMs(seconds) {
+        const n = Number(seconds || 0);
+        return Number.isFinite(n) && n >= 0 ? Math.round(n * 1000) : 0;
+      }
+
+      async function setInputSource(card, mode) {
+        if (mode === "real") {
+          await sendCommand("set_input_force", { cardId: card.id, forced: false });
+          return;
+        }
+        if (card.type === "DigitalInput") {
+          const high = mode === "forced_high";
+          await sendCommand("set_input_force", { cardId: card.id, forced: true, value: high });
+          return;
+        }
+        if (card.type === "AnalogInput") {
+          const value = Number(card.maskForced?.forcedAIValue ?? 0);
+          await sendCommand("set_input_force", { cardId: card.id, forced: true, value });
+        }
+      }
+
+      async function setAIForcedValue(card, value) {
+        const n = Number(value);
+        const safe = Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+        await sendCommand("set_input_force", { cardId: card.id, forced: true, value: safe });
+      }
+
+      async function setDoMask(card, mode) {
+        const masked = mode === "masked";
+        await sendCommand("set_output_mask", { cardId: card.id, masked });
+      }
+
+      async function setRunMode(mode) {
+        await sendCommand("set_run_mode", { mode });
+      }
+
+      async function setBreakpoint(card, enabled) {
+        await sendCommand("set_breakpoint", { cardId: card.id, enabled });
+      }
+
+      function isEditingCardControl() {
+        const active = document.activeElement;
+        if (!active) return false;
+        if (!(active instanceof HTMLElement)) return false;
+        return !!active.closest(".card");
+      }
+
+      function renderSafely() {
+        if (isEditingCardControl()) {
+          state.pendingUiRefresh = true;
+          return;
+        }
+        state.pendingUiRefresh = false;
+        render();
+      }
+
+      function updateEvalIndicators(cards) {
+        const now = Date.now();
+        cards.forEach((c) => {
+          const id = Number(c.id);
+          const current = Number(c.evalCounter || 0);
+          const hasPrev = Object.prototype.hasOwnProperty.call(state.evalCounterByCard, id);
+          const previous = hasPrev ? Number(state.evalCounterByCard[id]) : current;
+          if (hasPrev && current !== previous) {
+            state.evalPulseUntilByCard[id] = now + 450;
+          }
+          state.evalCounterByCard[id] = current;
+        });
+      }
+
+      function render() {
+        document.getElementById("runMode").textContent = state.runMode;
+        document.getElementById("bpState").innerHTML = state.breakpointPaused
+          ? '<span class="status-warn">Paused</span>'
+          : '<span class="status-ok">Running</span>';
+        document.getElementById("wifiState").innerHTML = state.wifiOnline
+          ? '<span class="status-ok">Online</span>'
+          : '<span class="status-bad">Offline</span>';
+        document.getElementById("wsState").innerHTML = state.wsOnline
+          ? '<span class="status-ok">Connected</span>'
+          : '<span class="status-warn">Polling</span>';
+        document.getElementById("scanWorkMs").textContent =
+          `${Number(state.lastCompleteScanMs || 0).toFixed(2)} ms`;
+        document.getElementById("snapshotSeq").textContent = String(state.snapshotSeq);
+
+        const cards = document.getElementById("cards");
+        cards.innerHTML = "";
+        state.cards.forEach((c) => {
+          const el = document.createElement("div");
+          el.className = "card";
+          let controls = `<div class="small">No direct controls for this card type.</div>`;
+          const breakpointEnabled = !!c.breakpointEnabled;
+          const evalPulseActive = Date.now() < Number(state.evalPulseUntilByCard[c.id] || 0);
+          const cfg = configCardById(c.id);
+          const cfgMode = cfg?.mode || "";
+          const cfgInvert = cfg?.invert ? "true" : "false";
+          const cfgSetting1 = Number(cfg?.setting1 || 0);
+          const cfgSetting2 = Number(cfg?.setting2 || 0);
+          const cfgSetting3 = Number(cfg?.setting3 || 0);
+          const cfgSetting1Display = isTimeFieldForCard(c, "setting1")
+            ? msToSecondsDisplay(cfgSetting1)
+            : String(cfgSetting1);
+          const cfgSetting2Display = isTimeFieldForCard(c, "setting2")
+            ? msToSecondsDisplay(cfgSetting2)
+            : String(cfgSetting2);
+          const cfgStartOnMs = Number(cfg?.startOnMs || 0);
+          const cfgStartOffMs = Number(cfg?.startOffMs || 0);
+          const cfgSetAId = Number(cfg?.setA_ID || 0);
+          const cfgSetAOp = cfg?.setA_Operator || "Op_AlwaysTrue";
+          const cfgSetATh = Number(cfg?.setA_Threshold || 0);
+          const cfgSetBId = Number(cfg?.setB_ID || 0);
+          const cfgSetBOp = cfg?.setB_Operator || "Op_AlwaysFalse";
+          const cfgSetBTh = Number(cfg?.setB_Threshold || 0);
+          const cfgSetCombine = cfg?.setCombine || "Combine_None";
+          const cfgResetAId = Number(cfg?.resetA_ID || 0);
+          const cfgResetAOp = cfg?.resetA_Operator || "Op_AlwaysFalse";
+          const cfgResetATh = Number(cfg?.resetA_Threshold || 0);
+          const cfgResetBId = Number(cfg?.resetB_ID || 0);
+          const cfgResetBOp = cfg?.resetB_Operator || "Op_AlwaysFalse";
+          const cfgResetBTh = Number(cfg?.resetB_Threshold || 0);
+          const cfgResetCombine = cfg?.resetCombine || "Combine_None";
+          const cfgLabels = settingLabelsByType[c.type] || {
+            setting1: "setting1",
+            setting2: "setting2",
+            setting3: "setting3"
+          };
+          const setATargetType = configCardById(cfgSetAId)?.type || null;
+          const setBTargetType = configCardById(cfgSetBId)?.type || null;
+          const resetATargetType = configCardById(cfgResetAId)?.type || null;
+          const resetBTargetType = configCardById(cfgResetBId)?.type || null;
+
+          if (c.type === "DigitalInput") {
+            const current = c.maskForced?.inputSource || "InputSource_Real";
+            const selected =
+              current === "InputSource_ForcedHigh" ? "forced_high" :
+              current === "InputSource_ForcedLow" ? "forced_low" :
+              "real";
+            controls = `
+              <div class="ctrl">
+                <label>Input Source</label>
+                <div class="inline">
+                  <div class="seg">
+                    <button class="seg-btn io-di-source ${selected === "real" ? "active" : ""}" data-id="${c.id}" data-mode="real">Real</button>
+                    <button class="seg-btn io-di-source ${selected === "forced_high" ? "active" : ""}" data-id="${c.id}" data-mode="forced_high">Forced High</button>
+                    <button class="seg-btn io-di-source ${selected === "forced_low" ? "active" : ""}" data-id="${c.id}" data-mode="forced_low">Forced Low</button>
+                  </div>
+                  <span class="small">Now: ${inputModeLabel(c)}</span>
+                </div>
+              </div>
+            `;
+          } else if (c.type === "AnalogInput") {
+            const current = c.maskForced?.inputSource || "InputSource_Real";
+            const selected = current === "InputSource_ForcedValue" ? "forced_value" : "real";
+            const forcedValue = Number(c.maskForced?.forcedAIValue ?? 0);
+            const disabled = selected === "real" ? "disabled" : "";
+            controls = `
+              <div class="ctrl">
+                <label>Input Source</label>
+                <div class="inline">
+                  <div class="seg">
+                    <button class="seg-btn io-ai-source-toggle ${selected === "real" ? "active" : ""}" data-id="${c.id}" data-mode="real">Real</button>
+                    <button class="seg-btn io-ai-source-toggle ${selected === "forced_value" ? "active" : ""}" data-id="${c.id}" data-mode="forced_value">Forced Value</button>
+                  </div>
+                  <span class="small">Now: ${inputModeLabel(c)}</span>
+                </div>
+                <div class="inline">
+                  <input class="io-ai-value" data-id="${c.id}" type="number" min="0" step="1" value="${forcedValue}" ${disabled} />
+                  <button class="io-ai-apply" data-id="${c.id}" ${disabled}>Apply Value</button>
+                </div>
+              </div>
+            `;
+          } else if (c.type === "DigitalOutput") {
+            const selected = c.maskForced?.outputMaskLocal ? "masked" : "direct";
+            controls = `
+              <div class="ctrl">
+                <label>Output Drive</label>
+                <div class="inline">
+                  <div class="seg">
+                    <button class="seg-btn io-do-mask ${selected === "direct" ? "active" : ""}" data-id="${c.id}" data-mode="direct">Direct</button>
+                    <button class="seg-btn io-do-mask ${selected === "masked" ? "active" : ""}" data-id="${c.id}" data-mode="masked">Masked</button>
+                  </div>
+                  <span class="small">Now: ${outputModeLabel(c)}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          el.innerHTML = `
+            <div><strong>${cardFriendlyName(c)}</strong></div>
+            <div class="small">Logical: ${boolText(!!c.logicalState)}</div>
+            <div class="small">Physical: ${boolText(!!c.physicalState)}</div>
+            <div class="small">${liveMetricLabel(c)}: ${Number(c.currentValue || 0)}</div>
+            <div class="small">State: ${c.state || "-"}</div>
+            <div class="indicators">
+              <label>Debug Indicators</label>
+              <div class="indicator-row">
+                <span class="pill ${evalPulseActive ? "warn" : ""}">Eval: ${evalPulseActive ? "Pulse" : "Idle"}</span>
+                <span class="pill ${c.setResult ? "ok" : ""}">SET: ${c.setResult ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.resetResult ? "warn" : ""}">RESET: ${c.resetResult ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.resetOverride ? "warn" : ""}">RESET Override: ${c.resetOverride ? "TRUE" : "FALSE"}</span>
+              </div>
+              <div class="ctrl">
+                <label>Breakpoint</label>
+                <div class="inline">
+                  <div class="seg">
+                    <button class="seg-btn io-breakpoint ${breakpointEnabled ? "" : "active"}" data-id="${c.id}" data-mode="off">Off</button>
+                    <button class="seg-btn io-breakpoint ${breakpointEnabled ? "active" : ""}" data-id="${c.id}" data-mode="on">On</button>
+                  </div>
+                  <span class="small">Now: ${breakpointEnabled ? "Enabled" : "Disabled"}</span>
+                </div>
+              </div>
+            </div>
+            ${controls}
+          `;
+          cards.appendChild(el);
+        });
+
+        document.querySelectorAll(".io-di-source").forEach((btn) => {
+          btn.addEventListener("click", async (ev) => {
+            const id = Number(ev.currentTarget.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const mode = ev.currentTarget.getAttribute("data-mode") || "real";
+            await setInputSource(card, mode);
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+        document.querySelectorAll(".io-ai-source-toggle").forEach((btn) => {
+          btn.addEventListener("click", async (ev) => {
+            const id = Number(ev.currentTarget.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const mode = ev.currentTarget.getAttribute("data-mode") || "real";
+            if (mode === "real") {
+              await sendCommand("set_input_force", { cardId: id, forced: false });
+            } else {
+              const valueInput = document.querySelector(`.io-ai-value[data-id="${id}"]`);
+              const v = valueInput ? Number(valueInput.value || 0) : Number(card.maskForced?.forcedAIValue ?? 0);
+              await setAIForcedValue(card, v);
+            }
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+        document.querySelectorAll(".io-ai-apply").forEach((btn) => {
+          btn.addEventListener("click", async (ev) => {
+            const id = Number(ev.target.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const isForced = !!document.querySelector(`.io-ai-source-toggle[data-id="${id}"][data-mode="forced_value"].active`);
+            if (!isForced) return;
+            const valueInput = document.querySelector(`.io-ai-value[data-id="${id}"]`);
+            const v = valueInput ? Number(valueInput.value || 0) : 0;
+            await setAIForcedValue(card, v);
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+        document.querySelectorAll(".io-ai-value").forEach((input) => {
+          input.addEventListener("keydown", async (ev) => {
+            if (ev.key !== "Enter") return;
+            const id = Number(ev.target.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const isForced = !!document.querySelector(`.io-ai-source-toggle[data-id="${id}"][data-mode="forced_value"].active`);
+            if (!isForced) return;
+            await setAIForcedValue(card, Number(ev.target.value || 0));
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+        document.querySelectorAll(".io-do-mask").forEach((btn) => {
+          btn.addEventListener("click", async (ev) => {
+            const id = Number(ev.currentTarget.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const mode = ev.currentTarget.getAttribute("data-mode") || "direct";
+            await setDoMask(card, mode);
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+        document.querySelectorAll(".io-breakpoint").forEach((btn) => {
+          btn.addEventListener("click", async (ev) => {
+            const id = Number(ev.currentTarget.getAttribute("data-id"));
+            const card = state.cards.find((x) => x.id === id);
+            if (!card) return;
+            const mode = ev.currentTarget.getAttribute("data-mode") || "off";
+            await setBreakpoint(card, mode === "on");
+            await fetchSnapshot();
+            renderSafely();
+          });
+        });
+
+      }
+
+      async function fetchSnapshot() {
+        try {
+          const res = await fetch("/api/snapshot");
+          if (!res.ok) return;
+          const snap = await res.json();
+          state.runMode = snap.runMode || state.runMode;
+          state.wifiOnline = true;
+          state.globalMask = !!(snap.testMode && snap.testMode.outputMaskGlobal);
+          state.breakpointPaused = !!(snap.testMode && snap.testMode.breakpointPaused);
+          state.lastCompleteScanMs = Number(snap.lastCompleteScanMs || 0);
+          state.snapshotSeq = snap.snapshotSeq || snap.scanSeq || state.snapshotSeq;
+          if (Array.isArray(snap.cards)) {
+            updateEvalIndicators(snap.cards);
+            state.cards = snap.cards;
+          }
+        } catch (_err) {
+          state.wifiOnline = false;
+        }
+      }
+
+      let ws = null;
+      let reqCounter = 0;
+      const pending = new Map();
+
+      function applySnapshot(snap) {
+        state.runMode = snap.runMode || state.runMode;
+        state.globalMask = !!(snap.testMode && snap.testMode.outputMaskGlobal);
+        state.breakpointPaused = !!(snap.testMode && snap.testMode.breakpointPaused);
+        state.lastCompleteScanMs = Number(snap.lastCompleteScanMs || 0);
+        state.snapshotSeq = snap.snapshotSeq || snap.scanSeq || state.snapshotSeq;
+        if (Array.isArray(snap.cards)) {
+          updateEvalIndicators(snap.cards);
+          state.cards = snap.cards;
+        }
+      }
+
+      function connectWs() {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        ws = new WebSocket(`${proto}://${location.hostname}:81/`);
+        ws.onopen = () => {
+          state.wsOnline = true;
+          state.wifiOnline = true;
+          render();
+        };
+        ws.onclose = () => {
+          state.wsOnline = false;
+          render();
+          setTimeout(connectWs, 1500);
+        };
+        ws.onerror = () => {
+          state.wsOnline = false;
+        };
+        ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data);
+            if (msg.type === "runtime_snapshot") {
+              applySnapshot(msg);
+              renderSafely();
+              return;
+            }
+            if (msg.type === "command_result") {
+              const waiter = pending.get(msg.requestId);
+              if (waiter) {
+                pending.delete(msg.requestId);
+                waiter(!!msg.ok);
+              }
+            }
+          } catch (_err) {}
+        };
+      }
+
+      async function sendCommand(name, payload = {}) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const requestId = `cmd-${++reqCounter}`;
+          const ok = await new Promise((resolve) => {
+            pending.set(requestId, resolve);
+            ws.send(
+              JSON.stringify({
+                type: "command",
+                schemaVersion: 1,
+                requestId,
+                name,
+                payload
+              })
+            );
+            setTimeout(() => {
+              if (pending.has(requestId)) {
+                pending.delete(requestId);
+                resolve(false);
+              }
+            }, 1200);
+          });
+          return ok;
+        }
+
+        try {
+          const res = await fetch("/api/command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              payload
+            })
+          });
+          return res.ok;
+        } catch (_err) {
+          state.wifiOnline = false;
+          return false;
+        }
+      }
+
+      document.getElementById("btnRefresh").addEventListener("click", () => {
+        fetchSnapshot().then(renderSafely);
+      });
+
+      document.getElementById("btnStep").addEventListener("click", () => {
+        sendCommand("step_once").then(() => fetchSnapshot().then(renderSafely));
+      });
+
+      document.getElementById("btnRunNormal").addEventListener("click", () => {
+        setRunMode("RUN_NORMAL").then(() => fetchSnapshot().then(renderSafely));
+      });
+      document.getElementById("btnRunSlow").addEventListener("click", () => {
+        setRunMode("RUN_SLOW").then(() => fetchSnapshot().then(renderSafely));
+      });
+      document.getElementById("btnRunStep").addEventListener("click", () => {
+        setRunMode("RUN_STEP").then(() => fetchSnapshot().then(renderSafely));
+      });
+      document.getElementById("btnRunBreakpoint").addEventListener("click", () => {
+        setRunMode("RUN_BREAKPOINT").then(() => fetchSnapshot().then(renderSafely));
+      });
+
+      document.getElementById("btnMaskAll").addEventListener("click", () => {
+        state.globalMask = !state.globalMask;
+        sendCommand("set_output_mask_global", { masked: state.globalMask }).then(() =>
+          fetchSnapshot().then(renderSafely)
+        );
+      });
+
+      document.getElementById("btnSettings").addEventListener("click", () => {
+        window.location.href = "/settings";
+      });
+
+      document.getElementById("btnConfig").addEventListener("click", () => {
+        window.location.href = "/config";
+      });
+
+      connectWs();
+      fetchSnapshot().then(renderSafely);
+      document.addEventListener("focusout", () => {
+        setTimeout(() => {
+          if (!isEditingCardControl() && state.pendingUiRefresh) renderSafely();
+        }, 0);
+      });
+      setInterval(() => {
+        if (!state.wsOnline) fetchSnapshot().then(renderSafely);
+      }, 1000);
+    </script>
+  </body>
+</html>
