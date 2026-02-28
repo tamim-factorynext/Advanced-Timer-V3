@@ -392,6 +392,15 @@ struct SharedRuntimeSnapshot {
   uint32_t seq;
   uint32_t tsMs;
   uint32_t lastCompleteScanUs;
+  uint32_t maxCompleteScanUs;
+  uint32_t scanBudgetUs;
+  uint32_t scanOverrunCount;
+  bool scanOverrunLast;
+  uint16_t kernelQueueDepth;
+  uint16_t kernelQueueHighWaterMark;
+  uint16_t kernelQueueCapacity;
+  uint32_t commandLatencyLastUs;
+  uint32_t commandLatencyMaxUs;
   runMode mode;
   bool testModeActive;
   bool globalOutputMask;
@@ -442,6 +451,15 @@ inputSourceMode gCardInputSource[TOTAL_CARDS] = {};
 uint32_t gCardForcedAIValue[TOTAL_CARDS] = {};
 uint32_t gScanIntervalMs = kDefaultScanIntervalMs;
 uint32_t gLastCompleteScanUs = 0;
+uint32_t gMaxCompleteScanUs = 0;
+uint32_t gScanBudgetUs = kDefaultScanIntervalMs * 1000;
+uint32_t gScanOverrunCount = 0;
+bool gScanOverrunLast = false;
+uint16_t gKernelQueueDepth = 0;
+uint16_t gKernelQueueHighWaterMark = 0;
+uint16_t gKernelQueueCapacity = 0;
+uint32_t gCommandLatencyLastUs = 0;
+uint32_t gCommandLatencyMaxUs = 0;
 
 const uint32_t SLOW_SCAN_INTERVAL_MS = 250;
 
@@ -503,6 +521,7 @@ struct KernelCommand {
   uint8_t cardId;
   bool flag;
   uint32_t value;
+  uint32_t enqueuedUs;
   runMode mode;
   inputSourceMode inputMode;
 };
@@ -827,6 +846,17 @@ void serializeRuntimeSnapshot(JsonDocument& doc, uint32_t nowMs) {
   doc["scanIntervalMs"] = gScanIntervalMs;
   doc["lastCompleteScanMs"] =
       static_cast<double>(snapshot.lastCompleteScanUs) / 1000.0;
+  JsonObject metrics = doc["metrics"].to<JsonObject>();
+  metrics["scanLastUs"] = snapshot.lastCompleteScanUs;
+  metrics["scanMaxUs"] = snapshot.maxCompleteScanUs;
+  metrics["scanBudgetUs"] = snapshot.scanBudgetUs;
+  metrics["scanOverrunLast"] = snapshot.scanOverrunLast;
+  metrics["scanOverrunCount"] = snapshot.scanOverrunCount;
+  metrics["queueDepth"] = snapshot.kernelQueueDepth;
+  metrics["queueHighWaterMark"] = snapshot.kernelQueueHighWaterMark;
+  metrics["queueCapacity"] = snapshot.kernelQueueCapacity;
+  metrics["commandLatencyLastUs"] = snapshot.commandLatencyLastUs;
+  metrics["commandLatencyMaxUs"] = snapshot.commandLatencyMaxUs;
   doc["runMode"] = toString(snapshot.mode);
   doc["snapshotSeq"] = snapshot.seq;
 
@@ -1870,7 +1900,15 @@ bool setInputForceCommand(uint8_t cardId, inputSourceMode mode,
 
 bool enqueueKernelCommand(const KernelCommand& command) {
   if (gKernelCommandQueue == nullptr) return false;
-  return xQueueSend(gKernelCommandQueue, &command, 0) == pdTRUE;
+  KernelCommand commandToQueue = command;
+  commandToQueue.enqueuedUs = micros();
+  bool queued = xQueueSend(gKernelCommandQueue, &commandToQueue, 0) == pdTRUE;
+  gKernelQueueDepth =
+      static_cast<uint16_t>(uxQueueMessagesWaiting(gKernelCommandQueue));
+  if (gKernelQueueDepth > gKernelQueueHighWaterMark) {
+    gKernelQueueHighWaterMark = gKernelQueueDepth;
+  }
+  return queued;
 }
 
 bool applyKernelCommand(const KernelCommand& command) {
@@ -1899,7 +1937,16 @@ void processKernelCommandQueue() {
   if (gKernelCommandQueue == nullptr) return;
   KernelCommand command = {};
   while (xQueueReceive(gKernelCommandQueue, &command, 0) == pdTRUE) {
+    uint32_t nowUs = micros();
+    uint32_t latencyUs = nowUs - command.enqueuedUs;
+    gCommandLatencyLastUs = latencyUs;
+    if (latencyUs > gCommandLatencyMaxUs) gCommandLatencyMaxUs = latencyUs;
     applyKernelCommand(command);
+  }
+  gKernelQueueDepth =
+      static_cast<uint16_t>(uxQueueMessagesWaiting(gKernelCommandQueue));
+  if (gKernelQueueDepth > gKernelQueueHighWaterMark) {
+    gKernelQueueHighWaterMark = gKernelQueueDepth;
   }
 }
 
@@ -1908,6 +1955,15 @@ void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq) {
   if (incrementSeq) gSharedSnapshot.seq += 1;
   gSharedSnapshot.tsMs = nowMs;
   gSharedSnapshot.lastCompleteScanUs = gLastCompleteScanUs;
+  gSharedSnapshot.maxCompleteScanUs = gMaxCompleteScanUs;
+  gSharedSnapshot.scanBudgetUs = gScanBudgetUs;
+  gSharedSnapshot.scanOverrunCount = gScanOverrunCount;
+  gSharedSnapshot.scanOverrunLast = gScanOverrunLast;
+  gSharedSnapshot.kernelQueueDepth = gKernelQueueDepth;
+  gSharedSnapshot.kernelQueueHighWaterMark = gKernelQueueHighWaterMark;
+  gSharedSnapshot.kernelQueueCapacity = gKernelQueueCapacity;
+  gSharedSnapshot.commandLatencyLastUs = gCommandLatencyLastUs;
+  gSharedSnapshot.commandLatencyMaxUs = gCommandLatencyMaxUs;
   gSharedSnapshot.mode = gRunMode;
   gSharedSnapshot.testModeActive = gTestModeActive;
   gSharedSnapshot.globalOutputMask = gGlobalOutputMask;
@@ -2336,6 +2392,7 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
 
   uint32_t scanInterval = (gRunMode == RUN_SLOW) ? SLOW_SCAN_INTERVAL_MS
                                                  : gScanIntervalMs;
+  gScanBudgetUs = scanInterval * 1000;
   if ((nowMs - lastScanMs) < scanInterval) {
     updateSharedRuntimeSnapshot(nowMs, false);
     return;
@@ -2363,6 +2420,11 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
   uint32_t scanEndUs = micros();
   if (completedFullScan) {
     gLastCompleteScanUs = (scanEndUs - scanStartUs);
+    if (gLastCompleteScanUs > gMaxCompleteScanUs) {
+      gMaxCompleteScanUs = gLastCompleteScanUs;
+    }
+    gScanOverrunLast = (gLastCompleteScanUs > gScanBudgetUs);
+    if (gScanOverrunLast) gScanOverrunCount += 1;
   }
   updateSharedRuntimeSnapshot(nowMs, true);
 }
@@ -2435,6 +2497,9 @@ void setup() {
     Serial.println("Failed to create kernel command queue");
     return;
   }
+  gKernelQueueCapacity = static_cast<uint16_t>(
+      uxQueueMessagesWaiting(gKernelCommandQueue) +
+      uxQueueSpacesAvailable(gKernelCommandQueue));
 
   updateSharedRuntimeSnapshot(millis(), false);
 

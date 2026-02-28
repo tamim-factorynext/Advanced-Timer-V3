@@ -1,20 +1,8 @@
 # API Contract V3
 
-<<<<<<< HEAD
 Date: 2026-02-28
 Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
 Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/decisions.md`
-=======
-<<<<<<< HEAD
-Date: 2026-02-28
-Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
-Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/decisions.md`
-=======
-Date: 2026-02-26
-Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
-Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`
->>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 Status: Frozen for implementation
 
 ## 1. Scope
@@ -53,33 +41,59 @@ Message type: `runtime_snapshot`
 ```json
 {
   "type": "runtime_snapshot",
-  "apiVersion": "2.0",
-  "timestamp": "2026-02-26T10:30:00Z",
-  "snapshotRevision": 8123,
+  "schemaVersion": 1,
+  "tsMs": 1740738600000,
+  "snapshotSeq": 8123,
   "scanIntervalMs": 10,
+  "lastCompleteScanMs": 0.812,
   "runMode": "RUN_NORMAL",
-  "testMode": {
-    "outputMaskGlobal": false,
-    "inputsForced": false
+  "metrics": {
+    "scanLastUs": 812,
+    "scanMaxUs": 1240,
+    "scanBudgetUs": 10000,
+    "scanOverrunLast": false,
+    "scanOverrunCount": 0,
+    "queueDepth": 0,
+    "queueHighWaterMark": 3,
+    "queueCapacity": 16,
+    "commandLatencyLastUs": 220,
+    "commandLatencyMaxUs": 900
   },
-  "system": {
-    "alarmActive": false,
-    "wifiOnline": true,
-    "firmwareVersion": "2.0.0"
+  "testMode": {
+    "active": false,
+    "outputMaskGlobal": false,
+    "breakpointPaused": false,
+    "scanCursor": 0
   },
   "cards": [
     {
-      "cardId": 8,
-      "cardType": "DO",
-      "health": "OK",
+      "id": 8,
+      "type": "DigitalOutput",
+      "familyOrder": 8,
       "logicalState": true,
       "physicalState": true,
+      "triggerFlag": false,
+      "state": "State_DO_Active",
+      "mode": "Mode_DO_Normal",
       "currentValue": 2,
+      "startOnMs": 1740738600000,
+      "startOffMs": 1740738600000,
+      "repeatCounter": 0,
+      "maskForced": {
+        "inputSource": "REAL",
+        "forcedAIValue": 0,
+        "outputMaskLocal": false,
+        "outputMasked": false
+      },
+      "breakpointEnabled": false,
       "setResult": true,
       "resetResult": false,
       "resetOverride": false,
-      "missionState": "ACTIVE",
-      "lastEvalUs": 42
+      "evalCounter": 120,
+      "debug": {
+        "evalCounter": 120,
+        "breakpointEnabled": false
+      }
     }
   ]
 }
@@ -88,16 +102,10 @@ Message type: `runtime_snapshot`
 Rules:
 - `cards[]` order must match deterministic firmware evaluation order.
 - Snapshot values are authoritative; clients must not recompute logical outcomes.
-<<<<<<< HEAD
-- `lastEvalUs` is card evaluation duration in microseconds (`uint32`, non-negative) for runtime observability and regression tracking.
-- `lastEvalUs` is runtime-only metadata and must not be required in config commit payloads.
-=======
-<<<<<<< HEAD
-- `lastEvalUs` is card evaluation duration in microseconds (`uint32`, non-negative) for runtime observability and regression tracking.
-- `lastEvalUs` is runtime-only metadata and must not be required in config commit payloads.
-=======
->>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
+- Runtime snapshots must include `metrics` object fields defined in `docs/timing-budget-v3.md` Section 3.
+- `metrics.scanBudgetUs` must equal `scanIntervalMs * 1000`.
+- `metrics.queueDepth` must be `<= metrics.queueCapacity`.
+- `cards[].evalCounter` is runtime-only metadata and must not be required in config commit payloads.
 
 ## 5.2 Command Request Envelope
 
@@ -182,13 +190,22 @@ Message type: `command_result`
 Success response:
 ```json
 {
-  "apiVersion": "2.0",
-  "status": "SUCCESS",
-  "timestamp": "2026-02-26T10:30:00Z",
-  "snapshotRevision": 8124,
-  "snapshot": {}
+  "type": "runtime_snapshot",
+  "schemaVersion": 1,
+  "tsMs": 1740738600000,
+  "snapshotSeq": 8124,
+  "scanIntervalMs": 10,
+  "lastCompleteScanMs": 0.812,
+  "runMode": "RUN_NORMAL",
+  "metrics": {},
+  "testMode": {},
+  "cards": []
 }
 ```
+
+Rules:
+- HTTP snapshot payload shape mirrors WebSocket `runtime_snapshot` payload.
+- `snapshotSeq` returned by HTTP must be the latest complete snapshot revision at response time.
 
 ## 6.2 Config Lifecycle
 
@@ -361,15 +378,10 @@ Rules:
 - `AT-API-003`: latest complete snapshot retrieval.
 - `AT-API-004`: WebSocket revision ordering.
 - `AT-API-005`: global output mask command behavior.
-<<<<<<< HEAD
+- `AT-API-008`: runtime snapshot metrics object shape and required field presence.
+- `AT-API-009`: `metrics.scanBudgetUs == scanIntervalMs * 1000` invariant.
+- `AT-API-010`: queue depth invariant (`metrics.queueDepth <= metrics.queueCapacity`).
 - `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
-=======
-<<<<<<< HEAD
-- `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
-=======
-- `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
->>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 
 
 

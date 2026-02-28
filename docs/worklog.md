@@ -154,3 +154,119 @@ Finalized the family-capacity model: every card family (physical and virtual) is
 - Updated `docs/decisions.md`:
   - Added `DEC-0002` to record this capacity-model decision.
 
+## 2026-02-28 (Phase 0 Metrics Instrumentation Start)
+
+### Session Summary
+
+Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtime telemetry fields required for measurable regression tracking.
+
+### Completed
+
+- Updated `src/main.cpp` runtime snapshot telemetry:
+  - Added scan metrics:
+    - `scanLastUs`
+    - `scanMaxUs`
+  - Added kernel command queue metrics:
+    - `queueDepth`
+    - `queueHighWaterMark`
+    - `queueCapacity`
+  - Added command processing latency metrics:
+    - `commandLatencyLastUs`
+    - `commandLatencyMaxUs`
+
+- Added runtime counters/state needed to populate these metrics:
+  - max complete scan duration tracking
+  - queue depth/high-water tracking on enqueue/process
+  - enqueue timestamp + enqueue-to-apply latency tracking
+
+### Notes
+
+- Local compile verification is currently blocked in this shell because `platformio` / `pio` CLI is not available on PATH.
+
+## 2026-02-28 (Phase 0 Metrics Instrumentation Continued)
+
+### Completed
+
+- Extended runtime snapshot metrics in `src/main.cpp` with explicit timing-budget visibility:
+  - `metrics.scanBudgetUs`
+  - `metrics.scanOverrunLast`
+  - `metrics.scanOverrunCount`
+
+- Added overrun tracking in runtime engine:
+  - budget derived from active scan interval
+  - per-scan overrun detection
+  - overrun event counter
+
+- Added missing contract artifact:
+  - `docs/timing-budget-v3.md`
+
+- Updated docs index:
+  - added `docs/timing-budget-v3.md` to active V3 docs.
+
+## 2026-02-28 (Contract Artifact Completion + Conflict Cleanup)
+
+### Completed
+
+- Resolved merge conflict markers in:
+  - `docs/api-contract-v3.md`
+  - `docs/acceptance-matrix-v3.md`
+
+- Added missing required V3 artifacts listed by source contract:
+  - `docs/fault-policy-v3.md`
+  - `docs/dependency-topology-rules.md`
+
+- Updated `docs/INDEX.md` to include the two new artifacts in active V3 docs.
+
+## 2026-02-28 (Phase 0 Contract Alignment: Snapshot Metrics)
+
+### Completed
+
+- Updated `docs/api-contract-v3.md` runtime snapshot contract:
+  - Added explicit `metrics` object shape and required fields.
+  - Added snapshot invariants:
+    - `metrics.scanBudgetUs == scanIntervalMs * 1000`
+    - `metrics.queueDepth <= metrics.queueCapacity`
+  - Clarified HTTP snapshot response mirrors WebSocket runtime snapshot payload.
+
+- Updated `docs/acceptance-matrix-v3.md`:
+  - Added `AT-API-008` (metrics shape/presence)
+  - Added `AT-API-009` (scan budget invariant)
+  - Added `AT-API-010` (queue depth capacity invariant)
+
+## 2026-02-28 (Phase 0 Hardware Baseline Capture)
+
+### Test Inputs
+
+- Idle capture file: `docs/snapshot-baseline.csv` (120 samples, ~2 minutes).
+- Stress capture file: `docs/snapshot-stress.csv` (120 samples, ~2 minutes).
+- Hardware: ESP32 DOIT DevKit (live `/api/snapshot` polling).
+
+### Measured Results
+
+- Idle:
+  - `scan_avg_us`: `1373.92`
+  - `scan_min_us`: `0`
+  - `scan_max_us`: `4361`
+  - `command_latency_last_avg_us`: `0`
+  - `command_latency_max_peak_us`: `0`
+  - `queue_depth_max`: `0`
+  - `queue_hwm_max`: `0`
+  - `overrun_end`: `0`
+
+- Stress:
+  - `scan_avg_us`: `1198.61`
+  - `scan_min_us`: `0`
+  - `scan_max_us`: `2710`
+  - `command_latency_last_avg_us`: `739.95`
+  - `command_latency_last_max_us`: `7076`
+  - `command_latency_max_peak_us`: `7296`
+  - `queue_depth_max`: `0`
+  - `queue_hwm_max`: `1`
+  - `overrun_end`: `0`
+
+### Observations
+
+- No scan overruns observed in either capture (`scanOverrunCount` remained `0`).
+- Queue behavior remained stable under stress (`queueHighWaterMark` peaked at `1` of `16`).
+- Command latency telemetry was exercised under stress and remained bounded in this run.
+

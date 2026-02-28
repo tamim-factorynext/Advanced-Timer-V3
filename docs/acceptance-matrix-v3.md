@@ -97,6 +97,9 @@ Status: Draft for implementation kickoff
 | AT-API-005 | Sec 15.1 | Global output mask command path | Command applies global mask state and reports acknowledged status | Yes | Yes | Yes |
 | AT-API-006 | Sec 6.3, 15.1 | Invalid run mode command payload (`RUN_SLOW`) | Command rejected with machine-readable validation error | Yes | No | Yes |
 | AT-API-007 | Sec 15.2 | Forward compatibility for additional response fields | Client behavior remains correct when unknown fields are present | Yes | No | No |
+| AT-API-008 | Sec 15.2, 18 | Runtime snapshot metrics object contract | Snapshot includes required `metrics.*` fields with correct primitive types | Yes | Yes | Yes |
+| AT-API-009 | Sec 15.2, 19 | Scan budget invariant | `metrics.scanBudgetUs == scanIntervalMs * 1000` for all sampled snapshots | Yes | Yes | Yes |
+| AT-API-010 | Sec 15.2, 19 | Queue depth capacity invariant | `metrics.queueDepth` never exceeds `metrics.queueCapacity` | Yes | Yes | Yes |
 | AT-SEC-001 | Sec 16.1, 16.2 | Role-based access matrix for protected ops | VIEWER/OPERATOR/ENGINEER/ADMIN permissions enforced | Yes | No | Yes |
 | AT-SEC-002 | Sec 16.3 | Successful protected operation audit | Audit record contains all mandatory fields | Yes | No | Yes |
 | AT-SEC-003 | Sec 16.3 | Failed protected operation audit | Failure recorded with actor/role/action/result | Yes | No | Yes |
@@ -117,16 +120,6 @@ These tests are defined as acceptance placeholders and should be finalized when 
 
 - Required suite prefixes from contract are present: `AT-CORE`, `AT-DI/AI/SIO/DO`, `AT-MATH`, `AT-RTC`, `AT-BIND`, `AT-CFG`, `AT-SEC`, `AT-REL`.
 - Every major contract section (4 through 20) has at least one mapped acceptance test.
-<<<<<<< HEAD
-=======
-=======
-<<<<<<< HEAD
-- Every major contract section (4 through 20) has at least one mapped acceptance test.
-=======
-- Every major contract section (4 through 20) has at least one mapped acceptance test.
->>>>>>> 942d78b3b5ec7d4412087cf2f719218ac79c5519
->>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
->>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 
 
 
