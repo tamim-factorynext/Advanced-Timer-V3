@@ -6,3 +6,6 @@ Planned scope:
 - staged config file IO
 - commit/rollback slot operations
 - version metadata persistence
+
+Current interfaces:
+- `config_lifecycle.h`

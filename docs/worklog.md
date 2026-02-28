@@ -396,3 +396,75 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 - Build passed:
   - `C:\\Users\\Admin\\.platformio\\penv\\Scripts\\platformio.exe run`
 
+## 2026-02-28 (Phase 1 Skeleton Refactor: Storage Lifecycle Declarations)
+
+### Completed
+
+- Added storage declaration surface header:
+  - `src/storage/config_lifecycle.h`
+  - Includes declarations for config persistence/lifecycle helpers only (no implementation move).
+
+- Updated `src/main.cpp`:
+  - includes `storage/config_lifecycle.h`
+  - removed duplicate storage/config-lifecycle forward declarations from local prototype block.
+  - kept all implementations in `main.cpp` unchanged.
+
+- Updated storage layer inventory:
+  - `src/storage/README.md` now lists `config_lifecycle.h`.
+
+### Verification
+
+- Build passed:
+  - `C:\\Users\\Admin\\.platformio\\penv\\Scripts\\platformio.exe run`
+
+## 2026-02-28 (End-Of-Day Handoff)
+
+### Current State
+
+- Versioning baseline is active:
+  - `V2` = frozen PoC baseline (`README.md`)
+  - `V3` = active rewrite track (`requirements-v3-contract.md` + `docs/*-v3.md`)
+
+- Phase 0 status:
+  - Runtime metrics instrumentation added and exposed in `/api/snapshot`.
+  - Timing budget contract added (`docs/timing-budget-v3.md`).
+  - Baseline captures completed and logged:
+    - `docs/snapshot-baseline.csv`
+    - `docs/snapshot-stress.csv`
+
+- Contract/doc integrity:
+  - Required artifact set now exists (including fault policy and dependency topology).
+  - Prior merge markers were cleaned from V3 docs.
+
+- Architecture decisions locked:
+  - `DEC-0003`: RTC stack is `RTClib` + `RTCMillis` now, DS3231 later, NTP sync.
+  - `DEC-0004`: bring-up target includes exactly 2 RTC cards + 2 MATH cards.
+  - `DEC-0005`: RTC schedule granularity is minute-level only (no second/ms config).
+
+- Phase 1 refactor status (interfaces-first, no behavior move):
+  - Added layered skeleton folders under `src/`.
+  - Extracted interfaces:
+    - `src/kernel/card_model.h`
+    - `src/kernel/enum_codec.h/.cpp`
+    - `src/control/command_dto.h`
+    - `src/runtime/shared_snapshot.h`
+    - `src/runtime/snapshot_json.h`
+    - `src/portal/routes.h`
+    - `src/storage/config_lifecycle.h`
+  - Implementations remain in `src/main.cpp` intentionally.
+
+- Build status:
+  - Build is green after latest changes.
+  - Current `platformio.ini` includes explicit SPI/Wire include paths to satisfy `RTClib` dependency resolution in this environment.
+
+### Exact Start Plan For Next Session
+
+1. Continue Phase 1 declaration extraction:
+   - Add `src/control/runtime_control.h` declarations for command/control surface (`setRunMode`, breakpoint, force/mask, queue apply path).
+   - Keep implementations in `main.cpp`.
+2. Extract runtime snapshot implementation to `src/runtime/snapshot_json.cpp` (first implementation move), keep function signatures stable.
+3. Begin RTC/MATH bring-up scaffolding:
+   - define initial capacities and IDs for 2 RTC + 2 MATH cards (without placeholder empty slots).
+   - add validation enforcement for minute-only RTC schedule fields (`V-CFG-022`) in firmware validation path.
+4. Rebuild and capture one quick smoke snapshot to confirm no regression.
+
