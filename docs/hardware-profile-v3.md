@@ -1,7 +1,7 @@
-# Hardware Profile Contract V2
+# Hardware Profile Contract V3
 
 Date: 2026-02-28
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
 Status: Draft for implementation
 
 ## 1. Purpose
@@ -85,7 +85,7 @@ Example backend classes:
 
 ## 6. Modbus And Plugin Boundary
 
-Modbus is intentionally excluded from core deterministic firmware in current V2 scope.
+Modbus is intentionally excluded from core deterministic firmware in current V3 scope.
 
 Rules:
 
@@ -125,3 +125,6 @@ Recommended implementation path:
 1. Build flags select profile.
 2. Profile header materializes typed channel arrays and gates.
 3. Validator and card factory consume this profile as single source of truth.
+
+
+

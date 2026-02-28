@@ -42,7 +42,7 @@ Use one short entry per decision with this structure:
 - Context: Runtime snapshots already include `lastEvalUs` in examples, but the field intent was not explicitly documented.
 - Decision: Keep `lastEvalUs` as a standard per-card runtime snapshot field to expose card evaluation duration in microseconds.
 - Impact: Supports deterministic observability and timing regression detection; enables tooling/UI to detect outlier cards without recomputing runtime internals; keeps this field runtime-only and out of config payload requirements.
-- References: `docs/api-contract-v2.md` (Section 5.1 rules), `requirements-v2-contract.md` (artifact set and change-control linkage), `README.md` (working method linkage).
+- References: `docs/api-contract-v3.md` (Section 5.1 rules), `requirements-v3-contract.md` (artifact set and change-control linkage), `README.md` (working method linkage).
 
 ## DEC-0002: Compile-Time Family Capacities Across All Card Types
 - Date: 2026-02-28
@@ -50,4 +50,5 @@ Use one short entry per decision with this structure:
 - Context: Product models will vary by available channels and optional capabilities; all card families (physical and virtual) must follow one consistent profile-capacity model.
 - Decision: Define explicit compile-time capacities for every family (`DI`, `DO`, `AI`, `SIO`, `MATH`, `RTC` alarm channels), allowing `0..N` instances per family by active hardware profile.
 - Impact: Enables deterministic multi-model product line support; removes assumptions that any family must exist; formalizes RTC as schedule-alarm channel capacity rather than a special-case family.
-- References: `docs/hardware-profile-v2.md`, `requirements-v2-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-v2.md` (family presence/capacity), `docs/acceptance-matrix-v2.md` (`AT-HW-005..007`).
+- References: `docs/hardware-profile-v3.md`, `requirements-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-v3.md` (family presence/capacity), `docs/acceptance-matrix-v3.md` (`AT-HW-005..007`).
+

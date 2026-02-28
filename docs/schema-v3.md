@@ -1,14 +1,14 @@
-# Schema V2
+# Schema V3
 
 Date: 2026-02-26
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
-Related Tests: `docs/acceptance-matrix-v2.md`
-Related Hardware Profile: `docs/hardware-profile-v2.md`
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
+Related Tests: `docs/acceptance-matrix-v3.md`
+Related Hardware Profile: `docs/hardware-profile-v3.md`
 Status: Draft for implementation
 
 ## 1. Purpose
 
-This document defines the configuration payload schema for Advanced Timer V2.
+This document defines the configuration payload schema for Advanced Timer V3.
 It is the implementation-facing contract for staged config validation and commit.
 
 ## 2. Global Conventions
@@ -353,8 +353,8 @@ Top-level `bindings` allows typed parameter binding.
 
 ## 11. Migration Notes
 
-- Any prior RTC recurrence/holiday policy structures are removed in V2.
-- Migration to V2 must transform old RTC schedule representation to field-based schedule + `triggerDuration`.
+- Any prior RTC recurrence/holiday policy structures are removed in V3.
+- Migration to V3 must transform old RTC schedule representation to field-based schedule + `triggerDuration`.
 - Any MATH comparison operators in legacy configs must fail validation or be migrated by explicit rule.
 - Legacy AI `emaAlpha` values stored as milliunits (`0..1000`) must be converted to centiunits (`0..100`) during migration.
 - Restore-source model is reduced to `LKG` (single rollback slot) and `FACTORY`.
@@ -362,6 +362,9 @@ Top-level `bindings` allows typed parameter binding.
 ## 12. Next Implementation Artifacts
 
 - `docs/dependency-topology-rules.md`
-- `docs/api-contract-v2.md`
-- `docs/timing-budget-v2.md`
+- `docs/api-contract-v3.md`
+- `docs/timing-budget-v3.md`
 - Validation error catalog in code aligned with rule IDs (`V-CFG-*`).
+
+
+

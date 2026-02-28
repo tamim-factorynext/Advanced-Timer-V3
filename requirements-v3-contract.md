@@ -1,13 +1,13 @@
-# Advanced Timer V2 Requirements Contract
+# Advanced Timer V3 Requirements Contract
 
 Date: February 26, 2026
-Version: 2.0.0-draft
+Version: 3.0.0-draft
 Status: Authoritative baseline for production rewrite
 Audience: Firmware, Portal, QA, DevOps
 
 ## 1. Purpose
 
-This document is the single source of truth for Advanced Timer V2 behavior.
+This document is the single source of truth for Advanced Timer V3 behavior.
 It defines the functional and non-functional contract for all card families and runtime services.
 
 This contract is intentionally self-contained. Implementation must not depend on legacy code or prior documents to infer behavior.
@@ -16,7 +16,7 @@ This contract is intentionally self-contained. Implementation must not depend on
 
 ## 2.1 Product intent
 
-Advanced Timer V2 is a deterministic, field-configurable controller with:
+Advanced Timer V3 is a deterministic, field-configurable controller with:
 
 - fixed scan-based evaluation,
 - schema-driven configuration,
@@ -780,14 +780,17 @@ Release gate:
 Create and maintain:
 
 - `docs/INDEX.md`
-- `docs/acceptance-matrix-v2.md`
-- `docs/schema-v2.md`
+- `docs/acceptance-matrix-v3.md`
+- `docs/schema-v3.md`
 - `docs/dependency-topology-rules.md`
-- `docs/acceptance-matrix-v2.md`
-- `docs/schema-v2.md`
+- `docs/acceptance-matrix-v3.md`
+- `docs/schema-v3.md`
 - `docs/dependency-topology-rules.md`
-- `docs/timing-budget-v2.md`
-- `docs/fault-policy-v2.md`
-- `docs/api-contract-v2.md`
+- `docs/timing-budget-v3.md`
+- `docs/fault-policy-v3.md`
+- `docs/api-contract-v3.md`
 - `docs/decisions.md`
-- `docs/hardware-profile-v2.md`
+- `docs/hardware-profile-v3.md`
+
+
+

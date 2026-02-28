@@ -344,3 +344,4 @@ Create a phased hardening backlog with three tracks:
 - Test + CI + security track
 
 This allows gradual evolution from PoC to product-grade firmware without freezing feature progress.
+

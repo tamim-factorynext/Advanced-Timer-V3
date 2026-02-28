@@ -1,7 +1,7 @@
-# Acceptance Matrix V2
+# Acceptance Matrix V3
 
 Date: 2026-02-26
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
 Status: Draft for implementation kickoff
 
 ## 1. Scope And Gate
@@ -127,3 +127,6 @@ These tests are defined as acceptance placeholders and should be finalized when 
 >>>>>>> 942d78b3b5ec7d4412087cf2f719218ac79c5519
 >>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
 >>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
+
+
+

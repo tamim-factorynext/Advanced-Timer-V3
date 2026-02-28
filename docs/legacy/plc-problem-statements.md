@@ -49,3 +49,4 @@ A wastewater lift station has two pumps (duty/standby), 4-20 mA wet-well level a
 
 ### Required Functionality
 Run one lead pump under normal load and automatically alternate lead assignment after each completed high-level event to balance wear. If inflow exceeds single-pump capacity (rising level/pressure trend), start the second pump as assist. On thermal overload or trip of one pump, transfer duty to the remaining healthy pump and alarm the fault. Enforce high-high overflow alarm and low-low protection. If hazardous gas alarm is active, force ventilation and block non-essential operations according to safety policy. Latch critical faults for remote telemetry and require controlled reset/recovery logic to prevent unsafe automatic restart.
+

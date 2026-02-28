@@ -1,6 +1,8 @@
 # Worklog
 
-Status: Canonical consolidated session log for V2 documentation and implementation tracking.
+Status: Canonical consolidated session log for rewrite documentation and implementation tracking.
+
+Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
 ## 2026-02-26
 
@@ -10,7 +12,7 @@ Today we converted planning into implementation-grade documentation for V2.
 
 ### Completed
 
-- Updated `requirements-v2-contract.md` with final decisions:
+- Updated `requirements-v3-contract.md` with final decisions:
   - MATH uses arithmetic operators only (no comparison operators).
   - RTC switched to field-based schedule (`year/month/day/hour/minute/second/weekday`) with wildcard semantics.
   - RTC uses `triggerDuration` for asserted output window.
@@ -24,32 +26,32 @@ Today we converted planning into implementation-grade documentation for V2.
     - `FACTORY`
 
 - Created/updated docs:
-  - `docs/schema-v2.md` (schema draft aligned with above decisions)
-  - `docs/acceptance-matrix-v2.md` (acceptance coverage expanded)
-  - `docs/poc-gap-log-v2.md` (PoC->V2 gap tracking updated)
-  - `docs/api-contract-v2.md` (new, payload-level API freeze draft)
+  - `docs/schema-v3.md` (schema draft aligned with above decisions)
+  - `docs/acceptance-matrix-v3.md` (acceptance coverage expanded)
+  - `docs/poc-gap-log-v3.md` (PoC->V3 gap tracking updated)
+  - `docs/api-contract-v3.md` (new, payload-level API freeze draft)
 
 - Gap status:
   - GAP-005 resolved (STATE condition model)
   - GAP-006 resolved (`emaAlpha` frozen to centiunits `0..100` for `0.00..1.00`)
   - GAP-008 resolved (restore sources frozen to `LKG|FACTORY`)
-  - GAP-007 drafted as resolved via `docs/api-contract-v2.md`
+  - GAP-007 drafted as resolved via `docs/api-contract-v3.md`
 
 ### Current Blocker
 
 - Unresolved merge markers exist in:
-  - `docs/acceptance-matrix-v2.md` (lines around 112-116)
+  - `docs/acceptance-matrix-v3.md` (lines around 112-116)
 - This must be cleaned first before further edits.
 
 ### Exact Start Plan For Next Session
 
-1. Resolve merge markers in `docs/acceptance-matrix-v2.md`.
+1. Resolve merge markers in `docs/acceptance-matrix-v3.md`.
 2. Re-run consistency pass across:
-   - `requirements-v2-contract.md`
-   - `docs/schema-v2.md`
-   - `docs/api-contract-v2.md`
-   - `docs/poc-gap-log-v2.md`
-   - `docs/acceptance-matrix-v2.md`
+   - `requirements-v3-contract.md`
+   - `docs/schema-v3.md`
+   - `docs/api-contract-v3.md`
+   - `docs/poc-gap-log-v3.md`
+   - `docs/acceptance-matrix-v3.md`
 3. Confirm final gap table status (all intended gaps closed, or explicitly deferred).
 4. Start implementation phase:
    - validator rules (`V-CFG-*`)
@@ -75,7 +77,7 @@ Established a minimal "vibe-safe" documentation workflow and aligned V2 docs wit
   - Workflow rules for contract-first changes.
   - `DEC-0001` documenting `lastEvalUs` as per-card evaluation timing metric.
 
-- Updated `docs/api-contract-v2.md`:
+- Updated `docs/api-contract-v3.md`:
   - Added `docs/decisions.md` in related docs.
   - Clarified `lastEvalUs` semantics:
     - microsecond unit
@@ -84,9 +86,9 @@ Established a minimal "vibe-safe" documentation workflow and aligned V2 docs wit
 
 - Updated process docs:
   - `README.md` Section 18.4 now requires decision-log updates for behavior/API/validation changes.
-  - `requirements-v2-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
+  - `requirements-v3-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
 
-- Cleaned unresolved merge markers in `docs/acceptance-matrix-v2.md`.
+- Cleaned unresolved merge markers in `docs/acceptance-matrix-v3.md`.
 
 ### Next Session Starting Point
 
@@ -108,22 +110,22 @@ Added V2 hardware-profile gating contract so build targets can define available 
   - AI backend selection
   - optional IO pin list macros
 
-- Added `docs/hardware-profile-v2.md`:
+- Added `docs/hardware-profile-v3.md`:
   - build-time hardware profile model
   - empty-array semantics for unavailable IO families
   - RTC gating rules
   - backend abstraction contract
   - plugin boundary for remote/protocol-specific IO
 
-- Updated `requirements-v2-contract.md`:
+- Updated `requirements-v3-contract.md`:
   - Added Section `6.4 Build-Time Hardware Profile Contract`
-  - Added `docs/hardware-profile-v2.md` to required artifacts
+  - Added `docs/hardware-profile-v3.md` to required artifacts
 
-- Updated `docs/schema-v2.md`:
+- Updated `docs/schema-v3.md`:
   - Linked hardware profile contract
   - Added validation IDs `V-CFG-017..019` for profile gates/capacity/RTC support
 
-- Updated `docs/acceptance-matrix-v2.md`:
+- Updated `docs/acceptance-matrix-v3.md`:
   - Added hardware-profile acceptance tests `AT-HW-001..004`
 
 ## 2026-02-28 (Capacity Model Clarification)
@@ -134,20 +136,21 @@ Finalized the family-capacity model: every card family (physical and virtual) is
 
 ### Completed
 
-- Updated `docs/hardware-profile-v2.md`:
+- Updated `docs/hardware-profile-v3.md`:
   - Added explicit compile-time capacities per family.
   - Clarified RTC as schedule-based alarm channel capacity (`0..N` by profile/hardware design).
   - Clarified that all families can be `0` and are profile-optional.
 
-- Updated `requirements-v2-contract.md`:
+- Updated `requirements-v3-contract.md`:
   - Added compile-time capacity language in hardware profile requirements.
   - Clarified RTC section with alarm-channel capacity gating.
 
-- Updated `docs/schema-v2.md`:
+- Updated `docs/schema-v3.md`:
   - Added compile-time family-capacity statement for all families.
 
-- Updated `docs/acceptance-matrix-v2.md`:
+- Updated `docs/acceptance-matrix-v3.md`:
   - Added `AT-HW-007` for RTC alarm-capacity enforcement.
 
 - Updated `docs/decisions.md`:
   - Added `DEC-0002` to record this capacity-model decision.
+

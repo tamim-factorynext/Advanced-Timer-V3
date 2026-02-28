@@ -1,18 +1,18 @@
-# API Contract V2
+# API Contract V3
 
 <<<<<<< HEAD
 Date: 2026-02-28
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
-Related: `docs/schema-v2.md`, `docs/acceptance-matrix-v2.md`, `docs/decisions.md`
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
+Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/decisions.md`
 =======
 <<<<<<< HEAD
 Date: 2026-02-28
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
-Related: `docs/schema-v2.md`, `docs/acceptance-matrix-v2.md`, `docs/decisions.md`
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
+Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/decisions.md`
 =======
 Date: 2026-02-26
-Source Contract: `requirements-v2-contract.md` (v2.0.0-draft)
-Related: `docs/schema-v2.md`, `docs/acceptance-matrix-v2.md`
+Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
+Related: `docs/schema-v3.md`, `docs/acceptance-matrix-v3.md`
 >>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
 >>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
 Status: Frozen for implementation
@@ -31,7 +31,7 @@ This document freezes transport-level payloads for runtime snapshots, runtime co
 ## 3. Versioning
 
 - API payloads use `apiVersion` (current: `2.0`).
-- Config payloads embedded in API requests/responses use `schemaVersion` from `docs/schema-v2.md` (current: `2.0.0`).
+- Config payloads embedded in API requests/responses use `schemaVersion` from `docs/schema-v3.md` (current: `2.0.0`).
 - Unknown fields in responses/events must be ignored by clients for forward compatibility.
 
 ## 4. Common Metadata
@@ -344,13 +344,13 @@ Rules:
 
 ## 8. Compatibility Rules
 
-- `RUN_SLOW` is not a valid V2 run mode and must be rejected by validation.
+- `RUN_SLOW` is not a valid V3 run mode and must be rejected by validation.
 - Clients must tolerate additional fields in responses/events.
 - Servers may reject unknown command names with `INVALID_REQUEST`.
 
 ## 9. Security Interaction
 
-- Protected endpoints/commands require role-based authorization per `requirements-v2-contract.md` Section 16.
+- Protected endpoints/commands require role-based authorization per `requirements-v3-contract.md` Section 16.
 - Unauthorized authn state returns `UNAUTHORIZED`.
 - Authenticated but insufficient role returns `FORBIDDEN`.
 
@@ -370,3 +370,6 @@ Rules:
 - `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
 >>>>>>> f49a5102eca0203e62e2f8f14683426ceca22683
 >>>>>>> 549b1e14679d699bc6e73313db0fe34b58c71af1
+
+
+

@@ -173,3 +173,4 @@ Priority order:
 ## Immediate Next Action
 
 Execute Phase 0 Task 1 in this repository: create `docs/acceptance-matrix.md` and derive test cases directly from the existing contract before any deep refactor.
+

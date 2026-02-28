@@ -1,19 +1,19 @@
 # Configuration Portal Implementation Contract
 
 Version: 1.1
-Status: Frozen PoC Contract (Legacy Baseline)
-Applies to: AdvancedTimer PoC firmware and portal integration baseline
+Status: Frozen V2 PoC Contract (Legacy Baseline)
+Applies to: AdvancedTimer V2 PoC firmware and portal integration baseline
 
 ## Contract Scope Notice (February 28, 2026)
 
-- `README.md` is frozen as the contract for the PoC codebase.
-- Production-hardened firmware work is V2 and is being built from scratch (not incremental patching of PoC behavior/comments).
-- Active source-of-truth for V2 planning/implementation:
+- `README.md` is frozen as the contract for the V2 PoC codebase.
+- Production-hardened firmware work is V3 and is being built from scratch (not incremental patching of PoC behavior/comments).
+- Active source-of-truth for V3 planning/implementation:
   - `docs/INDEX.md`
-  - `requirements-v2-contract.md`
-  - `docs/schema-v2.md`
-  - `docs/api-contract-v2.md`
-  - `docs/acceptance-matrix-v2.md`
+  - `requirements-v3-contract.md`
+  - `docs/schema-v3.md`
+  - `docs/api-contract-v3.md`
+  - `docs/acceptance-matrix-v3.md`
   - `docs/decisions.md`
 
 ## End-of-Day Update (February 25, 2026)
@@ -644,15 +644,15 @@ Status legend:
 
 ### 18.1 Master Source-of-Truth Rule
 
-`README.md` is the frozen primary contract for PoC portal + kernel integration behavior.
+`README.md` is the frozen primary contract for V2 PoC portal + kernel integration behavior.
 
-For production-hardened V2 rewrite work, `requirements-v2-contract.md` and the `docs/*-v2.md` set are authoritative.
+For production-hardened V3 rewrite work, `requirements-v3-contract.md` and the `docs/*-v3.md` set are authoritative.
 
 Rules:
 - PoC behavior changes (if any) MUST be reflected here first (or in the same change set).
-- V2 rewrite behavior/API/schema changes MUST be reflected in V2 docs and decision log first.
+- V3 rewrite behavior/API/schema changes MUST be reflected in V3 docs and decision log first.
 - Firmware comments in `main.cpp` are implementation notes, not primary authority.
-- If `main.cpp` comments and this file conflict for PoC, this file is authoritative until reconciled.
+- If `main.cpp` comments and this file conflict for V2 PoC, this file is authoritative until reconciled.
 
 ### 18.2 Implementation Checklist (Execution Order)
 
@@ -1239,3 +1239,5 @@ Each config card payload MUST include at minimum:
 - `resetCombine`
 
 Runtime-only fields MUST NOT be required in commit payloads.
+
+
