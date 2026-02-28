@@ -270,3 +270,29 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 - Queue behavior remained stable under stress (`queueHighWaterMark` peaked at `1` of `16`).
 - Command latency telemetry was exercised under stress and remained bounded in this run.
 
+## 2026-02-28 (Phase 1 Skeleton Refactor: Interface-First Start)
+
+### Completed
+
+- Introduced initial layered source skeleton under `src/`:
+  - `src/kernel/`
+  - `src/runtime/`
+  - `src/control/`
+  - `src/storage/`
+  - `src/portal/`
+  - `src/platform/`
+
+- Added interface headers for type extraction (no behavior changes):
+  - `src/kernel/card_model.h` (card model enums + `LogicCard` DTO)
+  - `src/control/command_dto.h` (run/input modes + kernel command DTO)
+  - `src/runtime/shared_snapshot.h` (`SharedRuntimeSnapshotT<N>` DTO)
+
+- Updated `src/main.cpp` to consume extracted interfaces:
+  - removed in-file duplicate type definitions for `LogicCard`, `KernelCommand`, and shared snapshot struct.
+  - retained existing runtime behavior and function logic.
+
+### Notes
+
+- This is a structure-only extraction step aligned with kickoff Phase 1 intent ("interfaces first, no behavior change").
+- Local compile verification remains blocked in this shell because `platformio` / `pio` CLI is not available on PATH.
+

@@ -17,6 +17,10 @@
 #include <WebSocketsServer.h>
 #include <WiFi.h>
 
+#include "control/command_dto.h"
+#include "kernel/card_model.h"
+#include "runtime/shared_snapshot.h"
+
 #include <cctype>
 #include <cstring>
 #include <freertos/FreeRTOS.h>
@@ -36,6 +40,7 @@ const uint8_t NUM_AI = sizeof(AI_Pins) / sizeof(AI_Pins[0]);
 const uint8_t NUM_SIO = sizeof(SIO_Pins) / sizeof(SIO_Pins[0]);
 
 const uint8_t TOTAL_CARDS = NUM_DI + NUM_DO + NUM_AI + NUM_SIO;
+using SharedRuntimeSnapshot = SharedRuntimeSnapshotT<TOTAL_CARDS>;
 
 const uint8_t DI_START = 0;
 const uint8_t DO_START = DI_START + NUM_DI;
@@ -122,21 +127,6 @@ const uint32_t USER_WIFI_TIMEOUT_MS = 180000;
   X(Combine_None)       \
   X(Combine_AND)        \
   X(Combine_OR)
-
-#define as_enum(name) name,
-enum logicCardType { LIST_CARD_TYPES(as_enum) };
-enum logicOperator { LIST_OPERATORS(as_enum) };
-enum cardMode { LIST_MODES(as_enum) };
-enum cardState { LIST_STATES(as_enum) };
-enum combineMode { LIST_COMBINE(as_enum) };
-enum runMode { RUN_NORMAL, RUN_STEP, RUN_BREAKPOINT, RUN_SLOW };
-enum inputSourceMode {
-  InputSource_Real,
-  InputSource_ForcedHigh,
-  InputSource_ForcedLow,
-  InputSource_ForcedValue
-};
-#undef as_enum
 
 #define ENUM_TO_STRING_CASE(name) \
   case name:                      \
@@ -282,103 +272,6 @@ combineMode parseOrDefault(const char* s, combineMode fallback) {
 #undef ENUM_TO_STRING_CASE
 #undef ENUM_TRY_PARSE_IF
 
-struct LogicCard {
-  // Global unique card ID used by set/reset reference and lookup.
-  uint8_t id;
-  // Type family of the card (DI, DO, AI, SIO).
-  logicCardType type;
-  // Position index within its family (e.g. DI0=0, DI1=1, DO0=0, SIO2=2).
-  uint8_t index;
-  // Hardware pin number for physical cards (255 for virtual SoftIO).
-  uint8_t hwPin;
-
-  // Active Low / Inverted Polarity flag.
-  bool invert;
-
-  // DI: debounce duration for DI
-  // DO/SIO: delay before output turns ON
-  // For DO/SIO 0 means stay in delay phase until reset
-  // AI: input minimum (raw ADC/sensor lower bound)
-  uint32_t setting1;
-  // DI: reserved for future use
-  // DO/SIO: ON duration (time to keep output ON before turning OFF)
-  // For DO/SIO 0 means stay ON until reset
-  // AI: input maximum (raw ADC/sensor upper bound)
-  uint32_t setting2;
-  // DI: reserved for future use
-  // DO/SIO: repeat count (0 = infinite, 1 = single pulse, N = N full cycles)
-  // AI: EMA alpha in range 0.0..1.0 (stored internally as 0..1000)
-  uint32_t setting3;
-
-  // DI: qualified logical state after debounce/qualification when setCondition
-  // is true DO/SIO: mission latch indicating active cycle (set on trigger,
-  // cleared on completion/reset)
-  // AI: unused placeholder in this phase
-  bool logicalState;
-  // DI: physical input state after polarity adjustment not considering
-  // set/reset conditions DO/SIO: effective output state considering timing and
-  // mission state
-  // AI: unused placeholder in this phase
-  bool physicalState;
-  // DI: edge-triggered one cycle pulse generated when logicalState transitions
-  // to true DO/SIO: one cycle pulse generated on setCondition rising edge to
-  // trigger mission start
-  // AI: unused placeholder in this phase
-  bool triggerFlag;
-
-  // DI: event counter incremented on each qualified edge when setCondition is
-  // true DO/SIO: cycle counter incremented on each physical rising edge to
-  // track repeat cycles Reset to 0 on when reset condition is met for DI/DO/SIO
-  // AI: EMA accumulator and filtered output storage
-  uint32_t currentValue;
-  // DI: timestamp of last qualified edge for debounce timing
-  // DO/SIO: timestamp when current delay-before-ON phase started
-  // AI: output minimum (scaled physical lower bound)
-  uint32_t startOnMs;
-  // DI: timestamp of last qualified edge for debounce timing
-  // DO/SIO: timestamp when current ON-duration phase started
-  // AI: output maximum (scaled physical upper bound)
-  uint32_t startOffMs;
-  // DI: unused for now, reserved for future use (e.g. long-press tracking)
-  // DO/SIO: counts completed cycles for repeat logic to determine when to
-  // finish
-  // AI: unused placeholder in this phase
-  uint32_t repeatCounter;
-
-  // DI: edge/debounce mode (rising, falling, change)
-  // DO/SIO: execution mode switch for timing semantics
-  // (DO_Normal/DO_Immediate/DO_Gated) Legacy mode values are deprecated and
-  // kept for schema compatibility only.
-  // AI: placeholder mode tag (Mode_AI_Continuous), no runtime effect yet
-  cardMode mode;
-  // DI: filtering lifecycle state (Idle, Filtering, Qualified, Inhibited)
-  // DO/SIO: phase state (Idle, OnDelay, Active, Finished)
-  // OnDelay = delay-before-ON, Active = output ON duration
-  // AI: placeholder state tag (State_AI_Streaming), no phase machine
-  cardState state;
-
-  // SET Group
-  uint8_t setA_ID;
-  logicOperator setA_Operator;
-  uint32_t setA_Threshold;
-
-  uint8_t setB_ID;
-  logicOperator setB_Operator;
-  uint32_t setB_Threshold;
-
-  combineMode setCombine;
-
-  // RESET Group
-  uint8_t resetA_ID;
-  logicOperator resetA_Operator;
-  uint32_t resetA_Threshold;
-
-  uint8_t resetB_ID;
-  logicOperator resetB_Operator;
-  uint32_t resetB_Threshold;
-
-  combineMode resetCombine;
-};
 LogicCard logicCards[TOTAL_CARDS] = {};
 bool gPrevSetCondition[TOTAL_CARDS] = {};
 bool gPrevDISample[TOTAL_CARDS] = {};
@@ -387,35 +280,6 @@ bool gCardSetResult[TOTAL_CARDS] = {};
 bool gCardResetResult[TOTAL_CARDS] = {};
 bool gCardResetOverride[TOTAL_CARDS] = {};
 uint32_t gCardEvalCounter[TOTAL_CARDS] = {};
-
-struct SharedRuntimeSnapshot {
-  uint32_t seq;
-  uint32_t tsMs;
-  uint32_t lastCompleteScanUs;
-  uint32_t maxCompleteScanUs;
-  uint32_t scanBudgetUs;
-  uint32_t scanOverrunCount;
-  bool scanOverrunLast;
-  uint16_t kernelQueueDepth;
-  uint16_t kernelQueueHighWaterMark;
-  uint16_t kernelQueueCapacity;
-  uint32_t commandLatencyLastUs;
-  uint32_t commandLatencyMaxUs;
-  runMode mode;
-  bool testModeActive;
-  bool globalOutputMask;
-  bool breakpointPaused;
-  uint16_t scanCursor;
-  LogicCard cards[TOTAL_CARDS];
-  inputSourceMode inputSource[TOTAL_CARDS];
-  uint32_t forcedAIValue[TOTAL_CARDS];
-  bool outputMaskLocal[TOTAL_CARDS];
-  bool breakpointEnabled[TOTAL_CARDS];
-  bool setResult[TOTAL_CARDS];
-  bool resetResult[TOTAL_CARDS];
-  bool resetOverride[TOTAL_CARDS];
-  uint32_t evalCounter[TOTAL_CARDS];
-};
 
 QueueHandle_t gKernelCommandQueue = nullptr;
 TaskHandle_t gCore0TaskHandle = nullptr;
@@ -505,26 +369,6 @@ void writeConfigErrorResponse(int statusCode, const char* code,
                               const String& message);
 bool loadPortalSettingsFromLittleFS();
 bool savePortalSettingsToLittleFS();
-
-enum kernelCommandType {
-  KernelCmd_SetRunMode,
-  KernelCmd_StepOnce,
-  KernelCmd_SetBreakpoint,
-  KernelCmd_SetTestMode,
-  KernelCmd_SetInputForce,
-  KernelCmd_SetOutputMask,
-  KernelCmd_SetOutputMaskGlobal
-};
-
-struct KernelCommand {
-  kernelCommandType type;
-  uint8_t cardId;
-  bool flag;
-  uint32_t value;
-  uint32_t enqueuedUs;
-  runMode mode;
-  inputSourceMode inputMode;
-};
 
 void serializeCardToJson(const LogicCard& card, JsonObject& json) {
   json["id"] = card.id;
