@@ -32,6 +32,5 @@ bool normalizeConfigRequestWithLayout(
     JsonObjectConst root, const V3CardLayout& layout, const char* apiVersion,
     const char* schemaVersion, const LogicCard* baselineCards,
     size_t baselineCount, JsonDocument& normalizedDoc, JsonArrayConst& outCards,
-    String& reason, const char*& outErrorCode, bool& usedLegacyBridge,
-    V3RtcScheduleChannel* rtcOut, size_t rtcOutCount);
-
+    String& reason, const char*& outErrorCode, V3RtcScheduleChannel* rtcOut,
+    size_t rtcOutCount);

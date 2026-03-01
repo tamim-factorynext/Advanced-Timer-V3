@@ -211,3 +211,13 @@ Use one short entry per decision with this structure:
 - Impact: Preserves runtime behavior while enabling further decomposition from monolithic `main.cpp`.
 - References: `src/storage/v3_normalizer.h`, `src/storage/v3_normalizer.cpp`, `src/main.cpp`, `src/storage/README.md`.
 
+## DEC-0019: Frontend Rebuild Strategy Uses Fresh V3 Portal Baseline
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Portal UI currently reflects legacy-era structure, while backend contracts are being finalized around V3 semantics and legacy bridge removal.
+- Decision: Rebuild frontend from a fresh baseline (Bootstrap + icon system + palette/theme options) after backend reaches stable V3-only config/runtime API checkpoint, instead of incrementally patching legacy UI screens.
+- Impact: Keeps frontend aligned with V3 contract-first model and avoids carrying legacy UX/DOM constraints into new portal.
+- Impact: Reduces long-term maintenance burden by introducing one coherent theme/token system at start of new UI work.
+- Impact: Requires explicit parity checklist before retiring old portal routes/pages.
+- References: `src/portal/README.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/worklog.md`.
+

@@ -53,16 +53,11 @@ void serializeLegacyCardToJson(const LogicCard& card, JsonObject& json) {
   } else {
     json["setting3"] = card.setting3;
   }
-
-  json["logicalState"] = card.logicalState;
-  json["physicalState"] = card.physicalState;
-  json["triggerFlag"] = card.triggerFlag;
-  json["currentValue"] = card.currentValue;
-  json["startOnMs"] = card.startOnMs;
-  json["startOffMs"] = card.startOffMs;
-  json["repeatCounter"] = card.repeatCounter;
   json["mode"] = toString(card.mode);
-  json["state"] = toString(card.state);
+  if (card.type == AnalogInput || card.type == MathCard) {
+    json["startOnMs"] = card.startOnMs;
+    json["startOffMs"] = card.startOffMs;
+  }
 
   json["setA_ID"] = card.setA_ID;
   json["setA_Operator"] = toString(card.setA_Operator);
@@ -86,9 +81,8 @@ bool normalizeConfigRequestWithLayout(
     JsonObjectConst root, const V3CardLayout& layout, const char* apiVersion,
     const char* schemaVersion, const LogicCard* baselineCards,
     size_t baselineCount, JsonDocument& normalizedDoc, JsonArrayConst& outCards,
-    String& reason, const char*& outErrorCode, bool& usedLegacyBridge,
-    V3RtcScheduleChannel* rtcOut, size_t rtcOutCount) {
-  usedLegacyBridge = false;
+    String& reason, const char*& outErrorCode, V3RtcScheduleChannel* rtcOut,
+    size_t rtcOutCount) {
   outErrorCode = "VALIDATION_FAILED";
   const char* requestId = root["requestId"] | "";
   const char* reqApiVersion = root["apiVersion"].as<const char*>();
@@ -134,17 +128,9 @@ bool normalizeConfigRequestWithLayout(
   }
 
   if (hasLegacyCardsShape(inputCards)) {
-    usedLegacyBridge = true;
-    JsonObject outConfig = normalizedDoc["config"].to<JsonObject>();
-    JsonArray out = outConfig["cards"].to<JsonArray>();
-    for (JsonVariantConst v : inputCards) {
-      out.add(v);
-    }
-    outCards = out;
-    JsonObject meta = normalizedDoc["bridge"].to<JsonObject>();
-    meta["usedLegacyCardsBridge"] = true;
-    meta["bridgeVersion"] = 1;
-    return true;
+    reason = "legacy cards payload is no longer supported; send V3 cardType/cardId cards";
+    outErrorCode = "INVALID_REQUEST";
+    return false;
   }
 
   if (!hasV3CardsShape(inputCards)) {
@@ -269,9 +255,5 @@ bool normalizeConfigRequestWithLayout(
     serializeLegacyCardToJson(mapped[i], node);
   }
   outCards = out;
-
-  JsonObject meta = normalizedDoc["bridge"].to<JsonObject>();
-  meta["usedLegacyCardsBridge"] = false;
-  meta["bridgeVersion"] = 1;
   return true;
 }

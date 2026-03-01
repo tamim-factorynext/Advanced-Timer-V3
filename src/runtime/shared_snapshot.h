@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "control/command_dto.h"
-#include "kernel/card_model.h"
+#include "runtime/runtime_snapshot_card.h"
 
 template <size_t N>
 struct SharedRuntimeSnapshotT {
@@ -29,7 +29,7 @@ struct SharedRuntimeSnapshotT {
   bool globalOutputMask;
   bool breakpointPaused;
   uint16_t scanCursor;
-  LogicCard cards[N];
+  RuntimeSnapshotCard cards[N];
   inputSourceMode inputSource[N];
   uint32_t forcedAIValue[N];
   bool outputMaskLocal[N];

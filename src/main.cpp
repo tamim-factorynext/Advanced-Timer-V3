@@ -32,13 +32,19 @@
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
+#include "kernel/v3_config_sanitize.h"
 #include "kernel/v3_math_runtime.h"
 #include "kernel/v3_sio_runtime.h"
 #include "kernel/v3_rtc_runtime.h"
+#include "kernel/v3_runtime_adapters.h"
+#include "kernel/v3_runtime_store.h"
+#include "kernel/v3_runtime_signals.h"
 #include "kernel/v3_status_runtime.h"
 #include "kernel/v3_payload_rules.h"
 #include "portal/routes.h"
 #include "runtime/shared_snapshot.h"
+#include "runtime/runtime_card_meta.h"
+#include "runtime/snapshot_card_builder.h"
 #include "runtime/snapshot_json.h"
 #include "storage/config_lifecycle.h"
 #include "storage/v3_normalizer.h"
@@ -101,6 +107,17 @@ const char* kSchemaVersion = "2.0.0";
 #endif
 
 LogicCard logicCards[TOTAL_CARDS] = {};
+V3DiRuntimeState gDiRuntime[NUM_DI] = {};
+V3DoRuntimeState gDoRuntime[NUM_DO] = {};
+V3AiRuntimeState gAiRuntime[NUM_AI] = {};
+V3SioRuntimeState gSioRuntime[NUM_SIO] = {};
+V3MathRuntimeState gMathRuntime[NUM_MATH] = {};
+V3RtcRuntimeState gRtcRuntime[NUM_RTC] = {};
+V3RuntimeStoreView gRuntimeStore = {gDiRuntime, NUM_DI,   gDoRuntime, NUM_DO,
+                                    gAiRuntime, NUM_AI,   gSioRuntime, NUM_SIO,
+                                    gMathRuntime, NUM_MATH, gRtcRuntime, NUM_RTC};
+V3RuntimeSignal gRuntimeSignals[TOTAL_CARDS] = {};
+RuntimeCardMeta gRuntimeCardMeta[TOTAL_CARDS] = {};
 bool gPrevDISample[TOTAL_CARDS] = {};
 bool gPrevDIPrimed[TOTAL_CARDS] = {};
 bool gCardSetResult[TOTAL_CARDS] = {};
@@ -172,18 +189,17 @@ bool connectWiFiWithPolicy();
 bool applyCommand(JsonObjectConst command);
 bool setRtcCardStateCommand(uint8_t cardId, bool state);
 void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq);
-void serializeCardsToArray(const LogicCard* sourceCards, JsonArray& array);
 void initializeCardArraySafeDefaults(LogicCard* cards);
 bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards);
 bool validateConfigCardsArray(JsonArrayConst array, String& reason);
 void serviceRtcMinuteScheduler(uint32_t nowMs);
+void syncRuntimeStateFromCards();
 void writeConfigResultResponse(int statusCode, bool ok, const char* requestId,
                                const char* errorCode, const String& message,
                                JsonObject* extra = nullptr);
 bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
                             JsonArrayConst& outCards, String& reason,
-                            const char*& outErrorCode,
-                            bool& usedLegacyBridge);
+                            const char*& outErrorCode);
 void serializeCardsToV3Array(const LogicCard* sourceCards, JsonArray& cards);
 void buildV3ConfigEnvelope(const LogicCard* sourceCards, JsonDocument& doc,
                            const char* configId, const char* requestId);
@@ -203,16 +219,11 @@ void serializeCardToJson(const LogicCard& card, JsonObject& json) {
     json["setting3"] = card.setting3;
   }
 
-  json["logicalState"] = card.logicalState;
-  json["physicalState"] = card.physicalState;
-  json["triggerFlag"] = card.triggerFlag;
-  json["currentValue"] = card.currentValue;
-  json["startOnMs"] = card.startOnMs;
-  json["startOffMs"] = card.startOffMs;
-  json["repeatCounter"] = card.repeatCounter;
-
   json["mode"] = toString(card.mode);
-  json["state"] = toString(card.state);
+  if (card.type == AnalogInput || card.type == MathCard) {
+    json["startOnMs"] = card.startOnMs;
+    json["startOffMs"] = card.startOffMs;
+  }
 
   json["setA_ID"] = card.setA_ID;
   json["setA_Operator"] = toString(card.setA_Operator);
@@ -264,23 +275,15 @@ void deserializeCardFromJson(JsonVariantConst jsonVariant, LogicCard& card) {
     card.setting3 = json["setting3"] | card.setting3;
   }
 
-  card.logicalState = json["logicalState"] | card.logicalState;
-  card.physicalState = json["physicalState"] | card.physicalState;
-  card.triggerFlag = json["triggerFlag"] | card.triggerFlag;
-  card.currentValue = json["currentValue"] | card.currentValue;
-  card.startOnMs = json["startOnMs"] | card.startOnMs;
-  card.startOffMs = json["startOffMs"] | card.startOffMs;
-  card.repeatCounter = json["repeatCounter"] | card.repeatCounter;
+  if (card.type == AnalogInput || card.type == MathCard) {
+    card.startOnMs = json["startOnMs"] | card.startOnMs;
+    card.startOffMs = json["startOffMs"] | card.startOffMs;
+  }
 
   const char* rawMode = json["mode"].as<const char*>();
   cardMode parsedMode = before.mode;
   bool modeOk = tryParseCardMode(rawMode, parsedMode);
   card.mode = modeOk ? parsedMode : before.mode;
-
-  const char* rawState = json["state"].as<const char*>();
-  cardState parsedState = before.state;
-  bool stateOk = tryParseCardState(rawState, parsedState);
-  card.state = stateOk ? parsedState : before.state;
 
   card.setA_ID = json["setA_ID"] | card.setA_ID;
   const char* rawSetA = json["setA_Operator"].as<const char*>();
@@ -431,6 +434,16 @@ void initializeAllCardsSafeDefaults() {
   for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
     initializeCardSafeDefaults(logicCards[i], i);
   }
+  syncRuntimeStateFromCards();
+  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
+}
+
+void syncRuntimeStateFromCards() {
+  syncRuntimeStoreFromCards(logicCards, TOTAL_CARDS, gRuntimeStore);
+  refreshRuntimeCardMetaFromCards(logicCards, TOTAL_CARDS, gRuntimeCardMeta);
+  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
+    mirrorRuntimeStoreCardToLegacy(logicCards[i], gRuntimeStore);
+  }
 }
 
 bool saveLogicCardsToLittleFS() {
@@ -441,6 +454,8 @@ bool loadLogicCardsFromLittleFS() {
   LogicCard loaded[TOTAL_CARDS];
   if (!loadCardsFromPath(kConfigPath, loaded)) return false;
   memcpy(logicCards, loaded, sizeof(logicCards));
+  syncRuntimeStateFromCards();
+  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
   return true;
 }
 
@@ -466,7 +481,7 @@ void copySharedRuntimeSnapshot(SharedRuntimeSnapshot& outSnapshot) {
 void appendRuntimeSnapshotCard(JsonArray& cards,
                                const SharedRuntimeSnapshot& snapshot,
                                uint8_t cardId) {
-  const LogicCard& card = snapshot.cards[cardId];
+  const RuntimeSnapshotCard& card = snapshot.cards[cardId];
   JsonObject node = cards.add<JsonObject>();
   node["id"] = card.id;
   node["type"] = toString(card.type);
@@ -742,10 +757,8 @@ void handleHttpStagedSaveConfig() {
   JsonDocument normalized;
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
-  bool usedLegacyBridge = false;
   const char* requestId = root["requestId"] | "";
-  if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode,
-                              usedLegacyBridge)) {
+  if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
     writeConfigResultResponse(400, false, requestId, errorCode, reason);
     return;
   }
@@ -759,9 +772,6 @@ void handleHttpStagedSaveConfig() {
 
   JsonDocument stagedDoc;
   buildV3ConfigEnvelope(stagedCards, stagedDoc, "staged", requestId);
-  JsonObject bridge = stagedDoc["bridge"].to<JsonObject>();
-  bridge["usedLegacyCardsBridge"] = usedLegacyBridge;
-  bridge["bridgeVersion"] = 1;
 
   if (!writeJsonToPath(kStagedConfigPath, stagedDoc)) {
     writeConfigResultResponse(500, false, requestId, "COMMIT_FAILED",
@@ -771,7 +781,6 @@ void handleHttpStagedSaveConfig() {
 
   JsonDocument extras;
   extras["stagedVersion"] = "staged";
-  extras["usedLegacyCardsBridge"] = usedLegacyBridge;
   JsonObject extrasObj = extras.as<JsonObject>();
   writeConfigResultResponse(200, true, requestId, nullptr, "", &extrasObj);
 }
@@ -782,7 +791,6 @@ void handleHttpStagedValidateConfig() {
   JsonArrayConst cards;
   String reason;
   const char* requestId = "";
-  bool usedLegacyBridge = false;
 
   if (gPortalServer.hasArg("plain") &&
       gPortalServer.arg("plain").length() > 0) {
@@ -795,8 +803,7 @@ void handleHttpStagedValidateConfig() {
     JsonObjectConst root = source.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode,
-                                usedLegacyBridge)) {
+    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
@@ -810,8 +817,7 @@ void handleHttpStagedValidateConfig() {
     JsonObjectConst root = source.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode,
-                                usedLegacyBridge)) {
+    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
@@ -821,7 +827,6 @@ void handleHttpStagedValidateConfig() {
   JsonObject validation = extras["validation"].to<JsonObject>();
   validation["errors"].to<JsonArray>();
   validation["warnings"].to<JsonArray>();
-  extras["usedLegacyCardsBridge"] = usedLegacyBridge;
   JsonObject extrasObj = extras.as<JsonObject>();
   writeConfigResultResponse(200, true, requestId, nullptr, "", &extrasObj);
 }
@@ -875,7 +880,6 @@ void handleHttpCommitConfig() {
   JsonArrayConst cards;
   String reason;
   const char* requestId = "";
-  bool usedLegacyBridge = false;
   const bool hasInlinePayload =
       gPortalServer.hasArg("plain") && gPortalServer.arg("plain").length() > 0;
 
@@ -889,8 +893,7 @@ void handleHttpCommitConfig() {
     JsonObjectConst root = sourceDoc.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode,
-                                usedLegacyBridge)) {
+    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
@@ -904,8 +907,7 @@ void handleHttpCommitConfig() {
     JsonObjectConst root = sourceDoc.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode,
-                                usedLegacyBridge)) {
+    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
@@ -921,7 +923,6 @@ void handleHttpCommitConfig() {
   JsonObject head = extras["historyHead"].to<JsonObject>();
   writeHistoryHead(head);
   extras["requiresRestart"] = false;
-  extras["usedLegacyCardsBridge"] = usedLegacyBridge;
   JsonObject extrasObj = extras.as<JsonObject>();
   writeConfigResultResponse(200, true, requestId, nullptr, "", &extrasObj);
 }
@@ -1190,13 +1191,6 @@ bool setRunModeCommand(runMode mode) {
     gBreakpointPaused = false;
   }
   return true;
-}
-
-void serializeCardsToArray(const LogicCard* sourceCards, JsonArray& array) {
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    JsonObject obj = array.add<JsonObject>();
-    serializeCardToJson(sourceCards[i], obj);
-  }
 }
 
 const RtcScheduleChannel* findRtcScheduleByCardId(uint8_t cardId) {
@@ -1559,6 +1553,7 @@ bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards) {
     if (!item.is<JsonObjectConst>()) return false;
     deserializeCardFromJson(item, outCards[i]);
   }
+  sanitizeConfigCardsRuntimeFields(outCards, TOTAL_CARDS);
   return true;
 }
 
@@ -1646,6 +1641,14 @@ bool validateConfigCardsArray(JsonArrayConst array, String& reason) {
     }
     return true;
   };
+  auto rejectFieldIfPresent = [&](JsonObjectConst card, const char* fieldName,
+                                  const char* label) -> bool {
+    if (!card[fieldName].isUnbound()) {
+      reason = String(label) + " is runtime-only and not allowed in config";
+      return false;
+    }
+    return true;
+  };
 
   bool seenId[TOTAL_CARDS] = {};
   logicCardType typeById[TOTAL_CARDS] = {};
@@ -1719,8 +1722,26 @@ bool validateConfigCardsArray(JsonArrayConst array, String& reason) {
     if (!ensureNonNegativeField(card, "setting1", "setting1")) return false;
     if (!ensureNonNegativeField(card, "setting2", "setting2")) return false;
     if (!ensureNonNegativeField(card, "setting3", "setting3")) return false;
-    if (!ensureNonNegativeField(card, "startOnMs", "startOnMs")) return false;
-    if (!ensureNonNegativeField(card, "startOffMs", "startOffMs")) return false;
+    if (!rejectFieldIfPresent(card, "logicalState", "logicalState")) return false;
+    if (!rejectFieldIfPresent(card, "physicalState", "physicalState")) return false;
+    if (!rejectFieldIfPresent(card, "triggerFlag", "triggerFlag")) return false;
+    if (!rejectFieldIfPresent(card, "currentValue", "currentValue")) return false;
+    if (!rejectFieldIfPresent(card, "repeatCounter", "repeatCounter")) return false;
+    if (!rejectFieldIfPresent(card, "state", "state")) return false;
+
+    if (typeById[id] == AnalogInput || typeById[id] == MathCard) {
+      if (!ensureNonNegativeField(card, "startOnMs", "startOnMs")) return false;
+      if (!ensureNonNegativeField(card, "startOffMs", "startOffMs")) return false;
+    } else {
+      if (!card["startOnMs"].isUnbound()) {
+        reason = "startOnMs is only allowed for AI/MATH cards";
+        return false;
+      }
+      if (!card["startOffMs"].isUnbound()) {
+        reason = "startOffMs is only allowed for AI/MATH cards";
+        return false;
+      }
+    }
     if (!ensureNonNegativeField(card, "setA_Threshold", "setA_Threshold"))
       return false;
     if (!ensureNonNegativeField(card, "setB_Threshold", "setB_Threshold"))
@@ -1848,9 +1869,8 @@ bool loadCardsFromPath(const char* path, LogicCard* outCards) {
   JsonArrayConst cards;
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
-  bool usedLegacyBridge = false;
-  if (!normalizeConfigRequest(doc.as<JsonObjectConst>(), normalized, cards, reason,
-                              errorCode, usedLegacyBridge)) {
+  if (!normalizeConfigRequest(doc.as<JsonObjectConst>(), normalized, cards,
+                              reason, errorCode)) {
     return false;
   }
   return deserializeCardsFromArray(cards, outCards);
@@ -1912,6 +1932,8 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
     return false;
   }
   memcpy(logicCards, newCards, sizeof(logicCards));
+  syncRuntimeStateFromCards();
+  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
   memset(gPrevDISample, 0, sizeof(gPrevDISample));
   memset(gPrevDIPrimed, 0, sizeof(gPrevDIPrimed));
   updateSharedRuntimeSnapshot(millis(), false);
@@ -2318,138 +2340,9 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   return false;
 }
 
-bool buildLegacyCardsFromV3Cards(JsonArrayConst v3Cards, JsonDocument& doc,
-                                 JsonArrayConst& outCards, String& reason) {
-  {
-    std::string payloadReason;
-    if (!validateV3PayloadConditionSources(v3Cards, TOTAL_CARDS, DO_START,
-                                           AI_START, SIO_START, MATH_START,
-                                           RTC_START, payloadReason)) {
-      reason = payloadReason.c_str();
-      return false;
-    }
-  }
-
-  LogicCard mapped[TOTAL_CARDS];
-  V3CardConfig typedCards[TOTAL_CARDS] = {};
-  initializeCardArraySafeDefaults(mapped);
-  bool seen[TOTAL_CARDS] = {};
-  logicCardType sourceTypeById[TOTAL_CARDS] = {};
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    sourceTypeById[i] = expectedTypeForCardId(i);
-  }
-
-  for (JsonVariantConst v : v3Cards) {
-    if (!v.is<JsonObjectConst>()) {
-      reason = "cards[] item is not object";
-      return false;
-    }
-    JsonObjectConst card = v.as<JsonObjectConst>();
-    const uint8_t cardId = card["cardId"] | 255;
-    if (cardId >= TOTAL_CARDS) {
-      reason = "cardId out of range";
-      return false;
-    }
-    logicCardType parsedType = DigitalInput;
-    if (!parseV3CardTypeToken(card["cardType"] | "", parsedType)) {
-      reason = "invalid cardType";
-      return false;
-    }
-    const logicCardType expectedType = expectedTypeForCardId(cardId);
-    if (parsedType != expectedType) {
-      reason = "cardType does not match cardId family slot";
-      return false;
-    }
-    sourceTypeById[cardId] = parsedType;
-  }
-
-  for (JsonVariantConst v : v3Cards) {
-    if (!v.is<JsonObjectConst>()) {
-      reason = "cards[] item is not object";
-      return false;
-    }
-    JsonObjectConst card = v.as<JsonObjectConst>();
-    const uint8_t cardId = card["cardId"] | 255;
-    if (cardId >= TOTAL_CARDS) {
-      reason = "cardId out of range";
-      return false;
-    }
-    if (seen[cardId]) {
-      reason = "duplicate cardId";
-      return false;
-    }
-    seen[cardId] = true;
-    if (!card["config"].is<JsonObjectConst>()) {
-      reason = "missing card config";
-      return false;
-    }
-    if (!parseV3CardToTyped(card, sourceTypeById, typedCards[cardId], reason))
-      return false;
-  }
-
-  for (uint8_t id = 0; id < TOTAL_CARDS; ++id) {
-    if (!seen[id]) continue;
-    if (!v3CardConfigToLegacy(typedCards[id], mapped[id])) {
-      reason = "failed to convert typed card to runtime card";
-      return false;
-    }
-    if (typedCards[id].family == V3CardFamily::RTC) {
-      const int slot = static_cast<int>(id) - static_cast<int>(RTC_START);
-      if (slot >= 0 && slot < NUM_RTC_SCHED_CHANNELS) {
-        gRtcScheduleChannels[slot].enabled = true;
-        gRtcScheduleChannels[slot].year =
-            typedCards[id].rtc.hasYear ? static_cast<int16_t>(typedCards[id].rtc.year)
-                                       : static_cast<int16_t>(-1);
-        gRtcScheduleChannels[slot].month = typedCards[id].rtc.hasMonth
-                                               ? static_cast<int8_t>(typedCards[id].rtc.month)
-                                               : static_cast<int8_t>(-1);
-        gRtcScheduleChannels[slot].day = typedCards[id].rtc.hasDay
-                                             ? static_cast<int8_t>(typedCards[id].rtc.day)
-                                             : static_cast<int8_t>(-1);
-        gRtcScheduleChannels[slot].weekday =
-            typedCards[id].rtc.hasWeekday
-                ? static_cast<int8_t>(typedCards[id].rtc.weekday)
-                : static_cast<int8_t>(-1);
-        gRtcScheduleChannels[slot].hour =
-            static_cast<int8_t>(typedCards[id].rtc.hour);
-        gRtcScheduleChannels[slot].minute =
-            static_cast<int8_t>(typedCards[id].rtc.minute);
-        gRtcScheduleChannels[slot].rtcCardId = id;
-      }
-    }
-  }
-
-  JsonObject normalized = doc["config"].to<JsonObject>();
-  JsonArray cards = normalized["cards"].to<JsonArray>();
-  serializeCardsToArray(mapped, cards);
-  outCards = cards;
-  return true;
-}
-
-bool hasLegacyCardsShape(JsonArrayConst cards) {
-  for (JsonVariantConst v : cards) {
-    if (!v.is<JsonObjectConst>()) continue;
-    JsonObjectConst o = v.as<JsonObjectConst>();
-    if (o["id"].is<uint64_t>() || o["type"].is<const char*>()) return true;
-    break;
-  }
-  return false;
-}
-
-bool hasV3CardsShape(JsonArrayConst cards) {
-  for (JsonVariantConst v : cards) {
-    if (!v.is<JsonObjectConst>()) continue;
-    JsonObjectConst o = v.as<JsonObjectConst>();
-    if (o["cardId"].is<uint64_t>() || o["cardType"].is<const char*>()) return true;
-    break;
-  }
-  return false;
-}
-
 bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
                             JsonArrayConst& outCards, String& reason,
-                            const char*& outErrorCode,
-                            bool& usedLegacyBridge) {
+                            const char*& outErrorCode) {
   V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                          SIO_START,  MATH_START, RTC_START};
   LogicCard baseline[TOTAL_CARDS];
@@ -2458,24 +2351,20 @@ bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
 
   if (!normalizeConfigRequestWithLayout(
           root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-          normalizedDoc, outCards, reason, outErrorCode, usedLegacyBridge,
-          rtcOut, NUM_RTC_SCHED_CHANNELS)) {
+          normalizedDoc, outCards, reason, outErrorCode, rtcOut,
+          NUM_RTC_SCHED_CHANNELS)) {
     return false;
   }
 
-  if (!usedLegacyBridge) {
-    for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
-      gRtcScheduleChannels[i].enabled = rtcOut[i].enabled;
-      gRtcScheduleChannels[i].year = rtcOut[i].year;
-      gRtcScheduleChannels[i].month = rtcOut[i].month;
-      gRtcScheduleChannels[i].day = rtcOut[i].day;
-      gRtcScheduleChannels[i].weekday = rtcOut[i].weekday;
-      gRtcScheduleChannels[i].hour = rtcOut[i].hour;
-      gRtcScheduleChannels[i].minute = rtcOut[i].minute;
-      gRtcScheduleChannels[i].rtcCardId = rtcOut[i].rtcCardId;
-    }
-  } else {
-    Serial.println("Config bridge: accepted legacy cards payload");
+  for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
+    gRtcScheduleChannels[i].enabled = rtcOut[i].enabled;
+    gRtcScheduleChannels[i].year = rtcOut[i].year;
+    gRtcScheduleChannels[i].month = rtcOut[i].month;
+    gRtcScheduleChannels[i].day = rtcOut[i].day;
+    gRtcScheduleChannels[i].weekday = rtcOut[i].weekday;
+    gRtcScheduleChannels[i].hour = rtcOut[i].hour;
+    gRtcScheduleChannels[i].minute = rtcOut[i].minute;
+    gRtcScheduleChannels[i].rtcCardId = rtcOut[i].rtcCardId;
   }
 
   if (!validateConfigCardsArray(outCards, reason)) {
@@ -2600,18 +2489,22 @@ bool setRtcCardStateCommand(uint8_t cardId, bool state) {
   if (cardId >= TOTAL_CARDS) return false;
   LogicCard& card = logicCards[cardId];
   if (card.type != RtcCard) return false;
+  V3RtcRuntimeState* runtime = runtimeRtcStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return false;
 
-  card.logicalState = state;
-  card.physicalState = state;
-  card.triggerFlag = state;  // one-minute assertion edge for condition logic
-  card.currentValue = state ? 1 : 0;
+  runtime->logicalState = state;
+  runtime->physicalState = state;
+  runtime->triggerFlag = state;  // one-minute assertion edge for condition logic
+  runtime->currentValue = state ? 1U : 0U;
   if (state) {
-    card.startOnMs = millis();
+    runtime->triggerStartMs = millis();
   }
   if (!state) {
-    card.triggerFlag = false;
-    card.startOnMs = 0;
+    runtime->triggerFlag = false;
+    runtime->triggerStartMs = 0;
   }
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  refreshRuntimeSignalAt(logicCards, gRuntimeSignals, TOTAL_CARDS, cardId);
   return true;
 }
 
@@ -2692,7 +2585,8 @@ void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq) {
   gSharedSnapshot.globalOutputMask = gGlobalOutputMask;
   gSharedSnapshot.breakpointPaused = gBreakpointPaused;
   gSharedSnapshot.scanCursor = gScanCursor;
-  memcpy(gSharedSnapshot.cards, logicCards, sizeof(logicCards));
+  buildRuntimeSnapshotCards(gRuntimeCardMeta, TOTAL_CARDS, gRuntimeStore,
+                            gSharedSnapshot.cards);
   memcpy(gSharedSnapshot.inputSource, gCardInputSource,
          sizeof(gCardInputSource));
   memcpy(gSharedSnapshot.forcedAIValue, gCardForcedAIValue,
@@ -2715,11 +2609,7 @@ uint8_t scanOrderCardIdFromCursor(uint16_t cursor) {
   return static_cast<uint8_t>((TOTAL_CARDS == 0) ? 0 : (cursor % TOTAL_CARDS));
 }
 
-bool isDoRunningState(cardState state) {
-  return state == State_DO_OnDelay || state == State_DO_Active;
-}
-
-bool evalOperator(const LogicCard& target, logicOperator op,
+bool evalOperator(const V3RuntimeSignal& target, logicOperator op,
                   uint32_t threshold) {
   switch (op) {
     case Op_AlwaysTrue:
@@ -2763,24 +2653,29 @@ bool evalOperator(const LogicCard& target, logicOperator op,
 
 bool evalCondition(uint8_t aId, logicOperator aOp, uint32_t aTh, uint8_t bId,
                    logicOperator bOp, uint32_t bTh, combineMode combine) {
-  const LogicCard* aCard = getCardById(aId);
-  bool aResult = (aCard != nullptr) ? evalOperator(*aCard, aOp, aTh) : false;
+  const V3RuntimeSignal* aSignal = (aId < TOTAL_CARDS) ? &gRuntimeSignals[aId] : nullptr;
+  bool aResult =
+      (aSignal != nullptr) ? evalOperator(*aSignal, aOp, aTh) : false;
   if (combine == Combine_None) return aResult;
 
-  const LogicCard* bCard = getCardById(bId);
-  bool bResult = (bCard != nullptr) ? evalOperator(*bCard, bOp, bTh) : false;
+  const V3RuntimeSignal* bSignal = (bId < TOTAL_CARDS) ? &gRuntimeSignals[bId] : nullptr;
+  bool bResult =
+      (bSignal != nullptr) ? evalOperator(*bSignal, bOp, bTh) : false;
 
   if (combine == Combine_AND) return aResult && bResult;
   if (combine == Combine_OR) return aResult || bResult;
   return false;
 }
 
-void processDICard(LogicCard& card, uint32_t nowMs) {
+void processDICard(uint8_t cardId, uint32_t nowMs) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3DiRuntimeState* runtime = runtimeDiStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+
   bool sample = false;
   inputSourceMode sourceMode = InputSource_Real;
-  if (card.id < TOTAL_CARDS) {
-    sourceMode = gCardInputSource[card.id];
-  }
+  sourceMode = gCardInputSource[cardId];
 
   if (sourceMode == InputSource_ForcedHigh) {
     sample = true;
@@ -2799,92 +2694,54 @@ void processDICard(LogicCard& card, uint32_t nowMs) {
                     card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
                     card.resetCombine);
 
-  V3DiRuntimeConfig cfg = {};
-  cfg.debounceTimeMs = card.setting1;
-  cfg.edgeMode = card.mode;
-
-  V3DiRuntimeState runtime = {};
-  runtime.logicalState = card.logicalState;
-  runtime.physicalState = card.physicalState;
-  runtime.triggerFlag = card.triggerFlag;
-  runtime.currentValue = card.currentValue;
-  runtime.startOnMs = card.startOnMs;
-  runtime.startOffMs = card.startOffMs;
-  runtime.repeatCounter = card.repeatCounter;
-  runtime.state = card.state;
+  V3DiRuntimeConfig cfg = makeDiRuntimeConfig(card);
 
   V3DiStepInput in = {};
   in.nowMs = nowMs;
   in.sample = sample;
   in.setCondition = setCondition;
   in.resetCondition = resetCondition;
-  if (card.id < TOTAL_CARDS) {
-    in.prevSample = gPrevDISample[card.id];
-    in.prevSampleValid = gPrevDIPrimed[card.id];
-  } else {
-    in.prevSample = sample;
-    in.prevSampleValid = false;
-  }
+  in.prevSample = gPrevDISample[cardId];
+  in.prevSampleValid = gPrevDIPrimed[cardId];
 
   V3DiStepOutput out = {};
-  runV3DiStep(cfg, runtime, in, out);
+  runV3DiStep(cfg, *runtime, in, out);
 
-  card.logicalState = runtime.logicalState;
-  card.physicalState = runtime.physicalState;
-  card.triggerFlag = runtime.triggerFlag;
-  card.currentValue = runtime.currentValue;
-  card.startOnMs = runtime.startOnMs;
-  card.startOffMs = runtime.startOffMs;
-  card.repeatCounter = runtime.repeatCounter;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 
-  if (card.id < TOTAL_CARDS) {
-    gPrevDISample[card.id] = out.nextPrevSample;
-    gPrevDIPrimed[card.id] = out.nextPrevSampleValid;
-    gCardSetResult[card.id] = out.setResult;
-    gCardResetResult[card.id] = out.resetResult;
-    gCardResetOverride[card.id] = out.resetOverride;
-  }
+  gPrevDISample[cardId] = out.nextPrevSample;
+  gPrevDIPrimed[cardId] = out.nextPrevSampleValid;
+  gCardSetResult[cardId] = out.setResult;
+  gCardResetResult[cardId] = out.resetResult;
+  gCardResetOverride[cardId] = out.resetOverride;
 }
 
-void processAICard(LogicCard& card) {
-  if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = false;
-    gCardResetResult[card.id] = false;
-    gCardResetOverride[card.id] = false;
-  }
+void processAICard(uint8_t cardId) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3AiRuntimeState* runtime = runtimeAiStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+  gCardSetResult[cardId] = false;
+  gCardResetResult[cardId] = false;
+  gCardResetOverride[cardId] = false;
   uint32_t raw = 0;
   inputSourceMode sourceMode = InputSource_Real;
-  if (card.id < TOTAL_CARDS) {
-    sourceMode = gCardInputSource[card.id];
-  }
+  sourceMode = gCardInputSource[cardId];
 
   if (sourceMode == InputSource_ForcedValue) {
-    raw = gCardForcedAIValue[card.id];
+    raw = gCardForcedAIValue[cardId];
   } else if (card.hwPin != 255) {
     raw = static_cast<uint32_t>(analogRead(card.hwPin));
   }
 
-  V3AiRuntimeConfig cfg = {};
-  cfg.inputMin = card.setting1;
-  cfg.inputMax = card.setting2;
-  cfg.outputMin = card.startOnMs;
-  cfg.outputMax = card.startOffMs;
-  cfg.emaAlphaX1000 = card.setting3;
-
-  V3AiRuntimeState runtime = {};
-  runtime.currentValue = card.currentValue;
-  runtime.mode = card.mode;
-  runtime.state = card.state;
+  V3AiRuntimeConfig cfg = makeAiRuntimeConfig(card);
 
   V3AiStepInput in = {};
   in.rawSample = raw;
 
-  runV3AiStep(cfg, runtime, in);
+  runV3AiStep(cfg, *runtime, in);
 
-  card.currentValue = runtime.currentValue;
-  card.mode = runtime.mode;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 }
 
 void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
@@ -2895,7 +2752,12 @@ void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
   digitalWrite(card.hwPin, level ? HIGH : LOW);
 }
 
-void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
+void processDOCard(uint8_t cardId, uint32_t nowMs, bool driveHardware) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3DoRuntimeState* runtime = runtimeDoStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+
   const bool setCondition = evalCondition(
       card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
       card.setB_Operator, card.setB_Threshold, card.setCombine);
@@ -2903,27 +2765,11 @@ void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
       evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
                     card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
                     card.resetCombine);
-  if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = setCondition;
-    gCardResetResult[card.id] = resetCondition;
-    gCardResetOverride[card.id] = setCondition && resetCondition;
-  }
+  gCardSetResult[cardId] = setCondition;
+  gCardResetResult[cardId] = resetCondition;
+  gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3DoRuntimeConfig cfg = {};
-  cfg.mode = card.mode;
-  cfg.delayBeforeOnMs = card.setting1;
-  cfg.onDurationMs = card.setting2;
-  cfg.repeatCount = card.setting3;
-
-  V3DoRuntimeState runtime = {};
-  runtime.logicalState = card.logicalState;
-  runtime.physicalState = card.physicalState;
-  runtime.triggerFlag = card.triggerFlag;
-  runtime.currentValue = card.currentValue;
-  runtime.startOnMs = card.startOnMs;
-  runtime.startOffMs = card.startOffMs;
-  runtime.repeatCounter = card.repeatCounter;
-  runtime.state = card.state;
+  V3DoRuntimeConfig cfg = makeDoRuntimeConfig(card);
 
   V3DoStepInput in = {};
   in.nowMs = nowMs;
@@ -2931,22 +2777,20 @@ void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
   in.resetCondition = resetCondition;
 
   V3DoStepOutput out = {};
-  runV3DoStep(cfg, runtime, in, out);
+  runV3DoStep(cfg, *runtime, in, out);
 
-  card.logicalState = runtime.logicalState;
-  card.physicalState = runtime.physicalState;
-  card.triggerFlag = runtime.triggerFlag;
-  card.currentValue = runtime.currentValue;
-  card.startOnMs = runtime.startOnMs;
-  card.startOffMs = runtime.startOffMs;
-  card.repeatCounter = runtime.repeatCounter;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 
   driveDOHardware(card, driveHardware, out.effectiveOutput,
-                  isOutputMasked(card.id));
+                  isOutputMasked(cardId));
 }
 
-void processSIOCard(LogicCard& card, uint32_t nowMs) {
+void processSIOCard(uint8_t cardId, uint32_t nowMs) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3SioRuntimeState* runtime = runtimeSioStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+
   const bool setCondition = evalCondition(
       card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
       card.setB_Operator, card.setB_Threshold, card.setCombine);
@@ -2954,27 +2798,11 @@ void processSIOCard(LogicCard& card, uint32_t nowMs) {
       evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
                     card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
                     card.resetCombine);
-  if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = setCondition;
-    gCardResetResult[card.id] = resetCondition;
-    gCardResetOverride[card.id] = setCondition && resetCondition;
-  }
+  gCardSetResult[cardId] = setCondition;
+  gCardResetResult[cardId] = resetCondition;
+  gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3SioRuntimeConfig cfg = {};
-  cfg.mode = card.mode;
-  cfg.delayBeforeOnMs = card.setting1;
-  cfg.onDurationMs = card.setting2;
-  cfg.repeatCount = card.setting3;
-
-  V3SioRuntimeState runtime = {};
-  runtime.logicalState = card.logicalState;
-  runtime.physicalState = card.physicalState;
-  runtime.triggerFlag = card.triggerFlag;
-  runtime.currentValue = card.currentValue;
-  runtime.startOnMs = card.startOnMs;
-  runtime.startOffMs = card.startOffMs;
-  runtime.repeatCounter = card.repeatCounter;
-  runtime.state = card.state;
+  V3SioRuntimeConfig cfg = makeSioRuntimeConfig(card);
 
   V3SioStepInput in = {};
   in.nowMs = nowMs;
@@ -2982,19 +2810,17 @@ void processSIOCard(LogicCard& card, uint32_t nowMs) {
   in.resetCondition = resetCondition;
 
   V3SioStepOutput out = {};
-  runV3SioStep(cfg, runtime, in, out);
+  runV3SioStep(cfg, *runtime, in, out);
 
-  card.logicalState = runtime.logicalState;
-  card.physicalState = runtime.physicalState;
-  card.triggerFlag = runtime.triggerFlag;
-  card.currentValue = runtime.currentValue;
-  card.startOnMs = runtime.startOnMs;
-  card.startOffMs = runtime.startOffMs;
-  card.repeatCounter = runtime.repeatCounter;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 }
 
-void processMathCard(LogicCard& card) {
+void processMathCard(uint8_t cardId) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3MathRuntimeState* runtime = runtimeMathStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+
   const bool setCondition = evalCondition(
       card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
       card.setB_Operator, card.setB_Threshold, card.setCombine);
@@ -3002,95 +2828,62 @@ void processMathCard(LogicCard& card) {
       evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
                     card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
                     card.resetCombine);
-  if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = setCondition;
-    gCardResetResult[card.id] = resetCondition;
-    gCardResetOverride[card.id] = setCondition && resetCondition;
-  }
+  gCardSetResult[cardId] = setCondition;
+  gCardResetResult[cardId] = resetCondition;
+  gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3MathRuntimeConfig cfg = {};
-  cfg.inputA = card.setting1;
-  cfg.inputB = card.setting2;
-  cfg.fallbackValue = card.setting3;
-  cfg.clampMin = card.startOnMs;
-  cfg.clampMax = card.startOffMs;
-  cfg.clampEnabled = (card.startOffMs >= card.startOnMs);
-
-  V3MathRuntimeState runtime = {};
-  runtime.logicalState = card.logicalState;
-  runtime.physicalState = card.physicalState;
-  runtime.triggerFlag = card.triggerFlag;
-  runtime.currentValue = card.currentValue;
-  runtime.state = card.state;
+  V3MathRuntimeConfig cfg = makeMathRuntimeConfig(card);
 
   V3MathStepInput in = {};
   in.setCondition = setCondition;
   in.resetCondition = resetCondition;
 
   V3MathStepOutput out = {};
-  runV3MathStep(cfg, runtime, in, out);
+  runV3MathStep(cfg, *runtime, in, out);
 
-  card.logicalState = runtime.logicalState;
-  card.physicalState = runtime.physicalState;
-  card.triggerFlag = runtime.triggerFlag;
-  card.currentValue = runtime.currentValue;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 }
 
-void processRtcCard(LogicCard& card, uint32_t nowMs) {
-  if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = false;
-    gCardResetResult[card.id] = false;
-    gCardResetOverride[card.id] = false;
-  }
+void processRtcCard(uint8_t cardId, uint32_t nowMs) {
+  if (cardId >= TOTAL_CARDS) return;
+  LogicCard& card = logicCards[cardId];
+  V3RtcRuntimeState* runtime = runtimeRtcStateForCard(card, gRuntimeStore);
+  if (runtime == nullptr) return;
+  gCardSetResult[cardId] = false;
+  gCardResetResult[cardId] = false;
+  gCardResetOverride[cardId] = false;
 
-  V3RtcRuntimeConfig cfg = {};
-  cfg.triggerDurationMs = card.setting1;
-
-  V3RtcRuntimeState runtime = {};
-  runtime.logicalState = card.logicalState;
-  runtime.physicalState = card.physicalState;
-  runtime.triggerFlag = card.triggerFlag;
-  runtime.currentValue = card.currentValue;
-  runtime.triggerStartMs = card.startOnMs;
-  runtime.mode = card.mode;
-  runtime.state = card.state;
+  V3RtcRuntimeConfig cfg = makeRtcRuntimeConfig(card);
 
   V3RtcStepInput in = {};
   in.nowMs = nowMs;
 
-  runV3RtcStep(cfg, runtime, in);
+  runV3RtcStep(cfg, *runtime, in);
 
-  card.logicalState = runtime.logicalState;
-  card.physicalState = runtime.physicalState;
-  card.triggerFlag = runtime.triggerFlag;
-  card.currentValue = runtime.currentValue;
-  card.startOnMs = runtime.triggerStartMs;
-  card.mode = runtime.mode;
-  card.state = runtime.state;
+  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 }
 
 void processCardById(uint8_t cardId, uint32_t nowMs) {
   if (cardId >= TOTAL_CARDS) return;
-  LogicCard& card = logicCards[cardId];
+  const LogicCard& card = logicCards[cardId];
   switch (card.type) {
     case DigitalInput:
-      processDICard(card, nowMs);
+      processDICard(cardId, nowMs);
       return;
     case AnalogInput:
-      processAICard(card);
+      processAICard(cardId);
       return;
     case SoftIO:
-      processSIOCard(card, nowMs);
+      processSIOCard(cardId, nowMs);
       return;
     case DigitalOutput:
-      processDOCard(card, nowMs, true);
+      processDOCard(cardId, nowMs, true);
       return;
     case MathCard:
-      processMathCard(card);
+      processMathCard(cardId);
       return;
     case RtcCard:
-      processRtcCard(card, nowMs);
+      processRtcCard(cardId, nowMs);
       return;
     default:
       return;
@@ -3100,6 +2893,7 @@ void processCardById(uint8_t cardId, uint32_t nowMs) {
 void processOneScanOrderedCard(uint32_t nowMs, bool honorBreakpoints) {
   uint8_t cardId = scanOrderCardIdFromCursor(gScanCursor);
   processCardById(cardId, nowMs);
+  refreshRuntimeSignalAt(logicCards, gRuntimeSignals, TOTAL_CARDS, cardId);
   gCardEvalCounter[cardId] += 1;
 
   gScanCursor = static_cast<uint16_t>((gScanCursor + 1) % TOTAL_CARDS);

@@ -1106,3 +1106,329 @@ Completed operator/status cleanup after AI extraction by replacing DO-only missi
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (V3 Runtime Slice 17: LogicCard Access Isolation via Runtime Adapters)
+
+### Session Summary
+
+Started explicit step-by-step phase-out of direct `LogicCard` usage by isolating legacy-field mapping to one adapter module and updating all runtime callsites to consume typed family DTOs through that boundary.
+
+### Completed
+
+- Added runtime adapter boundary module:
+  - `src/kernel/v3_runtime_adapters.h`
+  - `src/kernel/v3_runtime_adapters.cpp`
+  - provides family-specific mapping helpers for:
+    - `DI`, `AI`, `DO`, `SIO`, `MATH`, `RTC`
+
+- Updated runtime callsites in `src/main.cpp`:
+  - `processDICard(...)`, `processAICard(...)`, `processDOCard(...)`,
+    `processSIOCard(...)`, `processMathCard(...)`, and `processRtcCard(...)`
+    now use adapter helpers instead of manual per-field mapping blocks.
+  - removed remaining local helper duplication tied to direct mapping logic.
+
+- Added adapter acceptance tests:
+  - `test/test_v3_runtime_adapters/test_main.cpp`
+  - coverage includes:
+    - AI config mapping
+    - DO state roundtrip mapping
+    - RTC trigger-duration/start mapping
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_runtime_adapters.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (48/48 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 18: Typed Runtime State Store Ownership)
+
+### Session Summary
+
+Moved per-family mutable runtime state ownership out of `LogicCard` into a typed runtime store (`DI/DO/AI/SIO/MATH/RTC`), while keeping a controlled mirror-back bridge for legacy snapshot/API compatibility.
+
+### Completed
+
+- Added typed runtime store module:
+  - `src/kernel/v3_runtime_store.h`
+  - `src/kernel/v3_runtime_store.cpp`
+  - capabilities:
+    - family/index-safe runtime state lookup
+    - runtime store sync from legacy cards during config lifecycle transitions
+    - legacy mirror function for time-bounded compatibility
+
+- Updated runtime ownership flow in `src/main.cpp`:
+  - added family-typed runtime arrays as state owners:
+    - `gDiRuntime`, `gDoRuntime`, `gAiRuntime`, `gSioRuntime`, `gMathRuntime`, `gRtcRuntime`
+  - added `syncRuntimeStateFromCards()` and invoked it at deterministic transition points:
+    - safe defaults initialization
+    - config load
+    - active config apply
+  - refactored process paths to use typed runtime store as mutation target:
+    - `processDICard(...)`
+    - `processAICard(...)`
+    - `processDOCard(...)`
+    - `processSIOCard(...)`
+    - `processMathCard(...)`
+    - `processRtcCard(...)`
+  - `setRtcCardStateCommand(...)` now updates RTC typed runtime state first, then mirrors back.
+
+- Added native acceptance tests for runtime store:
+  - `test/test_v3_runtime_store/test_main.cpp`
+  - coverage includes:
+    - sync from card array into family stores
+    - mirror from family store back into legacy card state fields
+    - lookup rejection on wrong family or out-of-range index
+
+- Updated kernel inventory:
+  - `src/kernel/README.md` now lists `v3_runtime_store.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (54/54 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 19: Config Sanitization for Runtime-Only Fields)
+
+### Session Summary
+
+Stopped accepting runtime-mutable state from config deserialization so persisted/staged config can no longer rehydrate transient execution state into runtime ownership.
+
+### Completed
+
+- Added config sanitization module:
+  - `src/kernel/v3_config_sanitize.h`
+  - `src/kernel/v3_config_sanitize.cpp`
+  - APIs:
+    - `sanitizeConfigCardRuntimeFields(...)`
+    - `sanitizeConfigCardsRuntimeFields(...)`
+
+- Wired sanitization into config deserialization:
+  - `src/main.cpp`
+  - `deserializeCardsFromArray(...)` now sanitizes all cards after parsing.
+
+- Runtime-only fields now reset from config payloads:
+  - `logicalState`, `physicalState`, `triggerFlag`, `currentValue`, `repeatCounter`
+  - runtime timers/state per family (with family-safe preservation of true config fields like AI/MATH ranges and RTC trigger duration setting).
+
+- Added native acceptance tests:
+  - `test/test_v3_config_sanitize/test_main.cpp`
+  - coverage includes:
+    - DO runtime field clearing
+    - AI config range preservation with runtime reset
+    - RTC runtime trigger-start clearing while preserving config duration
+    - array-wide sanitize behavior
+
+- Updated kernel inventory:
+  - `src/kernel/README.md` now lists `v3_config_sanitize.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (58/58 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 20: Legacy Config Contract Drops Runtime Fields)
+
+### Session Summary
+
+Removed runtime-only fields from the legacy card config contract and made validation reject them explicitly, while preserving runtime observability through snapshot payloads.
+
+### Completed
+
+- Tightened legacy config serializer/deserializer in `src/main.cpp`:
+  - `serializeCardToJson(...)` no longer emits runtime-only fields:
+    - `logicalState`, `physicalState`, `triggerFlag`, `currentValue`, `repeatCounter`, `state`
+  - `deserializeCardFromJson(...)` no longer reads runtime-only fields.
+  - `startOnMs/startOffMs` are now emitted/read only for card families where these are true config fields (`AI`, `MATH`).
+
+- Tightened config validation in `src/main.cpp`:
+  - `validateConfigCardsArray(...)` now rejects runtime-only fields in config payloads.
+  - `startOnMs/startOffMs` are accepted only for `AI/MATH`; rejected for other families.
+
+- Runtime snapshot contract remains unchanged:
+  - runtime observability still comes from snapshot serialization (`appendRuntimeSnapshotCard(...)`).
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (58/58 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 21: External Legacy Payload Bridge Removal)
+
+### Session Summary
+
+Removed the remaining external legacy `config.cards` payload acceptance path so HTTP config APIs now require V3 typed card payload shape (`cardId/cardType/config`) only.
+
+### Completed
+
+- Updated shared normalizer:
+  - `src/storage/v3_normalizer.cpp`
+  - `normalizeConfigRequestWithLayout(...)` now rejects legacy-shaped cards payloads with:
+    - `INVALID_REQUEST`
+    - reason: legacy payload is no longer supported.
+
+- Aligned normalizer output card serialization to strict config contract:
+  - removed runtime-only fields from normalizer legacy card JSON projection.
+  - `startOnMs/startOffMs` emitted only for `AI/MATH`.
+
+- Removed stale in-file legacy conversion helpers from `src/main.cpp`:
+  - deleted dead local `buildLegacyCardsFromV3Cards(...)` and shape-detection helpers.
+  - simplified `normalizeConfigRequest(...)` RTC schedule propagation path (no legacy branch logging).
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (58/58 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 22: Bridge Metadata and Flag Removal)
+
+### Session Summary
+
+Removed leftover legacy-bridge flags/metadata from normalizer signatures and API responses so config flow is now V3-only without compatibility toggles.
+
+### Completed
+
+- Removed `usedLegacyBridge` from config normalization interfaces:
+  - `src/storage/v3_normalizer.h`
+  - `src/storage/v3_normalizer.cpp`
+  - `src/main.cpp`
+
+- Removed bridge metadata emission:
+  - dropped `bridge.usedLegacyCardsBridge` and `bridge.bridgeVersion` in normalizer output.
+  - dropped `usedLegacyCardsBridge` from staged/validate/commit API extras.
+
+- Simplified `main.cpp` config handlers:
+  - `handleHttpStagedSaveConfig(...)`
+  - `handleHttpStagedValidateConfig(...)`
+  - `handleHttpCommitConfig(...)`
+  - `loadCardsFromPath(...)`
+  - `normalizeConfigRequest(...)`
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (58/58 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 23: Typed Snapshot Ownership)
+
+### Session Summary
+
+Removed `LogicCard` from shared runtime snapshot ownership by introducing a dedicated runtime snapshot card DTO populated from typed runtime stores.
+
+### Completed
+
+- Added runtime snapshot card DTO:
+  - `src/runtime/runtime_snapshot_card.h`
+
+- Added snapshot card builder module:
+  - `src/runtime/snapshot_card_builder.h`
+  - `src/runtime/snapshot_card_builder.cpp`
+  - builds per-card snapshot state from typed family runtime stores (`DI/DO/AI/SIO/MATH/RTC`).
+
+- Updated shared snapshot structure:
+  - `src/runtime/shared_snapshot.h`
+  - `SharedRuntimeSnapshotT::cards` now uses `RuntimeSnapshotCard[N]` instead of `LogicCard[N]`.
+
+- Updated snapshot population path in `src/main.cpp`:
+  - `updateSharedRuntimeSnapshot(...)` now uses `buildRuntimeSnapshotCards(...)` instead of memcpy from `logicCards`.
+  - `appendRuntimeSnapshotCard(...)` now consumes `RuntimeSnapshotCard`.
+
+- Added native acceptance tests:
+  - `test/test_v3_snapshot_card_builder/test_main.cpp`
+  - coverage includes:
+    - DO snapshot mapping from typed runtime state
+    - mixed AI/RTC snapshot card generation
+
+- Updated runtime layer inventory:
+  - `src/runtime/README.md` now lists:
+    - `runtime_snapshot_card.h`
+    - `snapshot_card_builder.h`
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (60/60 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 24: Snapshot Publication Decoupled From Live LogicCard Reads)
+
+### Session Summary
+
+Completed the next decoupling step by removing live `LogicCard` reads from snapshot publication. Snapshot cards are now built from runtime metadata + typed runtime store, not from `logicCards` directly.
+
+### Completed
+
+- Added runtime card metadata module:
+  - `src/runtime/runtime_card_meta.h`
+  - `src/runtime/runtime_card_meta.cpp`
+  - provides:
+    - `RuntimeCardMeta`
+    - `refreshRuntimeCardMetaFromCards(...)`
+
+- Extended runtime store with index-based accessors:
+  - `src/kernel/v3_runtime_store.h`
+  - `src/kernel/v3_runtime_store.cpp`
+  - added `runtime*StateAt(index, store)` helpers for all families.
+
+- Refactored snapshot card builder to metadata-based input:
+  - `src/runtime/snapshot_card_builder.h`
+  - `src/runtime/snapshot_card_builder.cpp`
+  - now consumes `RuntimeCardMeta` instead of `LogicCard`.
+
+- Updated runtime snapshot path in `src/main.cpp`:
+  - added `gRuntimeCardMeta[TOTAL_CARDS]`.
+  - metadata is refreshed on config/runtime sync transitions via `syncRuntimeStateFromCards()`.
+  - `updateSharedRuntimeSnapshot(...)` now calls:
+    - `buildRuntimeSnapshotCards(gRuntimeCardMeta, TOTAL_CARDS, gRuntimeStore, ...)`
+
+- Added native acceptance tests:
+  - `test/test_v3_runtime_card_meta/test_main.cpp`
+  - updated `test/test_v3_snapshot_card_builder/test_main.cpp` for metadata-based builder input.
+
+- Updated runtime inventory:
+  - `src/runtime/README.md` now lists `runtime_card_meta.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (62/62 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
