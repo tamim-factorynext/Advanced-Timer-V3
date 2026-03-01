@@ -8,6 +8,7 @@
  *
  * This file should keep only implementation-local comments.
  * Do not duplicate long-form architecture contracts here.
+ * Developed by Yahya Tamim
  **********************************************************************************************/
 
 #include <Arduino.h>
@@ -16,6 +17,11 @@
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+
+#include <cstring>
 
 #include "control/command_dto.h"
 #include "kernel/card_model.h"
@@ -24,11 +30,6 @@
 #include "runtime/shared_snapshot.h"
 #include "runtime/snapshot_json.h"
 #include "storage/config_lifecycle.h"
-
-#include <cstring>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <freertos/task.h>
 
 const uint8_t DI_Pins[] = {13, 12, 14, 27};  // Digital Input pins
 const uint8_t DO_Pins[] = {26, 25, 33, 32};  // Digital Output pins
@@ -272,7 +273,6 @@ void deserializeCardFromJson(JsonVariantConst jsonVariant, LogicCard& card) {
   bool resetCombineOk =
       tryParseCombineMode(rawResetCombine, parsedResetCombine);
   card.resetCombine = resetCombineOk ? parsedResetCombine : before.resetCombine;
-
 }
 
 void initializeCardSafeDefaults(LogicCard& card, uint8_t globalId) {
@@ -309,9 +309,9 @@ void initializeCardSafeDefaults(LogicCard& card, uint8_t globalId) {
     card.index = globalId - DI_START;
     card.hwPin = DI_Pins[card.index];
     // DI defaults: debounced edge input behavior.
-    card.setting1 = 50;   // debounce window
-    card.setting2 = 0;    // reserved
-    card.setting3 = 0;    // reserved
+    card.setting1 = 50;  // debounce window
+    card.setting2 = 0;   // reserved
+    card.setting3 = 0;   // reserved
     card.mode = Mode_DI_Rising;
     card.state = State_DI_Idle;
     return;
@@ -335,10 +335,10 @@ void initializeCardSafeDefaults(LogicCard& card, uint8_t globalId) {
     card.index = globalId - AI_START;
     card.hwPin = AI_Pins[card.index];
     // AI defaults: raw ADC range with moderate smoothing and 0..100.00 output.
-    card.setting1 = 0;      // input minimum
-    card.setting2 = 4095;   // input maximum
-    card.setting3 = 250;    // EMA alpha = 0.25 (stored as 250/1000)
-    card.startOnMs = 0;     // output minimum (centiunits)
+    card.setting1 = 0;        // input minimum
+    card.setting2 = 4095;     // input maximum
+    card.setting3 = 250;      // EMA alpha = 0.25 (stored as 250/1000)
+    card.startOnMs = 0;       // output minimum (centiunits)
     card.startOffMs = 10000;  // output maximum (centiunits)
     card.mode = Mode_AI_Continuous;
     card.state = State_AI_Streaming;
@@ -530,8 +530,9 @@ bool connectWiFiWithPolicy() {
 void handleHttpRoot() {
   File file = LittleFS.open("/index.html", "r");
   if (!file) {
-    gPortalServer.send(404, "text/plain",
-                       "index.html not found in LittleFS (/data upload needed)");
+    gPortalServer.send(
+        404, "text/plain",
+        "index.html not found in LittleFS (/data upload needed)");
     return;
   }
   gPortalServer.streamFile(file, "text/html");
@@ -700,7 +701,8 @@ void handleHttpStagedSaveConfig() {
   }
 
   if (!writeJsonToPath(kStagedConfigPath, request)) {
-    writeConfigErrorResponse(500, "COMMIT_FAILED", "failed to save staged file");
+    writeConfigErrorResponse(500, "COMMIT_FAILED",
+                             "failed to save staged file");
     return;
   }
 
@@ -718,7 +720,8 @@ void handleHttpStagedValidateConfig() {
   JsonArrayConst cards;
   String reason;
 
-  if (gPortalServer.hasArg("plain") && gPortalServer.arg("plain").length() > 0) {
+  if (gPortalServer.hasArg("plain") &&
+      gPortalServer.arg("plain").length() > 0) {
     DeserializationError parseError =
         deserializeJson(request, gPortalServer.arg("plain"));
     if (parseError || !request.is<JsonObjectConst>()) {
@@ -732,7 +735,8 @@ void handleHttpStagedValidateConfig() {
     }
   } else {
     JsonDocument staged;
-    if (!readJsonFromPath(kStagedConfigPath, staged) || !staged.is<JsonObjectConst>()) {
+    if (!readJsonFromPath(kStagedConfigPath, staged) ||
+        !staged.is<JsonObjectConst>()) {
       writeConfigErrorResponse(404, "NOT_FOUND", "no staged config available");
       return;
     }
@@ -862,7 +866,8 @@ void handleHttpRestoreConfig() {
   if (strcmp(source, "SLOT3") == 0) restorePath = kSlot3ConfigPath;
   if (strcmp(source, "FACTORY") == 0) restorePath = kFactoryConfigPath;
   if (restorePath == nullptr) {
-    writeConfigErrorResponse(400, "VALIDATION_FAILED", "invalid restore source");
+    writeConfigErrorResponse(400, "VALIDATION_FAILED",
+                             "invalid restore source");
     return;
   }
   if (!LittleFS.exists(restorePath)) {
@@ -872,7 +877,8 @@ void handleHttpRestoreConfig() {
 
   JsonDocument doc;
   if (!readJsonFromPath(restorePath, doc) || !doc.is<JsonArrayConst>()) {
-    writeConfigErrorResponse(500, "RESTORE_FAILED", "failed to load restore source");
+    writeConfigErrorResponse(500, "RESTORE_FAILED",
+                             "failed to load restore source");
     return;
   }
   JsonArrayConst cards = doc.as<JsonArrayConst>();
@@ -915,7 +921,8 @@ void initPortalServer() {
   gPortalServer.on("/api/settings/wifi", HTTP_POST, handleHttpSaveSettingsWiFi);
   gPortalServer.on("/api/settings/runtime", HTTP_POST,
                    handleHttpSaveSettingsRuntime);
-  gPortalServer.on("/api/settings/reconnect", HTTP_POST, handleHttpReconnectWiFi);
+  gPortalServer.on("/api/settings/reconnect", HTTP_POST,
+                   handleHttpReconnectWiFi);
   gPortalServer.on("/api/settings/reboot", HTTP_POST, handleHttpReboot);
   gPortalServer.on("/favicon.ico", HTTP_GET,
                    []() { gPortalServer.send(204, "text/plain", ""); });
@@ -930,8 +937,8 @@ void handleWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
                           size_t length) {
   if (type == WStype_CONNECTED) {
     IPAddress ip = gWsServer.remoteIP(clientNum);
-    Serial.printf("WS client connected #%u from %u.%u.%u.%u\n", clientNum, ip[0],
-                  ip[1], ip[2], ip[3]);
+    Serial.printf("WS client connected #%u from %u.%u.%u.%u\n", clientNum,
+                  ip[0], ip[1], ip[2], ip[3]);
     return;
   }
   if (type == WStype_DISCONNECTED) {
@@ -941,8 +948,8 @@ void handleWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
   if (type != WStype_TEXT) return;
 
   JsonDocument doc;
-  DeserializationError error = deserializeJson(
-      doc, reinterpret_cast<const char*>(payload), length);
+  DeserializationError error =
+      deserializeJson(doc, reinterpret_cast<const char*>(payload), length);
   if (error || !doc.is<JsonObject>()) {
     gWsServer.sendTXT(clientNum,
                       "{\"type\":\"command_result\",\"ok\":false,"
@@ -1149,9 +1156,8 @@ bool validateConfigCardsArray(JsonArrayConst array, String& reason) {
     return false;
   };
   auto isAlwaysOp = [](const char* op) -> bool {
-    return op != nullptr &&
-           (strcmp(op, "Op_AlwaysTrue") == 0 ||
-            strcmp(op, "Op_AlwaysFalse") == 0);
+    return op != nullptr && (strcmp(op, "Op_AlwaysTrue") == 0 ||
+                             strcmp(op, "Op_AlwaysFalse") == 0);
   };
   auto isNumericOp = [](const char* op) -> bool {
     return op != nullptr &&
@@ -1160,28 +1166,26 @@ bool validateConfigCardsArray(JsonArrayConst array, String& reason) {
             strcmp(op, "Op_GTE") == 0 || strcmp(op, "Op_LTE") == 0);
   };
   auto isStateOp = [](const char* op) -> bool {
-    return op != nullptr &&
-           (strcmp(op, "Op_LogicalTrue") == 0 ||
-            strcmp(op, "Op_LogicalFalse") == 0 ||
-            strcmp(op, "Op_PhysicalOn") == 0 ||
-            strcmp(op, "Op_PhysicalOff") == 0);
+    return op != nullptr && (strcmp(op, "Op_LogicalTrue") == 0 ||
+                             strcmp(op, "Op_LogicalFalse") == 0 ||
+                             strcmp(op, "Op_PhysicalOn") == 0 ||
+                             strcmp(op, "Op_PhysicalOff") == 0);
   };
   auto isTriggerOp = [](const char* op) -> bool {
-    return op != nullptr &&
-           (strcmp(op, "Op_Triggered") == 0 ||
-            strcmp(op, "Op_TriggerCleared") == 0);
+    return op != nullptr && (strcmp(op, "Op_Triggered") == 0 ||
+                             strcmp(op, "Op_TriggerCleared") == 0);
   };
   auto isProcessOp = [](const char* op) -> bool {
     return op != nullptr &&
-           (strcmp(op, "Op_Running") == 0 ||
-            strcmp(op, "Op_Finished") == 0 ||
+           (strcmp(op, "Op_Running") == 0 || strcmp(op, "Op_Finished") == 0 ||
             strcmp(op, "Op_Stopped") == 0);
   };
   auto isOperatorAllowedForTarget = [&](logicCardType targetType,
                                         const char* op) -> bool {
     if (isAlwaysOp(op)) return true;
     if (targetType == AnalogInput) return isNumericOp(op);
-    if (targetType == DigitalInput) return isStateOp(op) || isTriggerOp(op) || isNumericOp(op);
+    if (targetType == DigitalInput)
+      return isStateOp(op) || isTriggerOp(op) || isNumericOp(op);
     if (targetType == DigitalOutput || targetType == SoftIO) {
       return isStateOp(op) || isTriggerOp(op) || isNumericOp(op) ||
              isProcessOp(op);
@@ -1429,8 +1433,8 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
   return true;
 }
 
-bool extractConfigCardsFromRequest(JsonObjectConst root, JsonArrayConst& outCards,
-                                   String& reason) {
+bool extractConfigCardsFromRequest(JsonObjectConst root,
+                                   JsonArrayConst& outCards, String& reason) {
   if (!root["config"].is<JsonObjectConst>()) {
     reason = "missing config object";
     return false;
@@ -1588,7 +1592,8 @@ void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq) {
   gSharedSnapshot.breakpointPaused = gBreakpointPaused;
   gSharedSnapshot.scanCursor = gScanCursor;
   memcpy(gSharedSnapshot.cards, logicCards, sizeof(logicCards));
-  memcpy(gSharedSnapshot.inputSource, gCardInputSource, sizeof(gCardInputSource));
+  memcpy(gSharedSnapshot.inputSource, gCardInputSource,
+         sizeof(gCardInputSource));
   memcpy(gSharedSnapshot.forcedAIValue, gCardForcedAIValue,
          sizeof(gCardForcedAIValue));
   memcpy(gSharedSnapshot.outputMaskLocal, gCardOutputMask,
@@ -1596,10 +1601,12 @@ void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq) {
   memcpy(gSharedSnapshot.breakpointEnabled, gCardBreakpoint,
          sizeof(gCardBreakpoint));
   memcpy(gSharedSnapshot.setResult, gCardSetResult, sizeof(gCardSetResult));
-  memcpy(gSharedSnapshot.resetResult, gCardResetResult, sizeof(gCardResetResult));
+  memcpy(gSharedSnapshot.resetResult, gCardResetResult,
+         sizeof(gCardResetResult));
   memcpy(gSharedSnapshot.resetOverride, gCardResetOverride,
          sizeof(gCardResetOverride));
-  memcpy(gSharedSnapshot.evalCounter, gCardEvalCounter, sizeof(gCardEvalCounter));
+  memcpy(gSharedSnapshot.evalCounter, gCardEvalCounter,
+         sizeof(gCardEvalCounter));
   portEXIT_CRITICAL(&gSnapshotMux);
 }
 
@@ -1950,7 +1957,8 @@ void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
   }
 
   card.physicalState = effectiveOutput;
-  driveDOHardware(card, driveHardware, effectiveOutput, isOutputMasked(card.id));
+  driveDOHardware(card, driveHardware, effectiveOutput,
+                  isOutputMasked(card.id));
 }
 
 void processSIOCard(LogicCard& card, uint32_t nowMs) {
@@ -1983,7 +1991,8 @@ void processOneScanOrderedCard(uint32_t nowMs, bool honorBreakpoints) {
 
   gScanCursor = static_cast<uint16_t>((gScanCursor + 1) % TOTAL_CARDS);
 
-  if (honorBreakpoints && gRunMode == RUN_BREAKPOINT && gCardBreakpoint[cardId]) {
+  if (honorBreakpoints && gRunMode == RUN_BREAKPOINT &&
+      gCardBreakpoint[cardId]) {
     gBreakpointPaused = true;
   }
 }
@@ -2008,8 +2017,8 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
     lastScanMs = nowMs;
   }
 
-  uint32_t scanInterval = (gRunMode == RUN_SLOW) ? SLOW_SCAN_INTERVAL_MS
-                                                 : gScanIntervalMs;
+  uint32_t scanInterval =
+      (gRunMode == RUN_SLOW) ? SLOW_SCAN_INTERVAL_MS : gScanIntervalMs;
   gScanBudgetUs = scanInterval * 1000;
   if ((nowMs - lastScanMs) < scanInterval) {
     updateSharedRuntimeSnapshot(nowMs, false);
@@ -2115,9 +2124,9 @@ void setup() {
     Serial.println("Failed to create kernel command queue");
     return;
   }
-  gKernelQueueCapacity = static_cast<uint16_t>(
-      uxQueueMessagesWaiting(gKernelCommandQueue) +
-      uxQueueSpacesAvailable(gKernelCommandQueue));
+  gKernelQueueCapacity =
+      static_cast<uint16_t>(uxQueueMessagesWaiting(gKernelCommandQueue) +
+                            uxQueueSpacesAvailable(gKernelCommandQueue));
 
   updateSharedRuntimeSnapshot(millis(), false);
 
@@ -2127,9 +2136,7 @@ void setup() {
                           &gCore1TaskHandle, 1);
 }
 
-void loop() {
-  vTaskDelay(pdMS_TO_TICKS(1000));
-}
+void loop() { vTaskDelay(pdMS_TO_TICKS(1000)); }
 
 bool applyCommand(JsonObjectConst command) {
   const char* name = command["name"] | "";
