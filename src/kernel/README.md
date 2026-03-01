@@ -20,3 +20,5 @@ Current interfaces:
 - `v3_payload_rules.h`
 - `v3_card_types.h`
 - `v3_card_bridge.h`
+- `v3_typed_config_rules.h`
+- `v3_typed_card_parser.h`

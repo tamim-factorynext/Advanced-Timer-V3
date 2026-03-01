@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 
 #include "kernel/card_model.h"
+#include "kernel/v3_card_types.h"
 
 struct V3CardLayout {
   uint8_t totalCards;
@@ -33,4 +34,4 @@ bool normalizeConfigRequestWithLayout(
     const char* schemaVersion, const LogicCard* baselineCards,
     size_t baselineCount, JsonDocument& normalizedDoc, JsonArrayConst& outCards,
     String& reason, const char*& outErrorCode, V3RtcScheduleChannel* rtcOut,
-    size_t rtcOutCount);
+    size_t rtcOutCount, V3CardConfig* typedOut, size_t typedOutCount);

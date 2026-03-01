@@ -1432,3 +1432,324 @@ Completed the next decoupling step by removing live `LogicCard` reads from snaps
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (V3 Runtime Slice 25: Runtime Signals Decoupled From LogicCard)
+
+### Session Summary
+
+Removed direct `LogicCard` dependency from runtime signal publication/evaluation inputs. Runtime signals now derive from typed runtime store plus per-card metadata (`RuntimeCardMeta`).
+
+### Completed
+
+- Refactored signal APIs to runtime-owned inputs:
+  - `src/kernel/v3_runtime_signals.h`
+  - `src/kernel/v3_runtime_signals.cpp`
+  - changes:
+    - `makeRuntimeSignal(...)` now consumes `RuntimeCardMeta + V3RuntimeStoreView`.
+    - `refreshRuntimeSignalsFromRuntime(...)` added for full-array refresh.
+    - `refreshRuntimeSignalAt(...)` now updates one signal from metadata + runtime store.
+
+- Updated all runtime callsites in `src/main.cpp`:
+  - initialization/config-load/apply-config now refresh signals via:
+    - `refreshRuntimeSignalsFromRuntime(gRuntimeCardMeta, gRuntimeStore, ...)`
+  - per-card runtime updates now use:
+    - `refreshRuntimeSignalAt(gRuntimeCardMeta, gRuntimeStore, ..., cardId)`
+
+- Updated native unit tests:
+  - `test/test_v3_runtime_signals/test_main.cpp`
+  - tests now validate signal generation from metadata + typed runtime states (no `LogicCard` inputs).
+
+### Evidence
+
+- Verification command availability in this shell:
+  - `platformio`, `pio`, and `python -m platformio` are not installed/resolvable.
+  - Acceptance commands to run in your PlatformIO environment:
+    - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+    - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 26: Typed Config Ownership Through Commit Path)
+
+### Session Summary
+
+Moved config normalization/commit flow one step closer to V3 ownership by carrying typed `V3CardConfig[]` through normalization and using typed-to-legacy bridge only at final runtime apply/persistence boundaries.
+
+### Completed
+
+- Extended normalizer output contract:
+  - `src/storage/v3_normalizer.h`
+  - `src/storage/v3_normalizer.cpp`
+  - `normalizeConfigRequestWithLayout(...)` now returns merged typed cards via `V3CardConfig* typedOut`.
+  - typed output is derived from normalized merged cards (including RTC schedule fields).
+
+- Updated main config pipeline:
+  - `src/main.cpp`
+  - `normalizeConfigRequest(...)` now accepts typed output buffer.
+  - Added `buildLegacyCardsFromTyped(...)` bridge helper.
+  - `handleHttpStagedSaveConfig(...)` now uses typed->legacy bridge instead of deserializing legacy JSON cards.
+  - `handleHttpCommitConfig(...)` now commits from typed cards (`commitCards(const V3CardConfig*)`).
+  - `loadCardsFromPath(...)` now builds runtime cards from typed normalized output.
+  - Kept `commitLegacyCards(JsonArrayConst, ...)` as explicit transitional bridge for legacy restore snapshots.
+
+### Migration Impact
+
+- Reduced active config path dependence on legacy JSON-card reparse (`deserializeCardsFromArray`) after V3 normalization.
+- Preserved deterministic behavior and fallback compatibility for legacy restore source while keeping boundary explicit.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 27: Typed-Only Normalize Contract in Main Pipeline)
+
+### Session Summary
+
+Removed legacy normalized-card array exposure from `main.cpp` normalize path. `normalizeConfigRequest(...)` now returns only typed cards (`V3CardConfig[]`) plus error metadata.
+
+### Completed
+
+- Refactored `normalizeConfigRequest(...)` signature in `src/main.cpp`:
+  - before: returned `JsonDocument` + `JsonArrayConst` + typed cards.
+  - now: returns typed cards only (`V3CardConfig* outTypedCards`) with `reason/errorCode`.
+
+- Updated callsites to typed-only normalize flow:
+  - `handleHttpStagedSaveConfig(...)`
+  - `handleHttpStagedValidateConfig(...)`
+  - `handleHttpCommitConfig(...)`
+  - `loadCardsFromPath(...)`
+  - all now call:
+    - `normalizeConfigRequest(root, reason, errorCode, typedCards)`
+
+- Kept existing legacy validation semantics internally:
+  - `normalizeConfigRequest(...)` still runs `validateConfigCardsArray(...)` against a local normalized cards view, but does not expose that legacy shape to callsites.
+
+### Migration Impact
+
+- Main config pipeline now treats typed cards as the sole normalization output contract.
+- Legacy card array format is further confined to transitional/internal boundaries.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 28: Normalize Uses Typed Validator, Not Legacy Array Validator)
+
+### Session Summary
+
+Completed the next decoupling step in normalization by removing its dependency on `validateConfigCardsArray(...)` and validating only typed cards in the V3 path.
+
+### Completed
+
+- Added typed config validator in `src/main.cpp`:
+  - `validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count, String& reason)`
+  - validates:
+    - fixed `cardId` ordering and family-slot alignment
+    - per-family mode constraints (DI/DO/SIO)
+    - AI ranges and EMA bounds
+    - RTC schedule bounds (month/day/weekday/hour/minute)
+    - condition source IDs and operator compatibility by source family
+
+- Updated `normalizeConfigRequest(...)` to use typed validation:
+  - replaced `validateConfigCardsArray(normalizedCards, reason)` with
+    - `validateTypedCardConfigs(outTypedCards, TOTAL_CARDS, reason)`
+  - keeps legacy validator out of normalize pipeline.
+
+### Migration Impact
+
+- V3 normalize path no longer depends on legacy JSON-card validator semantics.
+- Legacy card-array validator remains only for explicit legacy/transitional paths.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 29: Extract Typed Validator to Kernel Module + Unit Tests)
+
+### Session Summary
+
+Moved typed config validation out of `main.cpp` into a reusable kernel module and added dedicated native tests for it.
+
+### Completed
+
+- Added new kernel validation module:
+  - `src/kernel/v3_typed_config_rules.h`
+  - `src/kernel/v3_typed_config_rules.cpp`
+  - exposes:
+    - `validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count, uint8_t doStart, uint8_t aiStart, uint8_t sioStart, uint8_t mathStart, uint8_t rtcStart, std::string& reason)`
+
+- Refactored `src/main.cpp`:
+  - added include for new module.
+  - removed in-file typed validator implementation.
+  - `normalizeConfigRequest(...)` now calls kernel validator with layout boundaries.
+
+- Added new native test suite:
+  - `test/test_v3_typed_config_rules/test_main.cpp`
+  - coverage includes:
+    - valid typed layout acceptance
+    - family-slot mismatch rejection
+    - mode mismatch rejection (DO)
+    - operator-source-family mismatch rejection
+    - RTC minute bounds rejection
+
+- Updated kernel inventory docs:
+  - `src/kernel/README.md` now lists `v3_typed_config_rules.h`.
+
+### Migration Impact
+
+- Typed validation logic is now reusable, isolated, and testable without `main.cpp` coupling.
+- Keeps migration aligned with contract-first kernel ownership boundaries.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 30: Extract Typed Card Parser to Kernel Module + Unit Tests)
+
+### Session Summary
+
+Moved V3 typed card parsing out of `main.cpp` and into a dedicated kernel module, then rewired normalization to consume the module directly.
+
+### Completed
+
+- Added parser module:
+  - `src/kernel/v3_typed_card_parser.h`
+  - `src/kernel/v3_typed_card_parser.cpp`
+  - exposes:
+    - `parseV3CardToTyped(...)` with explicit layout boundaries (`totalCards`, `doStart`, `aiStart`, `sioStart`, `mathStart`, `rtcStart`)
+  - migrated helper logic from `main.cpp`:
+    - mode mapping (`mapV3ModeToLegacy`)
+    - clause/operator/threshold mapping
+    - condition block mapping
+    - family mapping for typed output
+
+- Rewired normalizer:
+  - `src/storage/v3_normalizer.cpp`
+  - removed `extern` linkage to `main.cpp` parser.
+  - now calls `parseV3CardToTyped(...)` from kernel parser module.
+
+- Cleaned `main.cpp`:
+  - removed in-file typed parse helper block and parser implementation.
+  - kept only config pipeline orchestration and typed-bridge ownership boundaries.
+
+- Added parser unit tests:
+  - `test/test_v3_typed_card_parser/test_main.cpp`
+  - coverage includes:
+    - DI parse success
+    - family slot mismatch rejection
+    - invalid mission-state threshold rejection
+    - RTC parse success
+
+- Updated kernel inventory docs:
+  - `src/kernel/README.md` now lists `v3_typed_card_parser.h`.
+
+### Migration Impact
+
+- Removes another large legacy-oriented parser block from `main.cpp`.
+- Clarifies kernel ownership of typed parsing + typed validation as reusable modules.
+- Keeps normalize path contract-first and module-driven.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 31: Move Normalize Orchestration Out of main.cpp)
+
+### Session Summary
+
+Completed extraction of normalize orchestration from `main.cpp` into a dedicated storage service module, leaving `main.cpp` as callsite orchestration only.
+
+### Completed
+
+- Added config service module:
+  - `src/storage/v3_config_service.h`
+  - `src/storage/v3_config_service.cpp`
+  - exposes:
+    - `normalizeV3ConfigRequestTyped(...)`
+  - responsibilities:
+    - calls `normalizeConfigRequestWithLayout(...)`
+    - runs typed validator (`validateTypedCardConfigs(...)`)
+    - returns typed cards + RTC schedule output for caller apply
+
+- Rewired `main.cpp` callsites (`staged save`, `staged validate`, `commit`, `load`) to use storage service API.
+- Removed old `normalizeConfigRequest(...)` implementation from `main.cpp`.
+- Kept RTC schedule ownership in runtime by adding explicit apply helper:
+  - `applyRtcScheduleChannels(...)`
+
+- Added native service-level tests:
+  - `test/test_v3_config_service/test_main.cpp`
+  - coverage includes:
+    - invalid API version rejection
+    - valid DI/DO payload normalization success
+
+- Updated storage inventory docs:
+  - `src/storage/README.md` now lists `v3_config_service.h`.
+
+### Migration Impact
+
+- Shrinks `main.cpp` config-domain responsibility.
+- Establishes a clearer storage/config service seam for future modularization and testing.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 32: Move Typed->Legacy Build Helper Out of main.cpp)
+
+### Session Summary
+
+Moved typed-to-legacy build logic (`buildLegacyCardsFromTyped`) out of `main.cpp` into storage config service, with explicit baseline preservation semantics.
+
+### Completed
+
+- Extended storage config service API:
+  - `src/storage/v3_config_service.h`
+  - added:
+    - `buildLegacyCardsFromTypedWithBaseline(...)`
+
+- Implemented helper in:
+  - `src/storage/v3_config_service.cpp`
+  - behavior:
+    - starts from caller-provided baseline cards
+    - overlays typed config via `v3CardConfigToLegacy(...)`
+    - sanitizes runtime-only fields via `sanitizeConfigCardsRuntimeFields(...)`
+
+- Rewired `main.cpp` callsites:
+  - staged save conversion path
+  - commit conversion path
+  - load conversion path
+  - all now call service helper with baseline profile.
+
+- Removed old in-file `buildLegacyCardsFromTyped(...)` implementation from `main.cpp`.
+
+- Added service helper test coverage:
+  - `test/test_v3_config_service/test_main.cpp`
+  - new test verifies baseline hardware fields are preserved while typed config fields are mapped.
+
+### Migration Impact
+
+- Further reduces config transformation ownership in `main.cpp`.
+- Consolidates config transformation behavior inside storage service seam.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+

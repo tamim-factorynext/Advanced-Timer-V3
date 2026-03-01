@@ -8,6 +8,7 @@
 #include "kernel/v3_condition_rules.h"
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_payload_rules.h"
+#include "kernel/v3_typed_card_parser.h"
 
 namespace {
 logicCardType expectedTypeForCardId(const V3CardLayout& layout, uint8_t id) {
@@ -82,7 +83,7 @@ bool normalizeConfigRequestWithLayout(
     const char* schemaVersion, const LogicCard* baselineCards,
     size_t baselineCount, JsonDocument& normalizedDoc, JsonArrayConst& outCards,
     String& reason, const char*& outErrorCode, V3RtcScheduleChannel* rtcOut,
-    size_t rtcOutCount) {
+    size_t rtcOutCount, V3CardConfig* typedOut, size_t typedOutCount) {
   outErrorCode = "VALIDATION_FAILED";
   const char* requestId = root["requestId"] | "";
   const char* reqApiVersion = root["apiVersion"].as<const char*>();
@@ -165,6 +166,11 @@ bool normalizeConfigRequestWithLayout(
     outErrorCode = "INTERNAL_ERROR";
     return false;
   }
+  if (typedOut == nullptr || typedOutCount < layout.totalCards) {
+    reason = "typed card output buffer mismatch";
+    outErrorCode = "INTERNAL_ERROR";
+    return false;
+  }
 
   logicCardType sourceTypeById[255] = {};
   for (uint8_t i = 0; i < layout.totalCards; ++i) {
@@ -201,14 +207,13 @@ bool normalizeConfigRequestWithLayout(
     sourceTypeById[cardId] = parsedType;
   }
 
-  extern bool parseV3CardToTyped(JsonObjectConst v3Card,
-                                 const logicCardType* sourceTypeById,
-                                 V3CardConfig& out, String& reason);
-
   for (JsonVariantConst v : inputCards) {
     JsonObjectConst card = v.as<JsonObjectConst>();
     uint8_t cardId = card["cardId"] | 255;
-    if (!parseV3CardToTyped(card, sourceTypeById, typedCards[cardId], reason)) {
+    if (!parseV3CardToTyped(card, sourceTypeById, layout.totalCards,
+                            layout.doStart, layout.aiStart, layout.sioStart,
+                            layout.mathStart, layout.rtcStart,
+                            typedCards[cardId], reason)) {
       outErrorCode = "VALIDATION_FAILED";
       return false;
     }
@@ -253,6 +258,24 @@ bool normalizeConfigRequestWithLayout(
   for (uint8_t i = 0; i < layout.totalCards; ++i) {
     JsonObject node = out.add<JsonObject>();
     serializeLegacyCardToJson(mapped[i], node);
+
+    const int slot = static_cast<int>(i) - static_cast<int>(layout.rtcStart);
+    const V3RtcScheduleChannel* rtc = nullptr;
+    if (slot >= 0 && static_cast<size_t>(slot) < rtcOutCount) {
+      rtc = &rtcOut[slot];
+    }
+    const int16_t rtcYear = (rtc != nullptr) ? rtc->year : -1;
+    const int8_t rtcMonth = (rtc != nullptr) ? rtc->month : -1;
+    const int8_t rtcDay = (rtc != nullptr) ? rtc->day : -1;
+    const int8_t rtcWeekday = (rtc != nullptr) ? rtc->weekday : -1;
+    const int8_t rtcHour = (rtc != nullptr) ? rtc->hour : -1;
+    const int8_t rtcMinute = (rtc != nullptr) ? rtc->minute : -1;
+    if (!legacyToV3CardConfig(mapped[i], rtcYear, rtcMonth, rtcDay, rtcWeekday,
+                              rtcHour, rtcMinute, typedOut[i])) {
+      reason = "failed to convert normalized card to typed card";
+      outErrorCode = "INTERNAL_ERROR";
+      return false;
+    }
   }
   outCards = out;
   return true;

@@ -28,7 +28,6 @@
 #include "kernel/enum_codec.h"
 #include "kernel/v3_card_bridge.h"
 #include "kernel/v3_ai_runtime.h"
-#include "kernel/v3_condition_rules.h"
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
@@ -40,12 +39,12 @@
 #include "kernel/v3_runtime_store.h"
 #include "kernel/v3_runtime_signals.h"
 #include "kernel/v3_status_runtime.h"
-#include "kernel/v3_payload_rules.h"
 #include "portal/routes.h"
 #include "runtime/shared_snapshot.h"
 #include "runtime/runtime_card_meta.h"
 #include "runtime/snapshot_card_builder.h"
 #include "runtime/snapshot_json.h"
+#include "storage/v3_config_service.h"
 #include "storage/config_lifecycle.h"
 #include "storage/v3_normalizer.h"
 
@@ -197,9 +196,8 @@ void syncRuntimeStateFromCards();
 void writeConfigResultResponse(int statusCode, bool ok, const char* requestId,
                                const char* errorCode, const String& message,
                                JsonObject* extra = nullptr);
-bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
-                            JsonArrayConst& outCards, String& reason,
-                            const char*& outErrorCode);
+void applyRtcScheduleChannels(const V3RtcScheduleChannel* rtcOut,
+                              uint8_t rtcCount);
 void serializeCardsToV3Array(const LogicCard* sourceCards, JsonArray& cards);
 void buildV3ConfigEnvelope(const LogicCard* sourceCards, JsonDocument& doc,
                            const char* configId, const char* requestId);
@@ -435,7 +433,8 @@ void initializeAllCardsSafeDefaults() {
     initializeCardSafeDefaults(logicCards[i], i);
   }
   syncRuntimeStateFromCards();
-  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
+  refreshRuntimeSignalsFromRuntime(gRuntimeCardMeta, gRuntimeStore,
+                                   gRuntimeSignals, TOTAL_CARDS);
 }
 
 void syncRuntimeStateFromCards() {
@@ -455,7 +454,8 @@ bool loadLogicCardsFromLittleFS() {
   if (!loadCardsFromPath(kConfigPath, loaded)) return false;
   memcpy(logicCards, loaded, sizeof(logicCards));
   syncRuntimeStateFromCards();
-  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
+  refreshRuntimeSignalsFromRuntime(gRuntimeCardMeta, gRuntimeStore,
+                                   gRuntimeSignals, TOTAL_CARDS);
   return true;
 }
 
@@ -753,20 +753,30 @@ void handleHttpStagedSaveConfig() {
   }
 
   JsonObjectConst root = request.as<JsonObjectConst>();
-  JsonArrayConst cards;
-  JsonDocument normalized;
+  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
   const char* requestId = root["requestId"] | "";
-  if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
+  const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                               SIO_START,  MATH_START, RTC_START};
+  if (!normalizeV3ConfigRequestTyped(
+          root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+          typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
+          errorCode)) {
     writeConfigResultResponse(400, false, requestId, errorCode, reason);
     return;
   }
+  applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
 
   LogicCard stagedCards[TOTAL_CARDS];
-  if (!deserializeCardsFromArray(cards, stagedCards)) {
+  if (!buildLegacyCardsFromTypedWithBaseline(
+          typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, stagedCards,
+          reason)) {
     writeConfigResultResponse(500, false, requestId, "INTERNAL_ERROR",
-                              "failed to normalize staged cards");
+                              reason);
     return;
   }
 
@@ -787,8 +797,10 @@ void handleHttpStagedSaveConfig() {
 
 void handleHttpStagedValidateConfig() {
   JsonDocument source;
-  JsonDocument normalized;
-  JsonArrayConst cards;
+  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* requestId = "";
 
@@ -803,10 +815,16 @@ void handleHttpStagedValidateConfig() {
     JsonObjectConst root = source.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
+    const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                                 SIO_START,  MATH_START, RTC_START};
+    if (!normalizeV3ConfigRequestTyped(
+            root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
+            errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
+    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
   } else {
     if (!readJsonFromPath(kStagedConfigPath, source) ||
         !source.is<JsonObjectConst>()) {
@@ -817,10 +835,16 @@ void handleHttpStagedValidateConfig() {
     JsonObjectConst root = source.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
+    const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                                 SIO_START,  MATH_START, RTC_START};
+    if (!normalizeV3ConfigRequestTyped(
+            root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
+            errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
+    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
   }
 
   JsonDocument extras;
@@ -847,7 +871,36 @@ void writeHistoryHead(JsonObject& head) {
   head["slot3Version"] = gSlot3Version;
 }
 
-bool commitCards(JsonArrayConst cards, String& reason) {
+bool commitCards(const V3CardConfig* typedCards, String& reason) {
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  LogicCard nextCards[TOTAL_CARDS];
+  if (!buildLegacyCardsFromTypedWithBaseline(
+          typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, nextCards, reason)) {
+    return false;
+  }
+
+  if (!rotateHistoryFiles()) {
+    reason = "failed to rotate history slots";
+    return false;
+  }
+
+  if (!saveCardsToPath(kConfigPath, nextCards)) {
+    reason = "failed to persist active config";
+    return false;
+  }
+
+  if (!applyCardsAsActiveConfig(nextCards)) {
+    reason = "failed to apply active config to runtime";
+    return false;
+  }
+
+  gConfigVersionCounter += 1;
+  formatVersion(gActiveVersion, sizeof(gActiveVersion), gConfigVersionCounter);
+  return true;
+}
+
+bool commitLegacyCards(JsonArrayConst cards, String& reason) {
   LogicCard nextCards[TOTAL_CARDS];
   if (!deserializeCardsFromArray(cards, nextCards)) {
     reason = "failed to parse cards";
@@ -876,8 +929,10 @@ bool commitCards(JsonArrayConst cards, String& reason) {
 
 void handleHttpCommitConfig() {
   JsonDocument sourceDoc;
-  JsonDocument normalized;
-  JsonArrayConst cards;
+  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* requestId = "";
   const bool hasInlinePayload =
@@ -893,10 +948,16 @@ void handleHttpCommitConfig() {
     JsonObjectConst root = sourceDoc.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
+    const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                                 SIO_START,  MATH_START, RTC_START};
+    if (!normalizeV3ConfigRequestTyped(
+            root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
+            errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
+    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
   } else {
     if (!readJsonFromPath(kStagedConfigPath, sourceDoc) ||
         !sourceDoc.is<JsonObjectConst>()) {
@@ -907,13 +968,19 @@ void handleHttpCommitConfig() {
     JsonObjectConst root = sourceDoc.as<JsonObjectConst>();
     requestId = root["requestId"] | "";
     const char* errorCode = "VALIDATION_FAILED";
-    if (!normalizeConfigRequest(root, normalized, cards, reason, errorCode)) {
+    const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                                 SIO_START,  MATH_START, RTC_START};
+    if (!normalizeV3ConfigRequestTyped(
+            root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
+            errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
+    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
   }
 
-  if (!commitCards(cards, reason)) {
+  if (!commitCards(typedCards, reason)) {
     writeConfigResultResponse(500, false, requestId, "COMMIT_FAILED", reason);
     return;
   }
@@ -965,7 +1032,7 @@ void handleHttpRestoreConfig() {
     writeConfigErrorResponse(500, "RESTORE_FAILED", reason);
     return;
   }
-  if (!commitCards(cards, reason)) {
+  if (!commitLegacyCards(cards, reason)) {
     writeConfigErrorResponse(500, "RESTORE_FAILED", reason);
     return;
   }
@@ -1865,15 +1932,23 @@ bool loadCardsFromPath(const char* path, LogicCard* outCards) {
     return deserializeCardsFromArray(doc.as<JsonArrayConst>(), outCards);
   }
   if (!doc.is<JsonObjectConst>()) return false;
-  JsonDocument normalized;
-  JsonArrayConst cards;
+  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
-  if (!normalizeConfigRequest(doc.as<JsonObjectConst>(), normalized, cards,
-                              reason, errorCode)) {
+  const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                               SIO_START,  MATH_START, RTC_START};
+  if (!normalizeV3ConfigRequestTyped(
+          doc.as<JsonObjectConst>(), layout, kApiVersion, kSchemaVersion,
+          baseline, TOTAL_CARDS, typedCards, TOTAL_CARDS, rtcOut,
+          NUM_RTC_SCHED_CHANNELS, reason, errorCode)) {
     return false;
   }
-  return deserializeCardsFromArray(cards, outCards);
+  applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+  return buildLegacyCardsFromTypedWithBaseline(
+      typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, outCards, reason);
 }
 
 bool copyFileIfExists(const char* srcPath, const char* dstPath) {
@@ -1933,7 +2008,8 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
   }
   memcpy(logicCards, newCards, sizeof(logicCards));
   syncRuntimeStateFromCards();
-  refreshRuntimeSignalsFromCards(logicCards, gRuntimeSignals, TOTAL_CARDS);
+  refreshRuntimeSignalsFromRuntime(gRuntimeCardMeta, gRuntimeStore,
+                                   gRuntimeSignals, TOTAL_CARDS);
   memset(gPrevDISample, 0, sizeof(gPrevDISample));
   memset(gPrevDIPrimed, 0, sizeof(gPrevDIPrimed));
   updateSharedRuntimeSnapshot(millis(), false);
@@ -1941,422 +2017,11 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
   return true;
 }
 
-logicCardType expectedTypeForCardId(uint8_t id) {
-  if (id < DO_START) return DigitalInput;
-  if (id < AI_START) return DigitalOutput;
-  if (id < SIO_START) return AnalogInput;
-  if (id < MATH_START) return SoftIO;
-  if (id < RTC_START) return MathCard;
-  return RtcCard;
-}
-
-bool mapV3ModeToLegacy(logicCardType type, const char* mode, cardMode& outMode) {
-  if (type == DigitalInput) {
-    if (strcmp(mode, "RISING") == 0) return (outMode = Mode_DI_Rising), true;
-    if (strcmp(mode, "FALLING") == 0) return (outMode = Mode_DI_Falling), true;
-    if (strcmp(mode, "CHANGE") == 0) return (outMode = Mode_DI_Change), true;
-    return false;
-  }
-  if (type == DigitalOutput || type == SoftIO) {
-    if (strcmp(mode, "Normal") == 0) return (outMode = Mode_DO_Normal), true;
-    if (strcmp(mode, "Immediate") == 0) return (outMode = Mode_DO_Immediate), true;
-    if (strcmp(mode, "Gated") == 0) return (outMode = Mode_DO_Gated), true;
-    return false;
-  }
-  if (type == AnalogInput) return (outMode = Mode_AI_Continuous), true;
-  return (outMode = Mode_None), true;
-}
-
-bool parseThresholdAsUInt(JsonVariantConst threshold, uint32_t& out) {
-  if (threshold.is<uint64_t>()) {
-    uint64_t v = threshold.as<uint64_t>();
-    if (v > UINT32_MAX) return false;
-    out = static_cast<uint32_t>(v);
-    return true;
-  }
-  if (threshold.is<int64_t>()) {
-    int64_t v = threshold.as<int64_t>();
-    if (v < 0 || v > static_cast<int64_t>(UINT32_MAX)) return false;
-    out = static_cast<uint32_t>(v);
-    return true;
-  }
-  if (threshold.is<bool>()) {
-    out = threshold.as<bool>() ? 1U : 0U;
-    return true;
-  }
-  return false;
-}
-
-logicOperator mapV3ClauseToLegacyOperator(logicCardType sourceType,
-                                          const char* field, const char* op,
-                                          JsonVariantConst threshold,
-                                          uint32_t& ioThreshold, bool& ok) {
-  ok = true;
-  if (!isV3FieldAllowedForSourceType(sourceType, field) ||
-      !isV3OperatorAllowedForField(field, op)) {
-    ok = false;
-    return Op_AlwaysFalse;
-  }
-
-  if (strcmp(field, "missionState") == 0) {
-    const char* stateName = threshold.as<const char*>();
-    if (strcmp(op, "EQ") != 0 || stateName == nullptr) {
-      ok = false;
-      return Op_AlwaysFalse;
-    }
-    ioThreshold = 0;
-    if (strcmp(stateName, "IDLE") == 0) return Op_Stopped;
-    if (strcmp(stateName, "ACTIVE") == 0) return Op_Running;
-    if (strcmp(stateName, "FINISHED") == 0) return Op_Finished;
-    ok = false;
-    return Op_AlwaysFalse;
-  }
-
-  uint32_t numeric = 0;
-  if (!parseThresholdAsUInt(threshold, numeric)) {
-    ok = false;
-    return Op_AlwaysFalse;
-  }
-  ioThreshold = numeric;
-
-  if (strcmp(field, "logicalState") == 0 || strcmp(field, "physicalState") == 0) {
-    if (strcmp(op, "EQ") == 0) {
-      if (strcmp(field, "logicalState") == 0) {
-        return (numeric != 0) ? Op_LogicalTrue : Op_LogicalFalse;
-      }
-      return (numeric != 0) ? Op_PhysicalOn : Op_PhysicalOff;
-    }
-    if (strcmp(op, "NEQ") == 0) {
-      if (strcmp(field, "logicalState") == 0) {
-        return (numeric != 0) ? Op_LogicalFalse : Op_LogicalTrue;
-      }
-      return (numeric != 0) ? Op_PhysicalOff : Op_PhysicalOn;
-    }
-  }
-
-  if (strcmp(field, "triggerFlag") == 0) {
-    if (strcmp(op, "EQ") == 0) return (numeric != 0) ? Op_Triggered : Op_TriggerCleared;
-    if (strcmp(op, "NEQ") == 0) return (numeric != 0) ? Op_TriggerCleared : Op_Triggered;
-  }
-
-  if (strcmp(op, "GT") == 0) return Op_GT;
-  if (strcmp(op, "GTE") == 0) return Op_GTE;
-  if (strcmp(op, "LT") == 0) return Op_LT;
-  if (strcmp(op, "LTE") == 0) return Op_LTE;
-  if (strcmp(op, "EQ") == 0) return Op_EQ;
-  if (strcmp(op, "NEQ") == 0) return Op_NEQ;
-  ok = false;
-  return Op_AlwaysFalse;
-}
-
-bool mapV3ConditionBlock(JsonObjectConst block, uint8_t& outAId,
-                         logicOperator& outAOp, uint32_t& outAThreshold,
-                         uint8_t& outBId, logicOperator& outBOp,
-                         uint32_t& outBThreshold, combineMode& outCombine,
-                         String& reason,
-                         const logicCardType* sourceTypeById) {
-  const char* combiner = block["combiner"] | "NONE";
-  if (strcmp(combiner, "NONE") == 0) {
-    outCombine = Combine_None;
-  } else if (strcmp(combiner, "AND") == 0) {
-    outCombine = Combine_AND;
-  } else if (strcmp(combiner, "OR") == 0) {
-    outCombine = Combine_OR;
-  } else {
-    reason = "invalid condition combiner";
-    return false;
-  }
-
-  if (!block["clauseA"].is<JsonObjectConst>()) {
-    reason = "missing clauseA";
-    return false;
-  }
-  JsonObjectConst a = block["clauseA"].as<JsonObjectConst>();
-  if (!a["source"].is<JsonObjectConst>()) {
-    reason = "clauseA.source missing";
-    return false;
-  }
-  JsonObjectConst aSource = a["source"].as<JsonObjectConst>();
-  outAId = aSource["cardId"] | 255;
-  if (outAId >= TOTAL_CARDS) {
-    reason = "clauseA source cardId out of range";
-    return false;
-  }
-  const char* aField = aSource["field"] | "currentValue";
-  const char* aOperator = a["operator"] | "";
-  bool aOk = false;
-  outAOp = mapV3ClauseToLegacyOperator(sourceTypeById[outAId], aField, aOperator, a["threshold"],
-                                       outAThreshold, aOk);
-  if (!aOk) {
-    reason = "invalid clauseA field/operator/threshold for source card type";
-    return false;
-  }
-
-  outBId = outAId;
-  outBOp = Op_AlwaysFalse;
-  outBThreshold = 0;
-  if (outCombine == Combine_None) return true;
-
-  if (!block["clauseB"].is<JsonObjectConst>()) {
-    reason = "missing clauseB";
-    return false;
-  }
-  JsonObjectConst b = block["clauseB"].as<JsonObjectConst>();
-  if (!b["source"].is<JsonObjectConst>()) {
-    reason = "clauseB.source missing";
-    return false;
-  }
-  JsonObjectConst bSource = b["source"].as<JsonObjectConst>();
-  outBId = bSource["cardId"] | 255;
-  if (outBId >= TOTAL_CARDS) {
-    reason = "clauseB source cardId out of range";
-    return false;
-  }
-  const char* bField = bSource["field"] | "currentValue";
-  const char* bOperator = b["operator"] | "";
-  bool bOk = false;
-  outBOp = mapV3ClauseToLegacyOperator(sourceTypeById[outBId], bField, bOperator, b["threshold"],
-                                       outBThreshold, bOk);
-  if (!bOk) {
-    reason = "invalid clauseB field/operator/threshold for source card type";
-    return false;
-  }
-  return true;
-}
-
-V3CardFamily v3FamilyFromLogicType(logicCardType type) {
-  switch (type) {
-    case DigitalInput:
-      return V3CardFamily::DI;
-    case DigitalOutput:
-      return V3CardFamily::DO;
-    case AnalogInput:
-      return V3CardFamily::AI;
-    case SoftIO:
-      return V3CardFamily::SIO;
-    case MathCard:
-      return V3CardFamily::MATH;
-    case RtcCard:
-      return V3CardFamily::RTC;
-    default:
-      return V3CardFamily::DI;
-  }
-}
-
-bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeById,
-                        V3CardConfig& out, String& reason) {
-  const uint8_t cardId = v3Card["cardId"] | 255;
-  const char* cardType = v3Card["cardType"] | "";
-  const logicCardType expectedType = expectedTypeForCardId(cardId);
-  logicCardType parsedType = DigitalInput;
-  if (!parseV3CardTypeToken(cardType, parsedType)) {
-    reason = "invalid cardType";
-    return false;
-  }
-  if (parsedType != expectedType) {
-    reason = "cardType does not match cardId family slot";
-    return false;
-  }
-
-  out.cardId = cardId;
-  out.family = v3FamilyFromLogicType(expectedType);
-  out.enabled = v3Card["enabled"] | true;
-  out.faultPolicy = V3FaultPolicy::WARN;
-
-  const char* faultPolicy = v3Card["faultPolicy"] | "WARN";
-  if (strcmp(faultPolicy, "INFO") == 0) out.faultPolicy = V3FaultPolicy::INFO;
-  if (strcmp(faultPolicy, "CRITICAL") == 0)
-    out.faultPolicy = V3FaultPolicy::CRITICAL;
-
-  JsonObjectConst cfg = v3Card["config"].as<JsonObjectConst>();
-  if (cfg.isNull()) {
-    reason = "missing card config";
-    return false;
-  }
-
-  if (expectedType == DigitalInput) {
-    out.di.channel = cfg["channel"] | cardId;
-    out.di.invert = cfg["invert"] | false;
-    out.di.debounceTimeMs = cfg["debounceTime"] | 0U;
-    const char* edgeMode = cfg["edgeMode"] | "RISING";
-    cardMode diMode = Mode_DI_Rising;
-    if (!mapV3ModeToLegacy(expectedType, edgeMode, diMode)) {
-      reason = "invalid DI edgeMode";
-      return false;
-    }
-    out.di.edgeMode = diMode;
-    if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
-      reason = "DI require set and reset blocks";
-      return false;
-    }
-    if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), out.di.set.clauseAId,
-                             out.di.set.clauseAOperator,
-                             out.di.set.clauseAThreshold, out.di.set.clauseBId,
-                             out.di.set.clauseBOperator,
-                             out.di.set.clauseBThreshold, out.di.set.combiner,
-                             reason, sourceTypeById)) {
-      return false;
-    }
-    if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(),
-                             out.di.reset.clauseAId, out.di.reset.clauseAOperator,
-                             out.di.reset.clauseAThreshold, out.di.reset.clauseBId,
-                             out.di.reset.clauseBOperator,
-                             out.di.reset.clauseBThreshold, out.di.reset.combiner,
-                             reason, sourceTypeById)) {
-      return false;
-    }
-    return true;
-  }
-
-  if (expectedType == AnalogInput) {
-    JsonObjectConst inputRange = cfg["inputRange"].as<JsonObjectConst>();
-    JsonObjectConst outputRange = cfg["outputRange"].as<JsonObjectConst>();
-    out.ai.channel = cfg["channel"] | cardId;
-    out.ai.inputMin = inputRange["min"] | 0U;
-    out.ai.inputMax = inputRange["max"] | 4095U;
-    const uint32_t emaAlphaX100 = cfg["emaAlpha"] | 100U;
-    if (emaAlphaX100 > 100U) {
-      reason = "AI emaAlpha out of range";
-      return false;
-    }
-    out.ai.emaAlphaX100 = emaAlphaX100;
-    out.ai.outputMin = outputRange["min"] | 0U;
-    out.ai.outputMax = outputRange["max"] | 10000U;
-    return true;
-  }
-
-  if (expectedType == DigitalOutput || expectedType == SoftIO) {
-    const char* mode = cfg["mode"] | "Normal";
-    cardMode outMode = Mode_DO_Normal;
-    if (!mapV3ModeToLegacy(expectedType, mode, outMode)) {
-      reason = "invalid DO/SIO mode";
-      return false;
-    }
-    if (expectedType == DigitalOutput) {
-      out.dout.channel = cfg["channel"] | cardId;
-      out.dout.mode = outMode;
-      out.dout.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
-      out.dout.onDurationMs = cfg["onDuration"] | 0U;
-      out.dout.repeatCount = cfg["repeatCount"] | 1U;
-    } else {
-      out.sio.mode = outMode;
-      out.sio.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
-      out.sio.onDurationMs = cfg["onDuration"] | 0U;
-      out.sio.repeatCount = cfg["repeatCount"] | 1U;
-    }
-    if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
-      reason = "DO/SIO require set and reset blocks";
-      return false;
-    }
-    if (expectedType == DigitalOutput) {
-      if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), out.dout.set.clauseAId,
-              out.dout.set.clauseAOperator, out.dout.set.clauseAThreshold,
-              out.dout.set.clauseBId, out.dout.set.clauseBOperator,
-              out.dout.set.clauseBThreshold, out.dout.set.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-      if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), out.dout.reset.clauseAId,
-              out.dout.reset.clauseAOperator, out.dout.reset.clauseAThreshold,
-              out.dout.reset.clauseBId, out.dout.reset.clauseBOperator,
-              out.dout.reset.clauseBThreshold, out.dout.reset.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-    } else {
-      if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), out.sio.set.clauseAId,
-              out.sio.set.clauseAOperator, out.sio.set.clauseAThreshold,
-              out.sio.set.clauseBId, out.sio.set.clauseBOperator,
-              out.sio.set.clauseBThreshold, out.sio.set.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-      if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), out.sio.reset.clauseAId,
-              out.sio.reset.clauseAOperator, out.sio.reset.clauseAThreshold,
-              out.sio.reset.clauseBId, out.sio.reset.clauseBOperator,
-              out.sio.reset.clauseBThreshold, out.sio.reset.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  if (expectedType == MathCard) {
-    out.math.fallbackValue = cfg["fallbackValue"] | 0U;
-    JsonObjectConst standard = cfg["standard"].as<JsonObjectConst>();
-    JsonObjectConst inputA = standard["inputA"].as<JsonObjectConst>();
-    JsonObjectConst inputB = standard["inputB"].as<JsonObjectConst>();
-    out.math.inputA = inputA["value"] | 0U;
-    out.math.inputB = inputB["value"] | 0U;
-    out.math.clampMin = standard["clampMin"] | 0U;
-    out.math.clampMax = standard["clampMax"] | 0U;
-    if (cfg["set"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), out.math.set.clauseAId,
-              out.math.set.clauseAOperator, out.math.set.clauseAThreshold,
-              out.math.set.clauseBId, out.math.set.clauseBOperator,
-              out.math.set.clauseBThreshold, out.math.set.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-    }
-    if (cfg["reset"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), out.math.reset.clauseAId,
-              out.math.reset.clauseAOperator, out.math.reset.clauseAThreshold,
-              out.math.reset.clauseBId, out.math.reset.clauseBOperator,
-              out.math.reset.clauseBThreshold, out.math.reset.combiner, reason,
-              sourceTypeById)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  if (expectedType == RtcCard) {
-    JsonObjectConst schedule = cfg["schedule"].as<JsonObjectConst>();
-    out.rtc.hasYear = schedule["year"].is<int>() || schedule["year"].is<uint32_t>();
-    out.rtc.hasMonth =
-        schedule["month"].is<int>() || schedule["month"].is<uint32_t>();
-    out.rtc.hasDay = schedule["day"].is<int>() || schedule["day"].is<uint32_t>();
-    out.rtc.hasWeekday =
-        schedule["weekday"].is<int>() || schedule["weekday"].is<uint32_t>();
-    out.rtc.year = schedule["year"] | 0;
-    out.rtc.month = schedule["month"] | 0;
-    out.rtc.day = schedule["day"] | 0;
-    out.rtc.weekday = schedule["weekday"] | 0;
-    out.rtc.hour = schedule["hour"] | 0;
-    out.rtc.minute = schedule["minute"] | 0;
-    out.rtc.triggerDurationMs = cfg["triggerDuration"] | 0U;
-    return true;
-  }
-
-  reason = "unsupported card type";
-  return false;
-}
-
-bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
-                            JsonArrayConst& outCards, String& reason,
-                            const char*& outErrorCode) {
-  V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
-                         SIO_START,  MATH_START, RTC_START};
-  LogicCard baseline[TOTAL_CARDS];
-  initializeCardArraySafeDefaults(baseline);
-  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
-
-  if (!normalizeConfigRequestWithLayout(
-          root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-          normalizedDoc, outCards, reason, outErrorCode, rtcOut,
-          NUM_RTC_SCHED_CHANNELS)) {
-    return false;
-  }
-
+void applyRtcScheduleChannels(const V3RtcScheduleChannel* rtcOut,
+                              uint8_t rtcCount) {
+  if (rtcOut == nullptr) return;
   for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
+    if (i >= rtcCount) break;
     gRtcScheduleChannels[i].enabled = rtcOut[i].enabled;
     gRtcScheduleChannels[i].year = rtcOut[i].year;
     gRtcScheduleChannels[i].month = rtcOut[i].month;
@@ -2366,12 +2031,6 @@ bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
     gRtcScheduleChannels[i].minute = rtcOut[i].minute;
     gRtcScheduleChannels[i].rtcCardId = rtcOut[i].rtcCardId;
   }
-
-  if (!validateConfigCardsArray(outCards, reason)) {
-    outErrorCode = "VALIDATION_FAILED";
-    return false;
-  }
-  return true;
 }
 
 bool extractConfigCardsFromRequest(JsonObjectConst root,
@@ -2504,7 +2163,8 @@ bool setRtcCardStateCommand(uint8_t cardId, bool state) {
     runtime->triggerStartMs = 0;
   }
   mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
-  refreshRuntimeSignalAt(logicCards, gRuntimeSignals, TOTAL_CARDS, cardId);
+  refreshRuntimeSignalAt(gRuntimeCardMeta, gRuntimeStore, gRuntimeSignals,
+                         TOTAL_CARDS, cardId);
   return true;
 }
 
@@ -2893,7 +2553,8 @@ void processCardById(uint8_t cardId, uint32_t nowMs) {
 void processOneScanOrderedCard(uint32_t nowMs, bool honorBreakpoints) {
   uint8_t cardId = scanOrderCardIdFromCursor(gScanCursor);
   processCardById(cardId, nowMs);
-  refreshRuntimeSignalAt(logicCards, gRuntimeSignals, TOTAL_CARDS, cardId);
+  refreshRuntimeSignalAt(gRuntimeCardMeta, gRuntimeStore, gRuntimeSignals,
+                         TOTAL_CARDS, cardId);
   gCardEvalCounter[cardId] += 1;
 
   gScanCursor = static_cast<uint16_t>((gScanCursor + 1) % TOTAL_CARDS);
