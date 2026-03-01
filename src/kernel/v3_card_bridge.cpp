@@ -1,4 +1,5 @@
 #include "kernel/v3_card_bridge.h"
+#include "kernel/legacy_card_fields.h"
 
 namespace {
 V3CardFamily familyFromLegacy(logicCardType type) {
@@ -53,7 +54,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
     case DigitalInput: {
       out.di.channel = legacy.index;
       out.di.invert = legacy.invert;
-      out.di.debounceTimeMs = legacy.setting1;
+      out.di.debounceTimeMs = legacyDiDebounceMs(legacy);
       out.di.edgeMode = legacy.mode;
       copyCondition(legacy, out.di.set, out.di.reset);
       return true;
@@ -61,37 +62,37 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
     case DigitalOutput: {
       out.dout.channel = legacy.index;
       out.dout.mode = legacy.mode;
-      out.dout.delayBeforeOnMs = legacy.setting1;
-      out.dout.onDurationMs = legacy.setting2;
-      out.dout.repeatCount = legacy.setting3;
+      out.dout.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
+      out.dout.onDurationMs = legacyDoOnDurationMs(legacy);
+      out.dout.repeatCount = legacyDoRepeatCount(legacy);
       copyCondition(legacy, out.dout.set, out.dout.reset);
       return true;
     }
     case AnalogInput: {
       out.ai.channel = legacy.index;
-      out.ai.inputMin = legacy.setting1;
-      out.ai.inputMax = legacy.setting2;
-      out.ai.outputMin = legacy.startOnMs;
-      out.ai.outputMax = legacy.startOffMs;
-      uint32_t alphaX100 = (legacy.setting3 + 5U) / 10U;
+      out.ai.inputMin = legacyAiInputMin(legacy);
+      out.ai.inputMax = legacyAiInputMax(legacy);
+      out.ai.outputMin = legacyAiOutputMin(legacy);
+      out.ai.outputMax = legacyAiOutputMax(legacy);
+      uint32_t alphaX100 = (legacyAiAlphaX1000(legacy) + 5U) / 10U;
       if (alphaX100 > 100U) alphaX100 = 100U;
       out.ai.emaAlphaX100 = alphaX100;
       return true;
     }
     case SoftIO: {
       out.sio.mode = legacy.mode;
-      out.sio.delayBeforeOnMs = legacy.setting1;
-      out.sio.onDurationMs = legacy.setting2;
-      out.sio.repeatCount = legacy.setting3;
+      out.sio.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
+      out.sio.onDurationMs = legacyDoOnDurationMs(legacy);
+      out.sio.repeatCount = legacyDoRepeatCount(legacy);
       copyCondition(legacy, out.sio.set, out.sio.reset);
       return true;
     }
     case MathCard: {
-      out.math.fallbackValue = legacy.setting3;
-      out.math.inputA = legacy.setting1;
-      out.math.inputB = legacy.setting2;
-      out.math.clampMin = legacy.startOnMs;
-      out.math.clampMax = legacy.startOffMs;
+      out.math.fallbackValue = legacyMathFallbackValue(legacy);
+      out.math.inputA = legacyMathInputA(legacy);
+      out.math.inputB = legacyMathInputB(legacy);
+      out.math.clampMin = legacyMathClampMin(legacy);
+      out.math.clampMax = legacyMathClampMax(legacy);
       copyCondition(legacy, out.math.set, out.math.reset);
       return true;
     }
@@ -108,7 +109,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.rtc.hour = (rtcHour >= 0) ? static_cast<uint8_t>(rtcHour) : 0U;
       out.rtc.minute =
           (rtcMinute >= 0) ? static_cast<uint8_t>(rtcMinute) : 0U;
-      out.rtc.triggerDurationMs = legacy.setting1;
+      out.rtc.triggerDurationMs = legacyRtcTriggerDurationMs(legacy);
       return true;
     }
     default:
@@ -122,7 +123,7 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       out.type = DigitalInput;
       out.index = v3.di.channel;
       out.invert = v3.di.invert;
-      out.setting1 = v3.di.debounceTimeMs;
+      setLegacyDiDebounceMs(out, v3.di.debounceTimeMs);
       out.mode = v3.di.edgeMode;
       out.setA_ID = v3.di.set.clauseAId;
       out.setA_Operator = v3.di.set.clauseAOperator;
@@ -143,9 +144,9 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       out.type = DigitalOutput;
       out.index = v3.dout.channel;
       out.mode = v3.dout.mode;
-      out.setting1 = v3.dout.delayBeforeOnMs;
-      out.setting2 = v3.dout.onDurationMs;
-      out.setting3 = v3.dout.repeatCount;
+      setLegacyDoDelayBeforeOnMs(out, v3.dout.delayBeforeOnMs);
+      setLegacyDoOnDurationMs(out, v3.dout.onDurationMs);
+      setLegacyDoRepeatCount(out, v3.dout.repeatCount);
       out.setA_ID = v3.dout.set.clauseAId;
       out.setA_Operator = v3.dout.set.clauseAOperator;
       out.setA_Threshold = v3.dout.set.clauseAThreshold;
@@ -164,19 +165,19 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
     case V3CardFamily::AI:
       out.type = AnalogInput;
       out.index = v3.ai.channel;
-      out.setting1 = v3.ai.inputMin;
-      out.setting2 = v3.ai.inputMax;
-      out.startOnMs = v3.ai.outputMin;
-      out.startOffMs = v3.ai.outputMax;
-      out.setting3 = v3.ai.emaAlphaX100 * 10U;
+      setLegacyAiInputMin(out, v3.ai.inputMin);
+      setLegacyAiInputMax(out, v3.ai.inputMax);
+      setLegacyAiOutputMin(out, v3.ai.outputMin);
+      setLegacyAiOutputMax(out, v3.ai.outputMax);
+      setLegacyAiAlphaX1000(out, v3.ai.emaAlphaX100 * 10U);
       out.mode = Mode_AI_Continuous;
       return true;
     case V3CardFamily::SIO:
       out.type = SoftIO;
       out.mode = v3.sio.mode;
-      out.setting1 = v3.sio.delayBeforeOnMs;
-      out.setting2 = v3.sio.onDurationMs;
-      out.setting3 = v3.sio.repeatCount;
+      setLegacyDoDelayBeforeOnMs(out, v3.sio.delayBeforeOnMs);
+      setLegacyDoOnDurationMs(out, v3.sio.onDurationMs);
+      setLegacyDoRepeatCount(out, v3.sio.repeatCount);
       out.setA_ID = v3.sio.set.clauseAId;
       out.setA_Operator = v3.sio.set.clauseAOperator;
       out.setA_Threshold = v3.sio.set.clauseAThreshold;
@@ -194,11 +195,11 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       return true;
     case V3CardFamily::MATH:
       out.type = MathCard;
-      out.setting3 = v3.math.fallbackValue;
-      out.setting1 = v3.math.inputA;
-      out.setting2 = v3.math.inputB;
-      out.startOnMs = v3.math.clampMin;
-      out.startOffMs = v3.math.clampMax;
+      setLegacyMathFallbackValue(out, v3.math.fallbackValue);
+      setLegacyMathInputA(out, v3.math.inputA);
+      setLegacyMathInputB(out, v3.math.inputB);
+      setLegacyMathClampMin(out, v3.math.clampMin);
+      setLegacyMathClampMax(out, v3.math.clampMax);
       out.mode = Mode_None;
       out.setA_ID = v3.math.set.clauseAId;
       out.setA_Operator = v3.math.set.clauseAOperator;
@@ -218,7 +219,7 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
     case V3CardFamily::RTC:
       out.type = RtcCard;
       out.mode = Mode_None;
-      out.setting1 = v3.rtc.triggerDurationMs;
+      setLegacyRtcTriggerDurationMs(out, v3.rtc.triggerDurationMs);
       out.setA_Operator = Op_AlwaysFalse;
       out.setB_Operator = Op_AlwaysFalse;
       out.resetA_Operator = Op_AlwaysFalse;
@@ -230,4 +231,3 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       return false;
   }
 }
-

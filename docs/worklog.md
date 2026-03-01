@@ -1966,3 +1966,180 @@ Moved runtime metadata refresh to typed card configs, reducing another runtime p
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (V3 Runtime Slice 39: Typed Runtime Store Sync in Main Path)
+
+### Session Summary
+
+Switched runtime-store synchronization in `main.cpp` from legacy-type dispatch to typed config dispatch.
+
+### Completed
+
+- Updated `syncRuntimeStateFromCards()` in `src/main.cpp`:
+  - now calls `syncRuntimeStoreFromTypedCards(logicCards, gActiveTypedCards, ...)`
+  - no longer calls legacy `syncRuntimeStoreFromCards(...)`.
+
+### Migration Impact
+
+- Runtime store hydration now follows typed family ownership while preserving legacy runtime-state mirror fields.
+
+## 2026-03-01 (V3 Runtime Slice 40: Typed Mirror API for Runtime->Legacy State Reflection)
+
+### Session Summary
+
+Introduced and adopted typed mirror API to remove runtime reflection dependence on legacy `LogicCard.type`.
+
+### Completed
+
+- Added runtime store API in:
+  - `src/kernel/v3_runtime_store.h`
+  - `src/kernel/v3_runtime_store.cpp`
+  - new:
+    - `mirrorRuntimeStoreCardToLegacyByTyped(...)`
+
+- Rewired `src/main.cpp` callsites to typed mirror API:
+  - DI/AI/DO/SIO/MATH/RTC process handlers
+  - RTC set-state command path
+  - runtime sync mirror loop
+
+### Migration Impact
+
+- Runtime reflection uses typed family routing end-to-end in main runtime loop.
+
+## 2026-03-01 (V3 Runtime Slice 41: Typed Runtime Store API Coverage)
+
+### Session Summary
+
+Extended runtime-store tests to cover typed sync and typed mirror entrypoints.
+
+### Completed
+
+- Updated:
+  - `test/test_v3_runtime_store/test_main.cpp`
+  - added assertions for:
+    - typed sync path (`syncRuntimeStoreFromTypedCards`)
+    - typed mirror path (`mirrorRuntimeStoreCardToLegacyByTyped`)
+
+## 2026-03-01 (V3 Runtime Slice 42: Remove Legacy Runtime Store Entry Points)
+
+### Session Summary
+
+Removed legacy runtime-store APIs that depended on `LogicCard.type`/`*ForCard` lookups, keeping only index-based and typed entrypoints.
+
+### Completed
+
+- Removed from `src/kernel/v3_runtime_store.h/.cpp`:
+  - `syncRuntimeStoreFromCards(...)`
+  - `mirrorRuntimeStoreCardToLegacy(...)`
+  - `runtime*StateForCard(...)` family wrappers
+
+- Kept:
+  - `runtime*StateAt(index, ...)`
+  - typed sync/mirror APIs
+
+### Migration Impact
+
+- Eliminates a core legacy dispatch surface from kernel runtime-store module.
+
+## 2026-03-01 (V3 Runtime Slice 43: Remove Legacy Runtime Card Meta APIs)
+
+### Session Summary
+
+Removed legacy card-meta constructors/refresh APIs that accepted `LogicCard[]`, leaving typed card metadata refresh as the canonical path.
+
+### Completed
+
+- Updated:
+  - `src/runtime/runtime_card_meta.h`
+  - `src/runtime/runtime_card_meta.cpp`
+- Removed:
+  - `makeRuntimeCardMeta(const LogicCard&)`
+  - `refreshRuntimeCardMetaFromCards(...)`
+
+### Migration Impact
+
+- Metadata ownership is now typed-only at the refresh boundary.
+
+## 2026-03-01 (V3 Runtime Slice 44: Runtime Meta/Store Tests Realigned to Typed-Only APIs)
+
+### Session Summary
+
+Completed test realignment to typed-only runtime metadata/store APIs after legacy entrypoint removal.
+
+### Completed
+
+- Updated:
+  - `test/test_v3_runtime_store/test_main.cpp`
+  - `test/test_v3_runtime_card_meta/test_main.cpp`
+- Removed tests targeting deleted legacy APIs.
+- Kept/expanded tests for typed-only APIs.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (74/74)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (Cleanup Pass: Post Slice 44 Dead-Code and Include Hygiene)
+
+### Session Summary
+
+Ran a focused cleanup pass after slices 39-44 to remove low-risk dead code and unused includes introduced during migration.
+
+### Completed
+
+- `src/main.cpp`
+  - removed unused include:
+    - `#include "kernel/v3_runtime_adapters.h"`
+  - removed unused typed helper functions:
+    - `isSoftIOCard(...)`
+    - `isMathCard(...)`
+    - `isRtcCard(...)`
+
+- `src/runtime/runtime_card_meta.cpp`
+  - removed unused `<stddef.h>` include.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (74/74)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (Cleanup Pass: Legacy Field Alias Seam for Untying Runtime Logic)
+
+### Session Summary
+
+Added an explicit semantic field alias layer for legacy `LogicCard` payload fields (`setting1/2/3`, `startOnMs/startOffMs`) so runtime/config bridge code no longer encodes behavior through raw legacy field names.
+
+### Completed
+
+- Added:
+  - `src/kernel/legacy_card_fields.h`
+  - semantic getters/setters for DI/DO/AI/MATH/RTC legacy-backed fields.
+
+- Updated callsites to consume semantic aliases:
+  - `src/kernel/v3_card_bridge.cpp`
+  - `src/kernel/v3_runtime_adapters.cpp`
+
+### Migration Impact
+
+- Reduces direct dependency on legacy generic field names in runtime bridge/adapters.
+- Establishes a controlled seam for future replacement of `LogicCard` internal storage without touching per-family runtime logic callsites.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (74/74)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+

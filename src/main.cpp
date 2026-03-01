@@ -35,7 +35,6 @@
 #include "kernel/v3_math_runtime.h"
 #include "kernel/v3_sio_runtime.h"
 #include "kernel/v3_rtc_runtime.h"
-#include "kernel/v3_runtime_adapters.h"
 #include "kernel/v3_runtime_store.h"
 #include "kernel/v3_runtime_signals.h"
 #include "kernel/v3_status_runtime.h"
@@ -456,12 +455,14 @@ void refreshActiveTypedCardsFromLegacy() {
 
 void syncRuntimeStateFromCards() {
   refreshActiveTypedCardsFromLegacy();
-  syncRuntimeStoreFromCards(logicCards, TOTAL_CARDS, gRuntimeStore);
+  syncRuntimeStoreFromTypedCards(logicCards, gActiveTypedCards, TOTAL_CARDS,
+                                 gRuntimeStore);
   refreshRuntimeCardMetaFromTypedCards(gActiveTypedCards, TOTAL_CARDS, DO_START,
                                        AI_START, SIO_START, MATH_START,
                                        RTC_START, gRuntimeCardMeta);
   for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    mirrorRuntimeStoreCardToLegacy(logicCards[i], gRuntimeStore);
+    mirrorRuntimeStoreCardToLegacyByTyped(logicCards[i], gActiveTypedCards[i],
+                                          gRuntimeStore);
   }
 }
 
@@ -1245,16 +1246,6 @@ bool isDigitalOutputCard(uint8_t id) {
 
 bool isAnalogInputCard(uint8_t id) {
   return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::AI;
-}
-
-bool isSoftIOCard(uint8_t id) {
-  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::SIO;
-}
-bool isMathCard(uint8_t id) {
-  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::MATH;
-}
-bool isRtcCard(uint8_t id) {
-  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::RTC;
 }
 
 bool isInputCard(uint8_t id) {
@@ -2187,7 +2178,7 @@ bool setRtcCardStateCommand(uint8_t cardId, bool state) {
     runtime->triggerFlag = false;
     runtime->triggerStartMs = 0;
   }
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
   refreshRuntimeSignalAt(gRuntimeCardMeta, gRuntimeStore, gRuntimeSignals,
                          TOTAL_CARDS, cardId);
   return true;
@@ -2406,7 +2397,7 @@ void processDICard(uint8_t cardId, uint32_t nowMs) {
   V3DiStepOutput out = {};
   runV3DiStep(cfg, *runtime, in, out);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
 
   gPrevDISample[cardId] = out.nextPrevSample;
   gPrevDIPrimed[cardId] = out.nextPrevSampleValid;
@@ -2448,7 +2439,7 @@ void processAICard(uint8_t cardId) {
 
   runV3AiStep(cfg, *runtime, in);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
 }
 
 void processDOCard(uint8_t cardId, uint32_t nowMs, bool driveHardware) {
@@ -2480,7 +2471,7 @@ void processDOCard(uint8_t cardId, uint32_t nowMs, bool driveHardware) {
   V3DoStepOutput out = {};
   runV3DoStep(cfg, *runtime, in, out);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
   uint8_t hwPin = 255;
   if (cfgTyped.channel < NUM_DO) hwPin = DO_Pins[cfgTyped.channel];
   if (driveHardware && hwPin != 255 && !isOutputMasked(cardId)) {
@@ -2519,7 +2510,7 @@ void processSIOCard(uint8_t cardId, uint32_t nowMs) {
   V3SioStepOutput out = {};
   runV3SioStep(cfg, *runtime, in, out);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
 }
 
 void processMathCard(uint8_t cardId) {
@@ -2554,7 +2545,7 @@ void processMathCard(uint8_t cardId) {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, *runtime, in, out);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
 }
 
 void processRtcCard(uint8_t cardId, uint32_t nowMs) {
@@ -2579,7 +2570,7 @@ void processRtcCard(uint8_t cardId, uint32_t nowMs) {
 
   runV3RtcStep(cfg, *runtime, in);
 
-  mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
+  mirrorRuntimeStoreCardToLegacyByTyped(card, *cfgCard, gRuntimeStore);
 }
 
 void processCardById(uint8_t cardId, uint32_t nowMs) {

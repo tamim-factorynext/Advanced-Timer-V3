@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "kernel/card_model.h"
+#include "kernel/v3_card_types.h"
 #include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
@@ -25,32 +26,23 @@ struct V3RuntimeStoreView {
   uint8_t rtcCount;
 };
 
-void syncRuntimeStoreFromCards(const LogicCard* cards, uint8_t cardCount,
-                               const V3RuntimeStoreView& store);
-void mirrorRuntimeStoreCardToLegacy(LogicCard& card,
+void syncRuntimeStoreFromTypedCards(const LogicCard* cards,
+                                    const V3CardConfig* typedCards,
+                                    uint8_t cardCount,
                                     const V3RuntimeStoreView& store);
+void mirrorRuntimeStoreCardToLegacyByTyped(LogicCard& card,
+                                           const V3CardConfig& typedCard,
+                                           const V3RuntimeStoreView& store);
 
-V3DiRuntimeState* runtimeDiStateForCard(const LogicCard& card,
-                                        const V3RuntimeStoreView& store);
 V3DiRuntimeState* runtimeDiStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
-V3DoRuntimeState* runtimeDoStateForCard(const LogicCard& card,
-                                        const V3RuntimeStoreView& store);
 V3DoRuntimeState* runtimeDoStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
-V3AiRuntimeState* runtimeAiStateForCard(const LogicCard& card,
-                                        const V3RuntimeStoreView& store);
 V3AiRuntimeState* runtimeAiStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
-V3SioRuntimeState* runtimeSioStateForCard(const LogicCard& card,
-                                          const V3RuntimeStoreView& store);
 V3SioRuntimeState* runtimeSioStateAt(uint8_t index,
                                      const V3RuntimeStoreView& store);
-V3MathRuntimeState* runtimeMathStateForCard(const LogicCard& card,
-                                            const V3RuntimeStoreView& store);
 V3MathRuntimeState* runtimeMathStateAt(uint8_t index,
                                        const V3RuntimeStoreView& store);
-V3RtcRuntimeState* runtimeRtcStateForCard(const LogicCard& card,
-                                          const V3RuntimeStoreView& store);
 V3RtcRuntimeState* runtimeRtcStateAt(uint8_t index,
                                      const V3RuntimeStoreView& store);

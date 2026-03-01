@@ -1,8 +1,9 @@
 #include "kernel/v3_runtime_adapters.h"
+#include "kernel/legacy_card_fields.h"
 
 V3DiRuntimeConfig makeDiRuntimeConfig(const LogicCard& card) {
   V3DiRuntimeConfig cfg = {};
-  cfg.debounceTimeMs = card.setting1;
+  cfg.debounceTimeMs = legacyDiDebounceMs(card);
   cfg.edgeMode = card.mode;
   return cfg;
 }
@@ -33,11 +34,11 @@ void applyDiRuntimeState(LogicCard& card, const V3DiRuntimeState& runtime) {
 
 V3AiRuntimeConfig makeAiRuntimeConfig(const LogicCard& card) {
   V3AiRuntimeConfig cfg = {};
-  cfg.inputMin = card.setting1;
-  cfg.inputMax = card.setting2;
-  cfg.outputMin = card.startOnMs;
-  cfg.outputMax = card.startOffMs;
-  cfg.emaAlphaX1000 = card.setting3;
+  cfg.inputMin = legacyAiInputMin(card);
+  cfg.inputMax = legacyAiInputMax(card);
+  cfg.outputMin = legacyAiOutputMin(card);
+  cfg.outputMax = legacyAiOutputMax(card);
+  cfg.emaAlphaX1000 = legacyAiAlphaX1000(card);
   return cfg;
 }
 
@@ -58,9 +59,9 @@ void applyAiRuntimeState(LogicCard& card, const V3AiRuntimeState& runtime) {
 V3DoRuntimeConfig makeDoRuntimeConfig(const LogicCard& card) {
   V3DoRuntimeConfig cfg = {};
   cfg.mode = card.mode;
-  cfg.delayBeforeOnMs = card.setting1;
-  cfg.onDurationMs = card.setting2;
-  cfg.repeatCount = card.setting3;
+  cfg.delayBeforeOnMs = legacyDoDelayBeforeOnMs(card);
+  cfg.onDurationMs = legacyDoOnDurationMs(card);
+  cfg.repeatCount = legacyDoRepeatCount(card);
   return cfg;
 }
 
@@ -91,9 +92,9 @@ void applyDoRuntimeState(LogicCard& card, const V3DoRuntimeState& runtime) {
 V3SioRuntimeConfig makeSioRuntimeConfig(const LogicCard& card) {
   V3SioRuntimeConfig cfg = {};
   cfg.mode = card.mode;
-  cfg.delayBeforeOnMs = card.setting1;
-  cfg.onDurationMs = card.setting2;
-  cfg.repeatCount = card.setting3;
+  cfg.delayBeforeOnMs = legacyDoDelayBeforeOnMs(card);
+  cfg.onDurationMs = legacyDoOnDurationMs(card);
+  cfg.repeatCount = legacyDoRepeatCount(card);
   return cfg;
 }
 
@@ -123,12 +124,12 @@ void applySioRuntimeState(LogicCard& card, const V3SioRuntimeState& runtime) {
 
 V3MathRuntimeConfig makeMathRuntimeConfig(const LogicCard& card) {
   V3MathRuntimeConfig cfg = {};
-  cfg.inputA = card.setting1;
-  cfg.inputB = card.setting2;
-  cfg.fallbackValue = card.setting3;
-  cfg.clampMin = card.startOnMs;
-  cfg.clampMax = card.startOffMs;
-  cfg.clampEnabled = (card.startOffMs >= card.startOnMs);
+  cfg.inputA = legacyMathInputA(card);
+  cfg.inputB = legacyMathInputB(card);
+  cfg.fallbackValue = legacyMathFallbackValue(card);
+  cfg.clampMin = legacyMathClampMin(card);
+  cfg.clampMax = legacyMathClampMax(card);
+  cfg.clampEnabled = (cfg.clampMax >= cfg.clampMin);
   return cfg;
 }
 
@@ -152,7 +153,7 @@ void applyMathRuntimeState(LogicCard& card, const V3MathRuntimeState& runtime) {
 
 V3RtcRuntimeConfig makeRtcRuntimeConfig(const LogicCard& card) {
   V3RtcRuntimeConfig cfg = {};
-  cfg.triggerDurationMs = card.setting1;
+  cfg.triggerDurationMs = legacyRtcTriggerDurationMs(card);
   return cfg;
 }
 
@@ -177,4 +178,3 @@ void applyRtcRuntimeState(LogicCard& card, const V3RtcRuntimeState& runtime) {
   card.mode = runtime.mode;
   card.state = runtime.state;
 }
-

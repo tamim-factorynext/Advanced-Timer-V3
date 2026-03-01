@@ -1,7 +1,5 @@
 #include "runtime/runtime_card_meta.h"
 
-#include <stddef.h>
-
 namespace {
 logicCardType typeFromFamily(V3CardFamily family) {
   switch (family) {
@@ -67,22 +65,6 @@ uint8_t indexFromTyped(const V3CardConfig& card, uint8_t doStart, uint8_t aiStar
   }
 }
 }  // namespace
-
-RuntimeCardMeta makeRuntimeCardMeta(const LogicCard& card) {
-  RuntimeCardMeta meta = {};
-  meta.id = card.id;
-  meta.type = card.type;
-  meta.index = card.index;
-  meta.mode = card.mode;
-  return meta;
-}
-
-void refreshRuntimeCardMetaFromCards(const LogicCard* cards, uint8_t count,
-                                     RuntimeCardMeta* out) {
-  for (uint8_t i = 0; i < count; ++i) {
-    out[i] = makeRuntimeCardMeta(cards[i]);
-  }
-}
 
 void refreshRuntimeCardMetaFromTypedCards(
     const V3CardConfig* cards, uint8_t count, uint8_t doStart, uint8_t aiStart,
