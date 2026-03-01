@@ -13,6 +13,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <RTClib.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 #include <WiFi.h>
@@ -66,6 +67,7 @@ const char* kDefaultUserSsid = "FactoryNext";
 const char* kDefaultUserPassword = "FactoryNext20$22#";
 const uint32_t MASTER_WIFI_TIMEOUT_MS = 2000;
 const uint32_t USER_WIFI_TIMEOUT_MS = 180000;
+const uint8_t NUM_RTC_SCHED_CHANNELS = 2;
 
 #ifndef LOGIC_ENGINE_DEBUG
 #define LOGIC_ENGINE_DEBUG 0
@@ -131,16 +133,41 @@ uint16_t gKernelQueueHighWaterMark = 0;
 uint16_t gKernelQueueCapacity = 0;
 uint32_t gCommandLatencyLastUs = 0;
 uint32_t gCommandLatencyMaxUs = 0;
+RTC_Millis gRtcClock;
+bool gRtcClockInitialized = false;
+int32_t gRtcLastMinuteKey = -1;
+uint32_t gRtcMinuteTickCount = 0;
+uint32_t gRtcIntentEnqueueCount = 0;
+uint32_t gRtcIntentEnqueueFailCount = 0;
+uint32_t gRtcLastEvalMs = 0;
+
+struct RtcScheduleChannel {
+  bool enabled;
+  int16_t year;  // -1 means wildcard
+  int8_t month;  // -1 means wildcard
+  int8_t day;    // -1 means wildcard
+  int8_t weekday;  // -1 means wildcard
+  int8_t hour;     // -1 means wildcard
+  int8_t minute;   // -1 means wildcard
+  uint8_t rtcCardId;
+};
+
+RtcScheduleChannel gRtcScheduleChannels[NUM_RTC_SCHED_CHANNELS] = {
+    {false, -1, -1, -1, -1, -1, -1, 0},
+    {false, -1, -1, -1, -1, -1, -1, 0},
+};
 
 bool isOutputMasked(uint8_t cardId);
 uint8_t scanOrderCardIdFromCursor(uint16_t cursor);
 bool connectWiFiWithPolicy();
 bool applyCommand(JsonObjectConst command);
+bool setRtcCardStateCommand(uint8_t cardId, bool state);
 void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq);
 void serializeCardsToArray(const LogicCard* sourceCards, JsonArray& array);
 void initializeCardArraySafeDefaults(LogicCard* cards);
 bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards);
 bool validateConfigCardsArray(JsonArrayConst array, String& reason);
+void serviceRtcMinuteScheduler(uint32_t nowMs);
 
 void serializeCardToJson(const LogicCard& card, JsonObject& json) {
   json["id"] = card.id;
@@ -472,6 +499,10 @@ void serializeRuntimeSnapshot(JsonDocument& doc, uint32_t nowMs) {
   metrics["queueCapacity"] = snapshot.kernelQueueCapacity;
   metrics["commandLatencyLastUs"] = snapshot.commandLatencyLastUs;
   metrics["commandLatencyMaxUs"] = snapshot.commandLatencyMaxUs;
+  metrics["rtcMinuteTickCount"] = snapshot.rtcMinuteTickCount;
+  metrics["rtcIntentEnqueueCount"] = snapshot.rtcIntentEnqueueCount;
+  metrics["rtcIntentEnqueueFailCount"] = snapshot.rtcIntentEnqueueFailCount;
+  metrics["rtcLastEvalMs"] = snapshot.rtcLastEvalMs;
   doc["runMode"] = toString(snapshot.mode);
   doc["snapshotSeq"] = snapshot.seq;
 
@@ -1517,6 +1548,21 @@ bool setInputForceCommand(uint8_t cardId, inputSourceMode mode,
   return true;
 }
 
+bool setRtcCardStateCommand(uint8_t cardId, bool state) {
+  if (cardId >= TOTAL_CARDS) return false;
+  LogicCard& card = logicCards[cardId];
+  if (card.type != RtcCard) return false;
+
+  card.logicalState = state;
+  card.physicalState = state;
+  card.triggerFlag = state;  // one-minute assertion edge for condition logic
+  card.currentValue = state ? 1 : 0;
+  if (!state) {
+    card.triggerFlag = false;
+  }
+  return true;
+}
+
 bool enqueueKernelCommand(const KernelCommand& command) {
   if (gKernelCommandQueue == nullptr) return false;
   KernelCommand commandToQueue = command;
@@ -1547,6 +1593,8 @@ bool applyKernelCommand(const KernelCommand& command) {
       return setOutputMaskCommand(command.cardId, command.flag);
     case KernelCmd_SetOutputMaskGlobal:
       return setGlobalOutputMaskCommand(command.flag);
+    case KernelCmd_SetRtcCardState:
+      return setRtcCardStateCommand(command.cardId, command.flag);
     default:
       return false;
   }
@@ -1583,6 +1631,10 @@ void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq) {
   gSharedSnapshot.kernelQueueCapacity = gKernelQueueCapacity;
   gSharedSnapshot.commandLatencyLastUs = gCommandLatencyLastUs;
   gSharedSnapshot.commandLatencyMaxUs = gCommandLatencyMaxUs;
+  gSharedSnapshot.rtcMinuteTickCount = gRtcMinuteTickCount;
+  gSharedSnapshot.rtcIntentEnqueueCount = gRtcIntentEnqueueCount;
+  gSharedSnapshot.rtcIntentEnqueueFailCount = gRtcIntentEnqueueFailCount;
+  gSharedSnapshot.rtcLastEvalMs = gRtcLastEvalMs;
   gSharedSnapshot.mode = gRunMode;
   gSharedSnapshot.testModeActive = gTestModeActive;
   gSharedSnapshot.globalOutputMask = gGlobalOutputMask;
@@ -2052,6 +2104,75 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
   updateSharedRuntimeSnapshot(nowMs, true);
 }
 
+bool rtcFieldMatches(int fieldValue, int scheduleValue) {
+  return scheduleValue < 0 || fieldValue == scheduleValue;
+}
+
+bool rtcChannelMatchesMinute(const RtcScheduleChannel& channel,
+                             const DateTime& dt) {
+  if (!channel.enabled) return false;
+  return rtcFieldMatches(dt.year(), channel.year) &&
+         rtcFieldMatches(dt.month(), channel.month) &&
+         rtcFieldMatches(dt.day(), channel.day) &&
+         rtcFieldMatches(dt.dayOfTheWeek(), channel.weekday) &&
+         rtcFieldMatches(dt.hour(), channel.hour) &&
+         rtcFieldMatches(dt.minute(), channel.minute);
+}
+
+void serviceRtcMinuteScheduler(uint32_t nowMs) {
+  if (!gRtcClockInitialized) return;
+
+  static uint32_t lastPollMs = 0;
+  if ((nowMs - lastPollMs) < 200) return;
+  lastPollMs = nowMs;
+
+  DateTime now = gRtcClock.now();
+  const int32_t minuteKey =
+      (((now.year() * 100 + now.month()) * 100 + now.day()) * 100 +
+       now.hour()) *
+          100 +
+      now.minute();
+  if (minuteKey == gRtcLastMinuteKey) return;
+
+  gRtcLastMinuteKey = minuteKey;
+  gRtcMinuteTickCount += 1;
+  gRtcLastEvalMs = nowMs;
+
+  // Default RTC schedule outputs to false each minute; matching channels
+  // re-assert true so downstream conditions can reference RTC cards directly.
+  for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
+    const RtcScheduleChannel& channel = gRtcScheduleChannels[i];
+    if (!channel.enabled) continue;
+    if (channel.rtcCardId >= TOTAL_CARDS) {
+      gRtcIntentEnqueueFailCount += 1;
+      continue;
+    }
+    KernelCommand clearCmd = {};
+    clearCmd.type = KernelCmd_SetRtcCardState;
+    clearCmd.cardId = channel.rtcCardId;
+    clearCmd.flag = false;
+    if (enqueueKernelCommand(clearCmd)) {
+      gRtcIntentEnqueueCount += 1;
+    } else {
+      gRtcIntentEnqueueFailCount += 1;
+    }
+  }
+
+  for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
+    const RtcScheduleChannel& channel = gRtcScheduleChannels[i];
+    if (!rtcChannelMatchesMinute(channel, now)) continue;
+    KernelCommand cmd = {};
+    cmd.type = KernelCmd_SetRtcCardState;
+    cmd.cardId = channel.rtcCardId;
+    cmd.flag = true;
+    if (enqueueKernelCommand(cmd)) {
+      gRtcIntentEnqueueCount += 1;
+    } else {
+      gRtcIntentEnqueueFailCount += 1;
+    }
+  }
+}
+
 void core0EngineTask(void* param) {
   (void)param;
   uint32_t lastScanMs = 0;
@@ -2081,6 +2202,7 @@ void core1PortalTask(void* param) {
       handlePortalServerLoop();
       handleWebSocketLoop();
       publishRuntimeSnapshotWebSocket();
+      serviceRtcMinuteScheduler(millis());
       vTaskDelay(pdMS_TO_TICKS(2));
       continue;
     }
@@ -2101,6 +2223,8 @@ void core1PortalTask(void* param) {
 
 void setup() {
   Serial.begin(115200);
+  gRtcClock.begin(DateTime(F(__DATE__), F(__TIME__)));
+  gRtcClockInitialized = true;
   configureHardwarePinsSafeState();
   initializeRuntimeControlState();
 

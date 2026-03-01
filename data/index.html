@@ -222,8 +222,7 @@
         <div class="row">
           <button id="btnRefresh">Refresh Snapshot</button>
           <button id="btnStep">Step Once</button>
-          <button id="btnRunNormal">Run Continuous</button>
-          <button id="btnRunSlow">Run Slow</button>
+          <button id="btnRunNormal">Run Normal (Settings Rate)</button>
           <button id="btnRunStep">Run Step Mode</button>
           <button id="btnRunBreakpoint">Run Breakpoint Mode</button>
           <button id="btnMaskAll">Toggle Global DO Mask</button>
@@ -869,9 +868,6 @@
 
       document.getElementById("btnRunNormal").addEventListener("click", () => {
         setRunMode("RUN_NORMAL").then(() => fetchSnapshot().then(renderSafely));
-      });
-      document.getElementById("btnRunSlow").addEventListener("click", () => {
-        setRunMode("RUN_SLOW").then(() => fetchSnapshot().then(renderSafely));
       });
       document.getElementById("btnRunStep").addEventListener("click", () => {
         setRunMode("RUN_STEP").then(() => fetchSnapshot().then(renderSafely));

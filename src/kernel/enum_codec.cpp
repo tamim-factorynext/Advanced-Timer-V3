@@ -27,6 +27,10 @@ const char* toString(logicCardType value) {
       return "AnalogInput";
     case SoftIO:
       return "SoftIO";
+    case MathCard:
+      return "MATH";
+    case RtcCard:
+      return "RTC";
     default:
       return "DigitalInput";
   }
@@ -170,6 +174,10 @@ bool tryParseLogicCardType(const char* s, logicCardType& out) {
   if (enumTokenEquals(s, "DigitalOutput")) return (out = DigitalOutput), true;
   if (enumTokenEquals(s, "AnalogInput")) return (out = AnalogInput), true;
   if (enumTokenEquals(s, "SoftIO")) return (out = SoftIO), true;
+  if (enumTokenEquals(s, "MATH") || enumTokenEquals(s, "MathCard"))
+    return (out = MathCard), true;
+  if (enumTokenEquals(s, "RTC") || enumTokenEquals(s, "RtcCard"))
+    return (out = RtcCard), true;
   return false;
 }
 

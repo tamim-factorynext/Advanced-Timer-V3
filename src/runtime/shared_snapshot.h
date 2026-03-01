@@ -20,6 +20,10 @@ struct SharedRuntimeSnapshotT {
   uint16_t kernelQueueCapacity;
   uint32_t commandLatencyLastUs;
   uint32_t commandLatencyMaxUs;
+  uint32_t rtcMinuteTickCount;
+  uint32_t rtcIntentEnqueueCount;
+  uint32_t rtcIntentEnqueueFailCount;
+  uint32_t rtcLastEvalMs;
   runMode mode;
   bool testModeActive;
   bool globalOutputMask;

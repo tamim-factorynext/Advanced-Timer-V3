@@ -2,7 +2,14 @@
 
 #include <stdint.h>
 
-enum logicCardType { DigitalInput, DigitalOutput, AnalogInput, SoftIO };
+enum logicCardType {
+  DigitalInput,
+  DigitalOutput,
+  AnalogInput,
+  SoftIO,
+  MathCard,
+  RtcCard
+};
 
 enum logicOperator {
   Op_AlwaysTrue,

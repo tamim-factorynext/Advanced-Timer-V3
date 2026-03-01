@@ -18,7 +18,8 @@ enum kernelCommandType {
   KernelCmd_SetTestMode,
   KernelCmd_SetInputForce,
   KernelCmd_SetOutputMask,
-  KernelCmd_SetOutputMaskGlobal
+  KernelCmd_SetOutputMaskGlobal,
+  KernelCmd_SetRtcCardState
 };
 
 struct KernelCommand {
