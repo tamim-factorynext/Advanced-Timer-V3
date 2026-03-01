@@ -19,6 +19,10 @@ Target users of this document:
 - Internal technical stakeholders (engineering leads, managers, QA, production).
 - Technical users who need to understand behavior deeply before deployment.
 
+Primary target users of the final off-the-shelf product:
+- People currently using traditional multifunction timer modules who are afraid of PLC IDE complexity.
+- Teams that need more capability than a timer module but do not want full PLC engineering overhead for everyday deployment and maintenance.
+
 ## 2. Current Program Direction
 
 V3 is a clean production rewrite path, not incremental patching of V2 behavior. The deterministic runtime and the portal/networking services are intentionally separated by core ownership and clear module boundaries.
@@ -65,9 +69,51 @@ The control/automation landscape already includes:
 
 Advanced Timer V3 is positioned as:
 - A deterministic, contract-driven controller firmware platform.
+- A practical migration path for timer-module users who need more capability without entering full PLC IDE workflows.
+- One tier above traditional multifunction timer modules in capability, observability, and lifecycle safety.
 - More structured and production-oriented than DIY "write-your-own-firmware" ESP32 projects.
 - More flexible and transparent than many fixed-function timer products.
 - Complementary to, not a replacement for, cloud/home-automation ecosystems (it can integrate at system boundaries while keeping deterministic local control).
+
+### 3.4 Distilled Market Research Essence
+
+Based on external landscape research, this project addresses a specific gap between DIY firmware ecosystems and expensive/rigid industrial control stacks.
+
+Key gap summary:
+- Many ESP32 ecosystems are powerful but assume firmware/toolchain confidence from the user.
+- Traditional timer modules are easy to use but limited in observability, lifecycle safety, and extensibility.
+- Small OEM and installer workflows need local-first reliability, controlled updates, and practical protocol interoperability.
+
+Strategic response in this project:
+- Keep no-code, structured configuration with deterministic behavior.
+- Add professional guardrails: staged validation/commit, rollback, runtime metrics, and clear ownership boundaries.
+- Support field-friendly operation for users avoiding PLC IDEs, while preserving a deeper contract layer for contributors and advanced integrations.
+
+Why this project exists:
+- To provide a commercially credible bridge between basic timer products and full PLC programming ecosystems.
+- To enable capable automation behavior without forcing every end user into PLC engineering workflows.
+
+Open-source direction:
+- Current focus is product/architecture hardening.
+- If feasible, future release strategy may include open-sourcing part or all of the framework with clear contracts and contribution boundaries.
+
+### 3.5 Competitive and Tooling Context (Short View)
+
+This project is not being built in a vacuum. We acknowledge a broad existing ecosystem:
+- ESP32 firmware ecosystems and tools: `ESPHome`, `Tasmota`, `Arduino`, `PlatformIO`, `ESP-IDF`, `MicroPython`, plus cloud/device ecosystems such as `Blynk`, `Particle`, and `The Things Network`.
+- PLC/industrial ecosystems: traditional PLC platforms, IEC 61131-3 toolchains, HMI/SCADA stacks, and established OT integration patterns.
+- Hardware-specific controller firmware projects and timer-class products already used in the field.
+
+Named examples from market research (non-exhaustive):
+- ESP32/open firmware and platforms: `ESPHome`, `Tasmota`, `Xedge32`, `Project Aura`.
+- ESP32 hardware+firmware vendors/projects: `KinCony` (`KCS-V3`), `EQSP32`.
+- Industrial/open control references: `OpenPLC`, `HomeMaster`, `BAScontrol`, `Siemens Desigo`.
+- Silicon/platform ecosystem anchor: `Espressif` (ESP32 family evolution).
+
+Our approach is simply a different fit point in that market:
+- More capable and safer lifecycle than typical multifunction timer modules.
+- Lower operational and learning burden than full PLC IDE-centric workflows for the target segment.
+- Local-first deterministic behavior with practical web-based usability and integration paths.
 
 ## 4. System Architecture (Firmware + Portal)
 

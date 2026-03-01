@@ -22,6 +22,10 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/decisions.md` - Decision log (accepted/superseded changes).
 - `docs/worklog.md` - Consolidated session worklog.
 
+## 2.1 Market/Strategy Research
+
+- `docs/market/market-fit-open-source-iot-firmware-2026.md` - Long-form external market landscape and positioning research input (Gemini deep research synthesis).
+
 Worklog rule:
 
 - `docs/worklog.md` is the only canonical worklog file.
