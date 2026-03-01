@@ -468,3 +468,252 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
    - add validation enforcement for minute-only RTC schedule fields (`V-CFG-022`) in firmware validation path.
 4. Rebuild and capture one quick smoke snapshot to confirm no regression.
 
+## 2026-03-01 (V3 Runtime Card Model Slice 1: MATH/RTC First-Class Allocation)
+
+### Session Summary
+
+Executed the first "future-first" migration slice by removing legacy-only runtime card allocation assumptions and promoting `MATH`/`RTC` to active runtime families.
+
+### Completed
+
+- Updated runtime family allocation in `src/main.cpp`:
+  - Added fixed bring-up capacities: `NUM_MATH=2`, `NUM_RTC=2`.
+  - Expanded `TOTAL_CARDS` to include `MATH` and `RTC`.
+  - Added `MATH_START` and `RTC_START` boundaries.
+
+- Updated default card initialization:
+  - Added safe defaults for `MathCard` and `RtcCard`.
+  - RTC scheduler channels now default to RTC family IDs (not DI IDs).
+
+- Updated deterministic runtime dispatch:
+  - Replaced legacy ID-range processing assumptions with `card.type` dispatch in `processCardById`.
+  - Added explicit `processMathCard(...)` and `processRtcCard(...)` handlers.
+  - Changed scan order to strict ascending `cardId` (`cursor % TOTAL_CARDS`) for deterministic contract alignment.
+
+- Updated config validation semantics:
+  - Enforced fixed family slot mapping by `cardId` (`DI|DO|AI|SIO|MATH|RTC`).
+  - Added `Mode_None` acceptance for `MATH` and `RTC`.
+  - Added operator allowance for `MATH`/`RTC` reference targets.
+  - Added RTC set/reset rejection (`RTC set/reset is unsupported`).
+
+- Updated decision log:
+  - Added `DEC-0010` documenting this migration step.
+
+### Evidence
+
+- Build command:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+- Result:
+  - `SUCCESS` (2026-03-01, local workspace build)
+
+### Next Slice Candidates
+
+1. Move config/API payload shape from legacy `config.cards[*].type/id` structure toward V3 canonical `cardType/cardId/config` semantics behind a strict schema gate.
+2. Replace transitional MATH bridge logic with contract-grade typed MATH pipeline config and validators (`AT-MATH-*` alignment).
+3. Introduce profile-backed family capacities/gates from one source of truth instead of hardcoded runtime constants.
+
+## 2026-03-01 (V3 Config/API Slice 2: Envelope Normalization + Legacy Bridge)
+
+### Session Summary
+
+Implemented a contract-first normalization path for config lifecycle endpoints so staged save/validate/commit now operate on a normalized V3 envelope and card payload, with an explicit transitional bridge for legacy card shape.
+
+### Completed
+
+- Added V3 config/API constants in firmware:
+  - `apiVersion=2.0`
+  - `schemaVersion=2.0.0`
+
+- Added unified normalization flow in `src/main.cpp`:
+  - `normalizeConfigRequest(...)`
+  - V3 card mapper (`cardId/cardType/config` -> legacy internal card model)
+  - legacy cards bridge detection and normalization (`usedLegacyCardsBridge`)
+  - unsupported version checks:
+    - `UNSUPPORTED_API_VERSION`
+    - `UNSUPPORTED_SCHEMA_VERSION`
+
+- Updated HTTP config endpoints to use normalization:
+  - `/api/config/staged/save`
+  - `/api/config/staged/validate`
+  - `/api/config/commit`
+
+- Updated response shape for these endpoints:
+  - `apiVersion`
+  - `requestId`
+  - `status` (`SUCCESS|FAILURE`)
+  - `errorCode`
+  - `message`
+  - endpoint-specific payload fields (`stagedVersion`, `validation`, `activeVersion`, etc.)
+
+- Added bridge observability:
+  - persisted `bridge.usedLegacyCardsBridge`
+  - response field `usedLegacyCardsBridge`
+  - serial log marker when legacy bridge path is used
+
+### Evidence
+
+- Build command:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+- Result:
+  - `SUCCESS` (2026-03-01, local workspace build)
+
+### Known Transitional Gaps
+
+1. Mapper currently implements a deterministic subset bridge for V3 typed cards into existing runtime fields; full typed model persistence is pending.
+2. `GET /api/config/active` still returns internal legacy card objects (with V3 response envelope metadata) until full schema model separation lands.
+
+## 2026-03-01 (V3 Persistence Slice 3: Native Storage Envelope)
+
+### Session Summary
+
+Completed the next migration slice by switching config persistence from legacy card arrays to native V3 envelope objects, while keeping safe legacy read fallback.
+
+### Completed
+
+- Added native V3 serialization helpers in `src/main.cpp`:
+  - `serializeCardsToV3Array(...)`
+  - `buildV3ConfigEnvelope(...)`
+  - condition translation helpers for set/reset blocks.
+
+- Switched persistence writers to V3 envelope:
+  - `saveCardsToPath(...)` now writes V3 object form.
+  - `saveLogicCardsToLittleFS()` now routes through `saveCardsToPath(...)`.
+  - staged save endpoint now writes V3 envelope to `/config_staged.json`.
+
+- Switched readers to dual-format load:
+  - `loadCardsFromPath(...)` accepts:
+    - native V3 object via normalization,
+    - legacy array fallback (migration safety).
+  - `loadLogicCardsFromLittleFS()` now routes through `loadCardsFromPath(...)`.
+
+- Updated active config API export:
+  - `GET /api/config/active` now emits V3 envelope-style `config`.
+
+### Evidence
+
+- Build command:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+- Result:
+  - `SUCCESS` (2026-03-01, local workspace build)
+
+### Remaining Transitional Gaps
+
+1. V3 <-> internal model mapping is deterministic but still bridge-based; full typed runtime model separation remains pending.
+2. Some operator/state mappings are represented via bridge-safe equivalents and should be hardened by acceptance tests before bridge removal.
+
+## 2026-03-01 (V3 Model Slice 4: Typed Per-Family Struct Foundation)
+
+### Session Summary
+
+Started the structural split away from unified legacy `LogicCard` by introducing typed per-family V3 config structs and a reusable bridge layer.
+
+### Completed
+
+- Added new kernel typed model files:
+  - `src/kernel/v3_card_types.h`
+  - `src/kernel/v3_card_bridge.h`
+  - `src/kernel/v3_card_bridge.cpp`
+
+- Added typed family definitions:
+  - `V3DiConfig`, `V3DoConfig`, `V3AiConfig`, `V3SioConfig`, `V3MathConfig`, `V3RtcConfig`
+  - Shared wrapper: `V3CardConfig`
+
+- Added migration bridge functions:
+  - `legacyToV3CardConfig(...)`
+  - `v3CardConfigToLegacy(...)`
+
+- Wired bridge into active serialization path:
+  - `serializeCardsToV3Array(...)` now uses typed bridge output as source for V3 payload emission.
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` includes new typed model interfaces.
+
+### Evidence
+
+- Build command:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+- Result:
+  - `SUCCESS` (2026-03-01, local workspace build)
+
+### Remaining Transitional Gaps
+
+1. Runtime execution path still evaluates `LogicCard`; typed structs currently own schema/bridge side, not full kernel processing.
+2. Full typed-validator and typed-commit internals are next required steps before removing `LogicCard` as primary runtime DTO.
+
+## 2026-03-01 (V3 Validation Slice 5: Family-Aware Condition Field Rules)
+
+### Session Summary
+
+Applied strict family-aware validation for V3 condition clauses so set/reset references only use runtime fields that are meaningful for the referenced source card family.
+
+### Completed
+
+- Added V3 signal capability model:
+  - `V3SignalSupport`
+  - `signalSupportForFamily(...)`
+  - file: `src/kernel/v3_card_types.h`
+
+- Tightened V3 clause mapping in `src/main.cpp`:
+  - validates source `cardType` map up-front by `cardId` slot.
+  - validates source field applicability by family.
+  - enforces bool-like field operators (`logicalState`, `physicalState`, `triggerFlag`) as `EQ|NEQ` only.
+  - enforces `missionState` mapping and rejects invalid source families/operators.
+  - rejects out-of-range clause source `cardId`.
+
+- Updated V3->legacy apply path to consume these validations before conversion.
+
+### Evidence
+
+- Build command:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+- Result:
+  - `SUCCESS` (2026-03-01, local workspace build)
+
+### Remaining Transitional Gaps
+
+1. Runtime still executes on transitional `LogicCard`; typed runtime-state engine migration is still pending.
+2. Acceptance tests for invalid clause-source combinations should be added next to lock this behavior.
+
+## 2026-03-01 (V3 Acceptance Slice 6: Executable Condition-Rule Tests)
+
+### Session Summary
+
+Added executable native tests for per-family condition source field/operator constraints and extracted those rules into a reusable kernel module.
+
+### Completed
+
+- Added kernel rule module:
+  - `src/kernel/v3_condition_rules.h`
+  - `src/kernel/v3_condition_rules.cpp`
+  - Functions:
+    - `parseV3CardTypeToken(...)`
+    - `isV3FieldAllowedForSourceType(...)`
+    - `isV3OperatorAllowedForField(...)`
+
+- Wired runtime normalization path to this module:
+  - `src/main.cpp` now uses the shared rule helpers in V3 clause mapping.
+
+- Added native Unity acceptance tests:
+  - `test/test_v3_condition_rules/test_main.cpp`
+  - Test coverage includes:
+    - reject `AI.logicalState`
+    - reject `RTC.missionState`
+    - allow `DO/SIO.missionState` only with `EQ`
+    - bool-field operator restrictions
+    - card-type token parsing
+
+- Added PlatformIO native test env:
+  - `platformio.ini` `[env:native]`
+  - Restored default firmware build target via:
+    - `[platformio] default_envs = esp32doit-devkit-v1`
+
+### Evidence
+
+- Native acceptance tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (5/5)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+

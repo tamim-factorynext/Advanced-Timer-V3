@@ -122,3 +122,62 @@ Use one short entry per decision with this structure:
 - Impact: Runtime pacing path now uses configured `scanIntervalMs` without slow-mode overrides.
 - References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-v3.md`.
 
+## DEC-0010: Promote MATH/RTC To First-Class Runtime Families
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Runtime enums already listed `MATH`/`RTC`, but card allocation, scan dispatch, and validation still treated the system as legacy `DI/DO/AI/SIO` only.
+- Decision: Add fixed bring-up capacities (`MATH=2`, `RTC=2`) to runtime card allocation, enforce fixed family slot mapping by `cardId`, and process `MATH`/`RTC` directly in scan dispatch.
+- Impact: Removes legacy-only card-count assumptions from runtime ownership path.
+- Impact: Makes snapshots/config validation aware of all active V3 families in current bring-up scope.
+- Impact: RTC set/reset misuse is now rejected during validation.
+- References: `src/main.cpp`, `requirements-v3-contract.md` (Sections 6.2, 7.1, 8.5, 8.6), `docs/hardware-profile-v3.md`, `docs/acceptance-matrix-v3.md`.
+
+## DEC-0011: V3 Config Envelope Normalization With Time-Bounded Legacy Bridge
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Config endpoints accepted legacy payloads directly and did not enforce V3 `apiVersion`/`schemaVersion` semantics, creating drift from the frozen API/schema contract.
+- Decision: Route staged save/validate/commit through a single normalization path that enforces V3 envelope rules, supports canonical V3 card payload shape, and temporarily bridges legacy card payload shape into the internal model with explicit bridge metadata.
+- Impact: Aligns endpoint behavior with V3 contract-first workflow while keeping migration risk controlled.
+- Impact: Provides stable machine-readable error codes for unsupported API/schema versions and validation failures.
+- Impact: Keeps legacy compatibility explicitly transitional (`usedLegacyCardsBridge`).
+- References: `src/main.cpp`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `requirements-v3-contract.md` (Sections 11, 15, 21).
+
+## DEC-0012: Persist Active/Staged Config In Native V3 Envelope
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Runtime commit path still persisted legacy card arrays, which blocked full migration to the V3 config model and kept storage/API semantics inconsistent.
+- Decision: Persist config artifacts as V3 envelope objects with typed `config.cards` payload (`cardId/cardType/config`), and keep backward-compatible legacy-array load fallback for migration safety.
+- Impact: Active/staged/factory config files now align with V3 schema direction.
+- Impact: Bootstrap/load supports both V3 and legacy storage during transition.
+- Impact: Runtime engine still consumes deterministic internal card model via normalization bridge.
+- References: `src/main.cpp`, `docs/schema-v3.md`, `docs/api-contract-v3.md`, `requirements-v3-contract.md` (Sections 11, 12, 21).
+
+## DEC-0013: Introduce Per-Family Typed V3 Config Structs Behind Bridge
+- Date: 2026-03-01
+- Status: Accepted
+- Context: A unified legacy `LogicCard` struct remains too broad for six families with divergent schema needs, but runtime migration still requires deterministic, low-risk transition.
+- Decision: Add typed per-family V3 config structs (`DI/DO/AI/SIO/MATH/RTC`) and a dedicated bridge (`legacy <-> typed`) as the primary migration seam, while keeping `LogicCard` as transitional runtime DTO.
+- Impact: Creates explicit family-specialized model without forcing one-shot runtime rewrite.
+- Impact: Reduces future validator/API complexity by centralizing family field ownership.
+- Impact: Enables staged removal of legacy-only fields after acceptance coverage is complete.
+- References: `src/kernel/v3_card_types.h`, `src/kernel/v3_card_bridge.h`, `src/kernel/v3_card_bridge.cpp`, `src/main.cpp`.
+
+## DEC-0014: Enforce Per-Family Condition Source Field Applicability
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Condition evaluation references only a subset of runtime outputs (`logicalState`, `physicalState`, `triggerFlag`, `currentValue`, `missionState`), and not all fields are valid for all card families.
+- Decision: Validate V3 condition clauses against source-card family capabilities before bridging to legacy operators, including strict `missionState` rules (`DO/SIO` only, `EQ` only).
+- Impact: Prevents semantically invalid cross-family condition references from entering runtime.
+- Impact: Aligns config validation with typed per-family state ownership.
+- Impact: Reduces hidden behavior drift caused by permissive clause parsing.
+- References: `src/main.cpp` (V3 clause mapping/normalization), `src/kernel/v3_card_types.h`, `docs/schema-v3.md`, `requirements-v3-contract.md` (Section 8).
+
+## DEC-0015: Add Native Acceptance Tests For Condition Field/Operator Rules
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Migration safety needs executable evidence that cross-family condition misuse is rejected consistently, independent of target hardware.
+- Decision: Add a native Unity test suite for V3 condition source-field/operator rule helpers and keep a dedicated `native` PlatformIO test environment.
+- Impact: Provides fast CI-style guardrails for core validation semantics (`AI.logicalState` reject, `RTC.missionState` reject, `missionState` operator constraints).
+- Impact: Reduces regression risk while runtime remains bridge-based.
+- References: `src/kernel/v3_condition_rules.h`, `src/kernel/v3_condition_rules.cpp`, `test/test_v3_condition_rules/test_main.cpp`, `platformio.ini`.
+
