@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "kernel/card_model.h"
+#include "kernel/string_compat.h"
 
 bool writeJsonToPath(const char* path, JsonDocument& doc);
 bool readJsonFromPath(const char* path, JsonDocument& doc);

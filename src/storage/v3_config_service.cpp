@@ -33,6 +33,30 @@ bool normalizeV3ConfigRequestTyped(
   return true;
 }
 
+bool normalizeV3ConfigRequestContext(
+    JsonObjectConst root, const V3CardLayout& layout, const char* apiVersion,
+    const char* schemaVersion, const LogicCard* baselineCards,
+    size_t baselineCount, size_t rtcChannelCount, V3ConfigContext& outContext,
+    String& reason, const char*& outErrorCode) {
+  if (layout.totalCards > kV3ConfigContextMaxCards) {
+    reason = "layout totalCards exceeds context capacity";
+    outErrorCode = "INTERNAL_ERROR";
+    return false;
+  }
+  if (rtcChannelCount > kV3ConfigContextMaxRtcChannels) {
+    reason = "rtc channel count exceeds context capacity";
+    outErrorCode = "INTERNAL_ERROR";
+    return false;
+  }
+
+  outContext.typedCount = layout.totalCards;
+  outContext.rtcCount = rtcChannelCount;
+  return normalizeV3ConfigRequestTyped(
+      root, layout, apiVersion, schemaVersion, baselineCards, baselineCount,
+      outContext.typedCards, outContext.typedCount, outContext.rtcChannels,
+      outContext.rtcCount, reason, outErrorCode);
+}
+
 bool buildLegacyCardsFromTypedWithBaseline(const V3CardConfig* typedCards,
                                            size_t typedCount,
                                            const LogicCard* baselineCards,
@@ -58,4 +82,22 @@ bool buildLegacyCardsFromTypedWithBaseline(const V3CardConfig* typedCards,
   sanitizeConfigCardsRuntimeFields(outCards, static_cast<uint8_t>(typedCount));
   reason = "";
   return true;
+}
+
+void applyRtcScheduleChannelsFromConfig(const V3RtcScheduleChannel* source,
+                                        size_t sourceCount,
+                                        V3RtcScheduleChannel* target,
+                                        size_t targetCount) {
+  if (source == nullptr || target == nullptr) return;
+  const size_t count = (sourceCount < targetCount) ? sourceCount : targetCount;
+  for (size_t i = 0; i < count; ++i) {
+    target[i].enabled = source[i].enabled;
+    target[i].year = source[i].year;
+    target[i].month = source[i].month;
+    target[i].day = source[i].day;
+    target[i].weekday = source[i].weekday;
+    target[i].hour = source[i].hour;
+    target[i].minute = source[i].minute;
+    target[i].rtcCardId = source[i].rtcCardId;
+  }
 }

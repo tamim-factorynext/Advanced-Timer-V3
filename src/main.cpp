@@ -115,6 +115,7 @@ V3RtcRuntimeState gRtcRuntime[NUM_RTC] = {};
 V3RuntimeStoreView gRuntimeStore = {gDiRuntime, NUM_DI,   gDoRuntime, NUM_DO,
                                     gAiRuntime, NUM_AI,   gSioRuntime, NUM_SIO,
                                     gMathRuntime, NUM_MATH, gRtcRuntime, NUM_RTC};
+V3CardConfig gActiveTypedCards[TOTAL_CARDS] = {};
 V3RuntimeSignal gRuntimeSignals[TOTAL_CARDS] = {};
 RuntimeCardMeta gRuntimeCardMeta[TOTAL_CARDS] = {};
 bool gPrevDISample[TOTAL_CARDS] = {};
@@ -189,6 +190,9 @@ bool applyCommand(JsonObjectConst command);
 bool setRtcCardStateCommand(uint8_t cardId, bool state);
 void updateSharedRuntimeSnapshot(uint32_t nowMs, bool incrementSeq);
 void initializeCardArraySafeDefaults(LogicCard* cards);
+void refreshActiveTypedCardsFromLegacy();
+const V3CardConfig* activeTypedCardConfig(uint8_t cardId);
+const RtcScheduleChannel* findRtcScheduleByCardId(uint8_t cardId);
 bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards);
 bool validateConfigCardsArray(JsonArrayConst array, String& reason);
 void serviceRtcMinuteScheduler(uint32_t nowMs);
@@ -196,8 +200,6 @@ void syncRuntimeStateFromCards();
 void writeConfigResultResponse(int statusCode, bool ok, const char* requestId,
                                const char* errorCode, const String& message,
                                JsonObject* extra = nullptr);
-void applyRtcScheduleChannels(const V3RtcScheduleChannel* rtcOut,
-                              uint8_t rtcCount);
 void serializeCardsToV3Array(const LogicCard* sourceCards, JsonArray& cards);
 void buildV3ConfigEnvelope(const LogicCard* sourceCards, JsonDocument& doc,
                            const char* configId, const char* requestId);
@@ -437,9 +439,27 @@ void initializeAllCardsSafeDefaults() {
                                    gRuntimeSignals, TOTAL_CARDS);
 }
 
+void refreshActiveTypedCardsFromLegacy() {
+  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
+    const LogicCard& card = logicCards[i];
+    const RtcScheduleChannel* rtc = findRtcScheduleByCardId(card.id);
+    const int16_t rtcYear = (rtc != nullptr) ? rtc->year : -1;
+    const int8_t rtcMonth = (rtc != nullptr) ? rtc->month : -1;
+    const int8_t rtcDay = (rtc != nullptr) ? rtc->day : -1;
+    const int8_t rtcWeekday = (rtc != nullptr) ? rtc->weekday : -1;
+    const int8_t rtcHour = (rtc != nullptr) ? rtc->hour : -1;
+    const int8_t rtcMinute = (rtc != nullptr) ? rtc->minute : -1;
+    legacyToV3CardConfig(card, rtcYear, rtcMonth, rtcDay, rtcWeekday, rtcHour,
+                         rtcMinute, gActiveTypedCards[i]);
+  }
+}
+
 void syncRuntimeStateFromCards() {
+  refreshActiveTypedCardsFromLegacy();
   syncRuntimeStoreFromCards(logicCards, TOTAL_CARDS, gRuntimeStore);
-  refreshRuntimeCardMetaFromCards(logicCards, TOTAL_CARDS, gRuntimeCardMeta);
+  refreshRuntimeCardMetaFromTypedCards(gActiveTypedCards, TOTAL_CARDS, DO_START,
+                                       AI_START, SIO_START, MATH_START,
+                                       RTC_START, gRuntimeCardMeta);
   for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
     mirrorRuntimeStoreCardToLegacy(logicCards[i], gRuntimeStore);
   }
@@ -753,27 +773,29 @@ void handleHttpStagedSaveConfig() {
   }
 
   JsonObjectConst root = request.as<JsonObjectConst>();
-  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  V3ConfigContext configContext = {};
   LogicCard baseline[TOTAL_CARDS];
   initializeCardArraySafeDefaults(baseline);
-  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
   const char* requestId = root["requestId"] | "";
   const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                SIO_START,  MATH_START, RTC_START};
-  if (!normalizeV3ConfigRequestTyped(
+  if (!normalizeV3ConfigRequestContext(
           root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-          typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
-          errorCode)) {
+          NUM_RTC_SCHED_CHANNELS, configContext, reason, errorCode)) {
     writeConfigResultResponse(400, false, requestId, errorCode, reason);
     return;
   }
-  applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+  applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                     configContext.rtcCount,
+                                     gRtcScheduleChannels,
+                                     NUM_RTC_SCHED_CHANNELS);
 
   LogicCard stagedCards[TOTAL_CARDS];
   if (!buildLegacyCardsFromTypedWithBaseline(
-          typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, stagedCards,
+          configContext.typedCards, configContext.typedCount, baseline,
+          TOTAL_CARDS, stagedCards,
           reason)) {
     writeConfigResultResponse(500, false, requestId, "INTERNAL_ERROR",
                               reason);
@@ -797,10 +819,9 @@ void handleHttpStagedSaveConfig() {
 
 void handleHttpStagedValidateConfig() {
   JsonDocument source;
-  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  V3ConfigContext configContext = {};
   LogicCard baseline[TOTAL_CARDS];
   initializeCardArraySafeDefaults(baseline);
-  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* requestId = "";
 
@@ -817,14 +838,16 @@ void handleHttpStagedValidateConfig() {
     const char* errorCode = "VALIDATION_FAILED";
     const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                  SIO_START,  MATH_START, RTC_START};
-    if (!normalizeV3ConfigRequestTyped(
+    if (!normalizeV3ConfigRequestContext(
             root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
-            errorCode)) {
+            NUM_RTC_SCHED_CHANNELS, configContext, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
-    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+    applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                       configContext.rtcCount,
+                                       gRtcScheduleChannels,
+                                       NUM_RTC_SCHED_CHANNELS);
   } else {
     if (!readJsonFromPath(kStagedConfigPath, source) ||
         !source.is<JsonObjectConst>()) {
@@ -837,14 +860,16 @@ void handleHttpStagedValidateConfig() {
     const char* errorCode = "VALIDATION_FAILED";
     const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                  SIO_START,  MATH_START, RTC_START};
-    if (!normalizeV3ConfigRequestTyped(
+    if (!normalizeV3ConfigRequestContext(
             root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
-            errorCode)) {
+            NUM_RTC_SCHED_CHANNELS, configContext, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
-    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+    applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                       configContext.rtcCount,
+                                       gRtcScheduleChannels,
+                                       NUM_RTC_SCHED_CHANNELS);
   }
 
   JsonDocument extras;
@@ -871,12 +896,13 @@ void writeHistoryHead(JsonObject& head) {
   head["slot3Version"] = gSlot3Version;
 }
 
-bool commitCards(const V3CardConfig* typedCards, String& reason) {
+bool commitCards(const V3ConfigContext& configContext, String& reason) {
   LogicCard baseline[TOTAL_CARDS];
   initializeCardArraySafeDefaults(baseline);
   LogicCard nextCards[TOTAL_CARDS];
   if (!buildLegacyCardsFromTypedWithBaseline(
-          typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, nextCards, reason)) {
+          configContext.typedCards, configContext.typedCount, baseline,
+          TOTAL_CARDS, nextCards, reason)) {
     return false;
   }
 
@@ -929,10 +955,9 @@ bool commitLegacyCards(JsonArrayConst cards, String& reason) {
 
 void handleHttpCommitConfig() {
   JsonDocument sourceDoc;
-  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  V3ConfigContext configContext = {};
   LogicCard baseline[TOTAL_CARDS];
   initializeCardArraySafeDefaults(baseline);
-  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* requestId = "";
   const bool hasInlinePayload =
@@ -950,14 +975,16 @@ void handleHttpCommitConfig() {
     const char* errorCode = "VALIDATION_FAILED";
     const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                  SIO_START,  MATH_START, RTC_START};
-    if (!normalizeV3ConfigRequestTyped(
+    if (!normalizeV3ConfigRequestContext(
             root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
-            errorCode)) {
+            NUM_RTC_SCHED_CHANNELS, configContext, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
-    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+    applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                       configContext.rtcCount,
+                                       gRtcScheduleChannels,
+                                       NUM_RTC_SCHED_CHANNELS);
   } else {
     if (!readJsonFromPath(kStagedConfigPath, sourceDoc) ||
         !sourceDoc.is<JsonObjectConst>()) {
@@ -970,17 +997,19 @@ void handleHttpCommitConfig() {
     const char* errorCode = "VALIDATION_FAILED";
     const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                  SIO_START,  MATH_START, RTC_START};
-    if (!normalizeV3ConfigRequestTyped(
+    if (!normalizeV3ConfigRequestContext(
             root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
-            typedCards, TOTAL_CARDS, rtcOut, NUM_RTC_SCHED_CHANNELS, reason,
-            errorCode)) {
+            NUM_RTC_SCHED_CHANNELS, configContext, reason, errorCode)) {
       writeConfigResultResponse(400, false, requestId, errorCode, reason);
       return;
     }
-    applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+    applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                       configContext.rtcCount,
+                                       gRtcScheduleChannels,
+                                       NUM_RTC_SCHED_CHANNELS);
   }
 
-  if (!commitCards(typedCards, reason)) {
+  if (!commitCards(configContext, reason)) {
     writeConfigResultResponse(500, false, requestId, "COMMIT_FAILED", reason);
     return;
   }
@@ -1207,20 +1236,26 @@ LogicCard* getCardById(uint8_t id) {
 }
 
 bool isDigitalInputCard(uint8_t id) {
-  return id < TOTAL_CARDS && logicCards[id].type == DigitalInput;
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::DI;
 }
 
 bool isDigitalOutputCard(uint8_t id) {
-  return id < TOTAL_CARDS && logicCards[id].type == DigitalOutput;
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::DO;
 }
 
 bool isAnalogInputCard(uint8_t id) {
-  return id < TOTAL_CARDS && logicCards[id].type == AnalogInput;
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::AI;
 }
 
-bool isSoftIOCard(uint8_t id) { return id < TOTAL_CARDS && logicCards[id].type == SoftIO; }
-bool isMathCard(uint8_t id) { return id < TOTAL_CARDS && logicCards[id].type == MathCard; }
-bool isRtcCard(uint8_t id) { return id < TOTAL_CARDS && logicCards[id].type == RtcCard; }
+bool isSoftIOCard(uint8_t id) {
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::SIO;
+}
+bool isMathCard(uint8_t id) {
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::MATH;
+}
+bool isRtcCard(uint8_t id) {
+  return id < TOTAL_CARDS && gActiveTypedCards[id].family == V3CardFamily::RTC;
+}
 
 bool isInputCard(uint8_t id) {
   return isDigitalInputCard(id) || isAnalogInputCard(id);
@@ -1932,23 +1967,26 @@ bool loadCardsFromPath(const char* path, LogicCard* outCards) {
     return deserializeCardsFromArray(doc.as<JsonArrayConst>(), outCards);
   }
   if (!doc.is<JsonObjectConst>()) return false;
-  V3CardConfig typedCards[TOTAL_CARDS] = {};
+  V3ConfigContext configContext = {};
   LogicCard baseline[TOTAL_CARDS];
   initializeCardArraySafeDefaults(baseline);
-  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
   const V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
                                SIO_START,  MATH_START, RTC_START};
-  if (!normalizeV3ConfigRequestTyped(
+  if (!normalizeV3ConfigRequestContext(
           doc.as<JsonObjectConst>(), layout, kApiVersion, kSchemaVersion,
-          baseline, TOTAL_CARDS, typedCards, TOTAL_CARDS, rtcOut,
-          NUM_RTC_SCHED_CHANNELS, reason, errorCode)) {
+          baseline, TOTAL_CARDS, NUM_RTC_SCHED_CHANNELS, configContext, reason,
+          errorCode)) {
     return false;
   }
-  applyRtcScheduleChannels(rtcOut, NUM_RTC_SCHED_CHANNELS);
+  applyRtcScheduleChannelsFromConfig(configContext.rtcChannels,
+                                     configContext.rtcCount,
+                                     gRtcScheduleChannels,
+                                     NUM_RTC_SCHED_CHANNELS);
   return buildLegacyCardsFromTypedWithBaseline(
-      typedCards, TOTAL_CARDS, baseline, TOTAL_CARDS, outCards, reason);
+      configContext.typedCards, configContext.typedCount, baseline, TOTAL_CARDS,
+      outCards, reason);
 }
 
 bool copyFileIfExists(const char* srcPath, const char* dstPath) {
@@ -2015,22 +2053,6 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
   updateSharedRuntimeSnapshot(millis(), false);
   resumeKernelAfterConfigApply();
   return true;
-}
-
-void applyRtcScheduleChannels(const V3RtcScheduleChannel* rtcOut,
-                              uint8_t rtcCount) {
-  if (rtcOut == nullptr) return;
-  for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
-    if (i >= rtcCount) break;
-    gRtcScheduleChannels[i].enabled = rtcOut[i].enabled;
-    gRtcScheduleChannels[i].year = rtcOut[i].year;
-    gRtcScheduleChannels[i].month = rtcOut[i].month;
-    gRtcScheduleChannels[i].day = rtcOut[i].day;
-    gRtcScheduleChannels[i].weekday = rtcOut[i].weekday;
-    gRtcScheduleChannels[i].hour = rtcOut[i].hour;
-    gRtcScheduleChannels[i].minute = rtcOut[i].minute;
-    gRtcScheduleChannels[i].rtcCardId = rtcOut[i].rtcCardId;
-  }
 }
 
 bool extractConfigCardsFromRequest(JsonObjectConst root,
@@ -2146,9 +2168,12 @@ bool setInputForceCommand(uint8_t cardId, inputSourceMode mode,
 
 bool setRtcCardStateCommand(uint8_t cardId, bool state) {
   if (cardId >= TOTAL_CARDS) return false;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::RTC) return false;
   LogicCard& card = logicCards[cardId];
-  if (card.type != RtcCard) return false;
-  V3RtcRuntimeState* runtime = runtimeRtcStateForCard(card, gRuntimeStore);
+  if (cardId < RTC_START) return false;
+  const uint8_t rtcIndex = static_cast<uint8_t>(cardId - RTC_START);
+  V3RtcRuntimeState* runtime = runtimeRtcStateAt(rtcIndex, gRuntimeStore);
   if (runtime == nullptr) return false;
 
   runtime->logicalState = state;
@@ -2327,34 +2352,48 @@ bool evalCondition(uint8_t aId, logicOperator aOp, uint32_t aTh, uint8_t bId,
   return false;
 }
 
+const V3CardConfig* activeTypedCardConfig(uint8_t cardId) {
+  if (cardId >= TOTAL_CARDS) return nullptr;
+  return &gActiveTypedCards[cardId];
+}
+
+bool evalTypedConditionBlock(const V3ConditionBlock& block) {
+  return evalCondition(block.clauseAId, block.clauseAOperator,
+                       block.clauseAThreshold, block.clauseBId,
+                       block.clauseBOperator, block.clauseBThreshold,
+                       block.combiner);
+}
+
 void processDICard(uint8_t cardId, uint32_t nowMs) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::DI) return;
+  const V3DiConfig& cfgTyped = cfgCard->di;
   LogicCard& card = logicCards[cardId];
-  V3DiRuntimeState* runtime = runtimeDiStateForCard(card, gRuntimeStore);
+  V3DiRuntimeState* runtime = runtimeDiStateAt(cfgTyped.channel, gRuntimeStore);
   if (runtime == nullptr) return;
 
   bool sample = false;
   inputSourceMode sourceMode = InputSource_Real;
   sourceMode = gCardInputSource[cardId];
+  uint8_t hwPin = 255;
+  if (cfgTyped.channel < NUM_DI) hwPin = DI_Pins[cfgTyped.channel];
 
   if (sourceMode == InputSource_ForcedHigh) {
     sample = true;
   } else if (sourceMode == InputSource_ForcedLow) {
     sample = false;
-  } else if (card.hwPin != 255) {
-    sample = (digitalRead(card.hwPin) == HIGH);
+  } else if (hwPin != 255) {
+    sample = (digitalRead(hwPin) == HIGH);
   }
-  if (card.invert) sample = !sample;
+  if (cfgTyped.invert) sample = !sample;
 
-  const bool setCondition = evalCondition(
-      card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
-      card.setB_Operator, card.setB_Threshold, card.setCombine);
-  const bool resetCondition =
-      evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
-                    card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
-                    card.resetCombine);
+  const bool setCondition = evalTypedConditionBlock(cfgTyped.set);
+  const bool resetCondition = evalTypedConditionBlock(cfgTyped.reset);
 
-  V3DiRuntimeConfig cfg = makeDiRuntimeConfig(card);
+  V3DiRuntimeConfig cfg = {};
+  cfg.debounceTimeMs = cfgTyped.debounceTimeMs;
+  cfg.edgeMode = cfgTyped.edgeMode;
 
   V3DiStepInput in = {};
   in.nowMs = nowMs;
@@ -2378,8 +2417,11 @@ void processDICard(uint8_t cardId, uint32_t nowMs) {
 
 void processAICard(uint8_t cardId) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::AI) return;
+  const V3AiConfig& cfgTyped = cfgCard->ai;
   LogicCard& card = logicCards[cardId];
-  V3AiRuntimeState* runtime = runtimeAiStateForCard(card, gRuntimeStore);
+  V3AiRuntimeState* runtime = runtimeAiStateAt(cfgTyped.channel, gRuntimeStore);
   if (runtime == nullptr) return;
   gCardSetResult[cardId] = false;
   gCardResetResult[cardId] = false;
@@ -2390,11 +2432,16 @@ void processAICard(uint8_t cardId) {
 
   if (sourceMode == InputSource_ForcedValue) {
     raw = gCardForcedAIValue[cardId];
-  } else if (card.hwPin != 255) {
-    raw = static_cast<uint32_t>(analogRead(card.hwPin));
+  } else if (cfgTyped.channel < NUM_AI) {
+    raw = static_cast<uint32_t>(analogRead(AI_Pins[cfgTyped.channel]));
   }
 
-  V3AiRuntimeConfig cfg = makeAiRuntimeConfig(card);
+  V3AiRuntimeConfig cfg = {};
+  cfg.inputMin = cfgTyped.inputMin;
+  cfg.inputMax = cfgTyped.inputMax;
+  cfg.outputMin = cfgTyped.outputMin;
+  cfg.outputMax = cfgTyped.outputMax;
+  cfg.emaAlphaX1000 = cfgTyped.emaAlphaX100 * 10U;
 
   V3AiStepInput in = {};
   in.rawSample = raw;
@@ -2404,32 +2451,26 @@ void processAICard(uint8_t cardId) {
   mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
 }
 
-void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
-                     bool masked) {
-  if (!driveHardware) return;
-  if (card.hwPin == 255) return;
-  if (masked) return;
-  digitalWrite(card.hwPin, level ? HIGH : LOW);
-}
-
 void processDOCard(uint8_t cardId, uint32_t nowMs, bool driveHardware) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::DO) return;
+  const V3DoConfig& cfgTyped = cfgCard->dout;
   LogicCard& card = logicCards[cardId];
-  V3DoRuntimeState* runtime = runtimeDoStateForCard(card, gRuntimeStore);
+  V3DoRuntimeState* runtime = runtimeDoStateAt(cfgTyped.channel, gRuntimeStore);
   if (runtime == nullptr) return;
 
-  const bool setCondition = evalCondition(
-      card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
-      card.setB_Operator, card.setB_Threshold, card.setCombine);
-  const bool resetCondition =
-      evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
-                    card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
-                    card.resetCombine);
+  const bool setCondition = evalTypedConditionBlock(cfgTyped.set);
+  const bool resetCondition = evalTypedConditionBlock(cfgTyped.reset);
   gCardSetResult[cardId] = setCondition;
   gCardResetResult[cardId] = resetCondition;
   gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3DoRuntimeConfig cfg = makeDoRuntimeConfig(card);
+  V3DoRuntimeConfig cfg = {};
+  cfg.mode = cfgTyped.mode;
+  cfg.delayBeforeOnMs = cfgTyped.delayBeforeOnMs;
+  cfg.onDurationMs = cfgTyped.onDurationMs;
+  cfg.repeatCount = cfgTyped.repeatCount;
 
   V3DoStepInput in = {};
   in.nowMs = nowMs;
@@ -2440,29 +2481,35 @@ void processDOCard(uint8_t cardId, uint32_t nowMs, bool driveHardware) {
   runV3DoStep(cfg, *runtime, in, out);
 
   mirrorRuntimeStoreCardToLegacy(card, gRuntimeStore);
-
-  driveDOHardware(card, driveHardware, out.effectiveOutput,
-                  isOutputMasked(cardId));
+  uint8_t hwPin = 255;
+  if (cfgTyped.channel < NUM_DO) hwPin = DO_Pins[cfgTyped.channel];
+  if (driveHardware && hwPin != 255 && !isOutputMasked(cardId)) {
+    digitalWrite(hwPin, out.effectiveOutput ? HIGH : LOW);
+  }
 }
 
 void processSIOCard(uint8_t cardId, uint32_t nowMs) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::SIO) return;
+  const V3SioConfig& cfgTyped = cfgCard->sio;
   LogicCard& card = logicCards[cardId];
-  V3SioRuntimeState* runtime = runtimeSioStateForCard(card, gRuntimeStore);
+  if (cardId < SIO_START) return;
+  V3SioRuntimeState* runtime =
+      runtimeSioStateAt(static_cast<uint8_t>(cardId - SIO_START), gRuntimeStore);
   if (runtime == nullptr) return;
 
-  const bool setCondition = evalCondition(
-      card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
-      card.setB_Operator, card.setB_Threshold, card.setCombine);
-  const bool resetCondition =
-      evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
-                    card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
-                    card.resetCombine);
+  const bool setCondition = evalTypedConditionBlock(cfgTyped.set);
+  const bool resetCondition = evalTypedConditionBlock(cfgTyped.reset);
   gCardSetResult[cardId] = setCondition;
   gCardResetResult[cardId] = resetCondition;
   gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3SioRuntimeConfig cfg = makeSioRuntimeConfig(card);
+  V3SioRuntimeConfig cfg = {};
+  cfg.mode = cfgTyped.mode;
+  cfg.delayBeforeOnMs = cfgTyped.delayBeforeOnMs;
+  cfg.onDurationMs = cfgTyped.onDurationMs;
+  cfg.repeatCount = cfgTyped.repeatCount;
 
   V3SioStepInput in = {};
   in.nowMs = nowMs;
@@ -2477,22 +2524,28 @@ void processSIOCard(uint8_t cardId, uint32_t nowMs) {
 
 void processMathCard(uint8_t cardId) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::MATH) return;
+  const V3MathConfig& cfgTyped = cfgCard->math;
   LogicCard& card = logicCards[cardId];
-  V3MathRuntimeState* runtime = runtimeMathStateForCard(card, gRuntimeStore);
+  if (cardId < MATH_START) return;
+  V3MathRuntimeState* runtime = runtimeMathStateAt(
+      static_cast<uint8_t>(cardId - MATH_START), gRuntimeStore);
   if (runtime == nullptr) return;
 
-  const bool setCondition = evalCondition(
-      card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
-      card.setB_Operator, card.setB_Threshold, card.setCombine);
-  const bool resetCondition =
-      evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
-                    card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
-                    card.resetCombine);
+  const bool setCondition = evalTypedConditionBlock(cfgTyped.set);
+  const bool resetCondition = evalTypedConditionBlock(cfgTyped.reset);
   gCardSetResult[cardId] = setCondition;
   gCardResetResult[cardId] = resetCondition;
   gCardResetOverride[cardId] = setCondition && resetCondition;
 
-  V3MathRuntimeConfig cfg = makeMathRuntimeConfig(card);
+  V3MathRuntimeConfig cfg = {};
+  cfg.inputA = cfgTyped.inputA;
+  cfg.inputB = cfgTyped.inputB;
+  cfg.fallbackValue = cfgTyped.fallbackValue;
+  cfg.clampMin = cfgTyped.clampMin;
+  cfg.clampMax = cfgTyped.clampMax;
+  cfg.clampEnabled = (cfgTyped.clampMax >= cfgTyped.clampMin);
 
   V3MathStepInput in = {};
   in.setCondition = setCondition;
@@ -2506,14 +2559,20 @@ void processMathCard(uint8_t cardId) {
 
 void processRtcCard(uint8_t cardId, uint32_t nowMs) {
   if (cardId >= TOTAL_CARDS) return;
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr || cfgCard->family != V3CardFamily::RTC) return;
+  const V3RtcConfig& cfgTyped = cfgCard->rtc;
   LogicCard& card = logicCards[cardId];
-  V3RtcRuntimeState* runtime = runtimeRtcStateForCard(card, gRuntimeStore);
+  if (cardId < RTC_START) return;
+  V3RtcRuntimeState* runtime =
+      runtimeRtcStateAt(static_cast<uint8_t>(cardId - RTC_START), gRuntimeStore);
   if (runtime == nullptr) return;
   gCardSetResult[cardId] = false;
   gCardResetResult[cardId] = false;
   gCardResetOverride[cardId] = false;
 
-  V3RtcRuntimeConfig cfg = makeRtcRuntimeConfig(card);
+  V3RtcRuntimeConfig cfg = {};
+  cfg.triggerDurationMs = cfgTyped.triggerDurationMs;
 
   V3RtcStepInput in = {};
   in.nowMs = nowMs;
@@ -2525,24 +2584,25 @@ void processRtcCard(uint8_t cardId, uint32_t nowMs) {
 
 void processCardById(uint8_t cardId, uint32_t nowMs) {
   if (cardId >= TOTAL_CARDS) return;
-  const LogicCard& card = logicCards[cardId];
-  switch (card.type) {
-    case DigitalInput:
+  const V3CardConfig* cfgCard = activeTypedCardConfig(cardId);
+  if (cfgCard == nullptr) return;
+  switch (cfgCard->family) {
+    case V3CardFamily::DI:
       processDICard(cardId, nowMs);
       return;
-    case AnalogInput:
+    case V3CardFamily::AI:
       processAICard(cardId);
       return;
-    case SoftIO:
+    case V3CardFamily::SIO:
       processSIOCard(cardId, nowMs);
       return;
-    case DigitalOutput:
+    case V3CardFamily::DO:
       processDOCard(cardId, nowMs, true);
       return;
-    case MathCard:
+    case V3CardFamily::MATH:
       processMathCard(cardId);
       return;
-    case RtcCard:
+    case V3CardFamily::RTC:
       processRtcCard(cardId, nowMs);
       return;
     default:

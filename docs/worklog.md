@@ -1753,3 +1753,216 @@ Moved typed-to-legacy build logic (`buildLegacyCardsFromTyped`) out of `main.cpp
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
 
+## 2026-03-01 (V3 Config Slice 33: Move RTC Schedule Apply Ownership Out of main.cpp)
+
+### Session Summary
+
+Removed `applyRtcScheduleChannels(...)` from `main.cpp` and moved RTC schedule application ownership into storage config service.
+
+### Completed
+
+- Extended storage service API:
+  - `src/storage/v3_config_service.h`
+  - added:
+    - `applyRtcScheduleChannelsFromConfig(...)`
+
+- Implemented schedule apply helper in:
+  - `src/storage/v3_config_service.cpp`
+  - copies schedule channel fields from normalized output to runtime-owned schedule array.
+
+- Rewired `main.cpp` callsites:
+  - staged save/validate, commit, and load flows now call service helper.
+  - removed local `applyRtcScheduleChannels(...)` function from `main.cpp`.
+
+- Added service test coverage:
+  - `test/test_v3_config_service/test_main.cpp`
+  - new test validates field-level copy behavior for RTC schedule channels.
+
+### Migration Impact
+
+- Eliminates another config orchestration helper from `main.cpp`.
+- Clarifies schedule application as part of config service boundary.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Config Slice 34: Introduce Typed Config Context Object)
+
+### Session Summary
+
+Introduced a single typed config context object to carry normalized typed cards plus RTC schedule output, and rewired main config flows to consume the context instead of separate buffers.
+
+### Completed
+
+- Added context type in storage config service:
+  - `src/storage/v3_config_service.h`
+  - `V3ConfigContext` with:
+    - `typedCards[]`
+    - `typedCount`
+    - `rtcChannels[]`
+    - `rtcCount`
+
+- Added normalize entrypoint returning context:
+  - `normalizeV3ConfigRequestContext(...)` in
+    - `src/storage/v3_config_service.h`
+    - `src/storage/v3_config_service.cpp`
+
+- Rewired `main.cpp` callsites to context-based flow:
+  - staged save
+  - staged validate
+  - commit
+  - load
+  - now each path uses one `V3ConfigContext` object and no longer carries separate `typedCards`/`rtcOut` buffers.
+
+- Updated commit path shape:
+  - `commitCards(...)` now accepts `const V3ConfigContext&`.
+
+- Extended config service test coverage:
+  - `test/test_v3_config_service/test_main.cpp`
+  - valid normalize test now calls `normalizeV3ConfigRequestContext(...)` and asserts context content/count.
+
+### Migration Impact
+
+- Removes repeated buffer plumbing from `main.cpp`.
+- Establishes a single typed config handoff contract between storage/config service and runtime orchestration.
+
+### Evidence
+
+- Could not run build/tests in this shell because PlatformIO CLI is unavailable (`platformio`, `pio`, and `python -m platformio` not found).
+- Acceptance commands to run in your PlatformIO environment:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+
+## 2026-03-01 (V3 Runtime Slice 35: Scan Loop Uses Typed Card Config Model)
+
+### Session Summary
+
+Completed scan-path migration so runtime processing dispatch and per-family step config are sourced from typed `V3CardConfig` data (`gActiveTypedCards`) instead of legacy `LogicCard` type/config fields.
+
+### Completed
+
+- Updated runtime-family helpers in `src/main.cpp`:
+  - `isDigitalInputCard/isDigitalOutputCard/isAnalogInputCard/isSoftIOCard/isMathCard/isRtcCard`
+  - now resolve by `gActiveTypedCards[id].family`.
+
+- Updated runtime scan dispatch in `src/main.cpp`:
+  - `processCardById(...)` now switches on `V3CardFamily` from typed active config.
+
+- Migrated per-family scan handlers to typed config sources:
+  - `processAICard(...)` uses `V3AiConfig` for channel/range/alpha and runtime index.
+  - `processDOCard(...)` uses `V3DoConfig` for condition blocks and mission timing fields.
+  - `processSIOCard(...)` uses `V3SioConfig` for condition blocks and mission timing fields.
+  - `processMathCard(...)` uses `V3MathConfig` for condition blocks and computation/clamp fields.
+  - `processRtcCard(...)` uses `V3RtcConfig` for trigger duration.
+  - `processDICard(...)` was already typed in prior in-progress work and now aligns with this slice.
+
+- Updated RTC command path:
+  - `setRtcCardStateCommand(...)` now validates RTC by typed family and resolves runtime state by RTC slot index.
+
+### Migration Impact
+
+- Removes scan-time dependence on legacy card type/config fields.
+- Keeps `LogicCard` as transitional mirror/state DTO only, not scan behavior owner.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (75/75)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 36: Native Test Portability for Typed Parser/Storage Headers)
+
+### Session Summary
+
+Removed Arduino-framework-only include coupling from typed parser/storage headers so native tests can build parser/normalizer/service flows without requiring `Arduino.h`.
+
+### Completed
+
+- Added compatibility header:
+  - `src/kernel/string_compat.h`
+  - provides `String` alias for non-Arduino targets while keeping Arduino builds unchanged.
+
+- Updated headers to use compatibility layer:
+  - `src/kernel/v3_typed_card_parser.h`
+  - `src/storage/v3_normalizer.h`
+  - `src/storage/v3_config_service.h`
+  - `src/storage/config_lifecycle.h`
+
+### Migration Impact
+
+- Keeps contract/parser/config modules platform-agnostic and testable in native environment.
+- Reduces accidental framework coupling in backend logic modules.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (75/75)
+
+## 2026-03-01 (V3 Runtime Slice 37: Fix Config Service Native Test Linkage)
+
+### Session Summary
+
+Resolved `test_v3_config_service` linker failures by explicitly including enum codec implementation in that standalone native harness.
+
+### Completed
+
+- Updated:
+  - `test/test_v3_config_service/test_main.cpp`
+  - added `#include "../../src/kernel/enum_codec.cpp"` to provide `toString(...)` symbol definitions used by included storage/parser code paths.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (75/75)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 38: Runtime Metadata Refresh Uses Typed Cards)
+
+### Session Summary
+
+Moved runtime metadata refresh to typed card configs, reducing another runtime path that depended on legacy `LogicCard` type/index fields.
+
+### Completed
+
+- Extended runtime metadata module:
+  - `src/runtime/runtime_card_meta.h`
+  - `src/runtime/runtime_card_meta.cpp`
+  - added:
+    - `refreshRuntimeCardMetaFromTypedCards(...)`
+  - maps typed family to runtime `logicCardType`, derives family index, and resolves per-family mode from typed config.
+
+- Updated runtime sync path in `src/main.cpp`:
+  - `syncRuntimeStateFromCards()` now refreshes `gRuntimeCardMeta` from `gActiveTypedCards` via typed metadata refresh API.
+
+- Expanded native test coverage:
+  - `test/test_v3_runtime_card_meta/test_main.cpp`
+  - added typed metadata refresh test (`DI`, `DO`, `RTC` cases).
+
+### Migration Impact
+
+- Snapshot and runtime signal metadata rebuild now aligns with V3 typed ownership.
+- Legacy card array remains transitional mirror/state container only.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (76/76)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+

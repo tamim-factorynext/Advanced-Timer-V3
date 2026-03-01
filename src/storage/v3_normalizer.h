@@ -3,10 +3,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <Arduino.h>
 #include <ArduinoJson.h>
 
 #include "kernel/card_model.h"
+#include "kernel/string_compat.h"
 #include "kernel/v3_card_types.h"
 
 struct V3CardLayout {

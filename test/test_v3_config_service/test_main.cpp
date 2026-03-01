@@ -1,5 +1,6 @@
 #include <unity.h>
 
+#include "../../src/kernel/enum_codec.cpp"
 #include "../../src/kernel/v3_condition_rules.cpp"
 #include "../../src/kernel/v3_card_bridge.cpp"
 #include "../../src/kernel/v3_config_sanitize.cpp"
@@ -124,18 +125,18 @@ void test_normalize_service_accepts_valid_di_do_payload() {
 
   V3CardLayout layout = {kTotalCards, kDoStart, kAiStart, kSioStart, kMathStart,
                          kRtcStart};
-  V3CardConfig out[kTotalCards] = {};
-  V3RtcScheduleChannel rtcOut[1] = {};
+  V3ConfigContext context = {};
   String reason;
   const char* errorCode = "VALIDATION_FAILED";
-  bool ok = normalizeV3ConfigRequestTyped(
+  bool ok = normalizeV3ConfigRequestContext(
       req.as<JsonObjectConst>(), layout, "2.0", "2.0.0", baseline, kTotalCards,
-      out, kTotalCards, rtcOut, 0, reason, errorCode);
+      0, context, reason, errorCode);
   TEST_ASSERT_TRUE(ok);
   TEST_ASSERT_EQUAL(static_cast<int>(V3CardFamily::DI),
-                    static_cast<int>(out[0].family));
+                    static_cast<int>(context.typedCards[0].family));
   TEST_ASSERT_EQUAL(static_cast<int>(V3CardFamily::DO),
-                    static_cast<int>(out[1].family));
+                    static_cast<int>(context.typedCards[1].family));
+  TEST_ASSERT_EQUAL_UINT32(kTotalCards, context.typedCount);
 }
 
 void test_build_legacy_cards_from_typed_uses_baseline() {
@@ -181,10 +182,45 @@ void test_build_legacy_cards_from_typed_uses_baseline() {
   TEST_ASSERT_EQUAL_UINT32(100, out[1].setting1);
 }
 
+void test_apply_rtc_schedule_channels_from_config_copies_fields() {
+  V3RtcScheduleChannel source[2] = {};
+  source[0].enabled = true;
+  source[0].year = 2026;
+  source[0].month = 3;
+  source[0].day = 1;
+  source[0].weekday = 0;
+  source[0].hour = 12;
+  source[0].minute = 34;
+  source[0].rtcCardId = 16;
+  source[1].enabled = false;
+  source[1].year = -1;
+  source[1].month = -1;
+  source[1].day = -1;
+  source[1].weekday = -1;
+  source[1].hour = 8;
+  source[1].minute = 0;
+  source[1].rtcCardId = 17;
+
+  V3RtcScheduleChannel target[2] = {};
+  applyRtcScheduleChannelsFromConfig(source, 2, target, 2);
+
+  TEST_ASSERT_TRUE(target[0].enabled);
+  TEST_ASSERT_EQUAL_INT16(2026, target[0].year);
+  TEST_ASSERT_EQUAL_INT8(3, target[0].month);
+  TEST_ASSERT_EQUAL_INT8(1, target[0].day);
+  TEST_ASSERT_EQUAL_INT8(0, target[0].weekday);
+  TEST_ASSERT_EQUAL_INT8(12, target[0].hour);
+  TEST_ASSERT_EQUAL_INT8(34, target[0].minute);
+  TEST_ASSERT_EQUAL_UINT8(16, target[0].rtcCardId);
+  TEST_ASSERT_FALSE(target[1].enabled);
+  TEST_ASSERT_EQUAL_UINT8(17, target[1].rtcCardId);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_normalize_service_rejects_invalid_api_version);
   RUN_TEST(test_normalize_service_accepts_valid_di_do_payload);
   RUN_TEST(test_build_legacy_cards_from_typed_uses_baseline);
+  RUN_TEST(test_apply_rtc_schedule_channels_from_config_copies_fields);
   return UNITY_END();
 }
