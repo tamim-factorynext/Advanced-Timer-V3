@@ -2143,3 +2143,45 @@ Added an explicit semantic field alias layer for legacy `LogicCard` payload fiel
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (Cleanup Pass: Main.cpp Size Reduction via Legacy Profile + Validator Extraction)
+
+### Session Summary
+
+Reduced `main.cpp` by extracting large legacy card profile/validation blocks into dedicated kernel modules.
+
+### Completed
+
+- Added legacy profile module:
+  - `src/kernel/legacy_card_profile.h`
+  - `src/kernel/legacy_card_profile.cpp`
+  - moved:
+    - legacy card JSON serialize/deserialize behavior
+    - safe-default card initialization behavior
+    - legacy cards-array deserialize behavior
+
+- Added legacy config validator module:
+  - `src/kernel/legacy_config_validator.h`
+  - `src/kernel/legacy_config_validator.cpp`
+  - moved:
+    - `validateConfigCardsArray(...)` implementation
+
+- Updated `src/main.cpp`:
+  - now delegates those behaviors to module APIs
+  - removed in-file long implementation blocks.
+
+### Measured Result
+
+- `src/main.cpp` line count:
+  - before this pass: `2426`
+  - after this pass: `2201`
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (74/74)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+

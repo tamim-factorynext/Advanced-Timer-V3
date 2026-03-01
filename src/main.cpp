@@ -26,12 +26,13 @@
 #include "control/command_dto.h"
 #include "kernel/card_model.h"
 #include "kernel/enum_codec.h"
+#include "kernel/legacy_card_profile.h"
+#include "kernel/legacy_config_validator.h"
 #include "kernel/v3_card_bridge.h"
 #include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
-#include "kernel/v3_config_sanitize.h"
 #include "kernel/v3_math_runtime.h"
 #include "kernel/v3_sio_runtime.h"
 #include "kernel/v3_rtc_runtime.h"
@@ -91,6 +92,10 @@ const uint32_t MASTER_WIFI_TIMEOUT_MS = 2000;
 const uint32_t USER_WIFI_TIMEOUT_MS = 180000;
 const char* kApiVersion = "2.0";
 const char* kSchemaVersion = "2.0.0";
+
+const LegacyCardProfileLayout kLegacyCardLayout = {
+    TOTAL_CARDS, DO_START, AI_START, SIO_START, MATH_START, RTC_START,
+    DI_Pins,      DO_Pins,  AI_Pins,  SIO_Pins};
 
 #ifndef LOGIC_ENGINE_DEBUG
 #define LOGIC_ENGINE_DEBUG 0
@@ -203,236 +208,8 @@ void serializeCardsToV3Array(const LogicCard* sourceCards, JsonArray& cards);
 void buildV3ConfigEnvelope(const LogicCard* sourceCards, JsonDocument& doc,
                            const char* configId, const char* requestId);
 
-void serializeCardToJson(const LogicCard& card, JsonObject& json) {
-  json["id"] = card.id;
-  json["type"] = toString(card.type);
-  json["index"] = card.index;
-  json["hwPin"] = card.hwPin;
-  json["invert"] = card.invert;
-
-  json["setting1"] = card.setting1;
-  json["setting2"] = card.setting2;
-  if (card.type == AnalogInput) {
-    json["setting3"] = static_cast<double>(card.setting3) / 1000.0;
-  } else {
-    json["setting3"] = card.setting3;
-  }
-
-  json["mode"] = toString(card.mode);
-  if (card.type == AnalogInput || card.type == MathCard) {
-    json["startOnMs"] = card.startOnMs;
-    json["startOffMs"] = card.startOffMs;
-  }
-
-  json["setA_ID"] = card.setA_ID;
-  json["setA_Operator"] = toString(card.setA_Operator);
-  json["setA_Threshold"] = card.setA_Threshold;
-  json["setB_ID"] = card.setB_ID;
-  json["setB_Operator"] = toString(card.setB_Operator);
-  json["setB_Threshold"] = card.setB_Threshold;
-  json["setCombine"] = toString(card.setCombine);
-
-  json["resetA_ID"] = card.resetA_ID;
-  json["resetA_Operator"] = toString(card.resetA_Operator);
-  json["resetA_Threshold"] = card.resetA_Threshold;
-  json["resetB_ID"] = card.resetB_ID;
-  json["resetB_Operator"] = toString(card.resetB_Operator);
-  json["resetB_Threshold"] = card.resetB_Threshold;
-  json["resetCombine"] = toString(card.resetCombine);
-}
-
-void deserializeCardFromJson(JsonVariantConst jsonVariant, LogicCard& card) {
-  if (!jsonVariant.is<JsonObjectConst>()) return;
-  JsonObjectConst json = jsonVariant.as<JsonObjectConst>();
-  LogicCard before = card;
-
-  card.id = json["id"] | card.id;
-  const char* rawType = json["type"].as<const char*>();
-  logicCardType parsedType = before.type;
-  bool typeOk = tryParseLogicCardType(rawType, parsedType);
-  card.type = typeOk ? parsedType : before.type;
-  card.index = json["index"] | card.index;
-  card.hwPin = json["hwPin"] | card.hwPin;
-  card.invert = json["invert"] | card.invert;
-
-  card.setting1 = json["setting1"] | card.setting1;
-  card.setting2 = json["setting2"] | card.setting2;
-  if (card.type == AnalogInput) {
-    const double currentAlpha = static_cast<double>(card.setting3) / 1000.0;
-    const double parsed = json["setting3"] | currentAlpha;
-    if (parsed >= 0.0 && parsed <= 1.0) {
-      const double scaled = parsed * 1000.0;
-      card.setting3 = static_cast<uint32_t>(scaled + 0.5);
-    } else {
-      // Backward compatibility: accept legacy milliunit payloads.
-      int32_t legacy = static_cast<int32_t>(parsed);
-      if (legacy < 0) legacy = 0;
-      if (legacy > 1000) legacy = 1000;
-      card.setting3 = static_cast<uint32_t>(legacy);
-    }
-  } else {
-    card.setting3 = json["setting3"] | card.setting3;
-  }
-
-  if (card.type == AnalogInput || card.type == MathCard) {
-    card.startOnMs = json["startOnMs"] | card.startOnMs;
-    card.startOffMs = json["startOffMs"] | card.startOffMs;
-  }
-
-  const char* rawMode = json["mode"].as<const char*>();
-  cardMode parsedMode = before.mode;
-  bool modeOk = tryParseCardMode(rawMode, parsedMode);
-  card.mode = modeOk ? parsedMode : before.mode;
-
-  card.setA_ID = json["setA_ID"] | card.setA_ID;
-  const char* rawSetA = json["setA_Operator"].as<const char*>();
-  logicOperator parsedSetA = before.setA_Operator;
-  bool setAOk = tryParseLogicOperator(rawSetA, parsedSetA);
-  card.setA_Operator = setAOk ? parsedSetA : before.setA_Operator;
-  card.setA_Threshold = json["setA_Threshold"] | card.setA_Threshold;
-  card.setB_ID = json["setB_ID"] | card.setB_ID;
-  const char* rawSetB = json["setB_Operator"].as<const char*>();
-  logicOperator parsedSetB = before.setB_Operator;
-  bool setBOk = tryParseLogicOperator(rawSetB, parsedSetB);
-  card.setB_Operator = setBOk ? parsedSetB : before.setB_Operator;
-  card.setB_Threshold = json["setB_Threshold"] | card.setB_Threshold;
-  const char* rawSetCombine = json["setCombine"].as<const char*>();
-  combineMode parsedSetCombine = before.setCombine;
-  bool setCombineOk = tryParseCombineMode(rawSetCombine, parsedSetCombine);
-  card.setCombine = setCombineOk ? parsedSetCombine : before.setCombine;
-
-  card.resetA_ID = json["resetA_ID"] | card.resetA_ID;
-  const char* rawResetA = json["resetA_Operator"].as<const char*>();
-  logicOperator parsedResetA = before.resetA_Operator;
-  bool resetAOk = tryParseLogicOperator(rawResetA, parsedResetA);
-  card.resetA_Operator = resetAOk ? parsedResetA : before.resetA_Operator;
-  card.resetA_Threshold = json["resetA_Threshold"] | card.resetA_Threshold;
-  card.resetB_ID = json["resetB_ID"] | card.resetB_ID;
-  const char* rawResetB = json["resetB_Operator"].as<const char*>();
-  logicOperator parsedResetB = before.resetB_Operator;
-  bool resetBOk = tryParseLogicOperator(rawResetB, parsedResetB);
-  card.resetB_Operator = resetBOk ? parsedResetB : before.resetB_Operator;
-  card.resetB_Threshold = json["resetB_Threshold"] | card.resetB_Threshold;
-  const char* rawResetCombine = json["resetCombine"].as<const char*>();
-  combineMode parsedResetCombine = before.resetCombine;
-  bool resetCombineOk =
-      tryParseCombineMode(rawResetCombine, parsedResetCombine);
-  card.resetCombine = resetCombineOk ? parsedResetCombine : before.resetCombine;
-}
-
-void initializeCardSafeDefaults(LogicCard& card, uint8_t globalId) {
-  card.id = globalId;
-  card.invert = false;
-  card.setting1 = 0;
-  card.setting2 = 0;
-  card.setting3 = 0;
-  card.logicalState = false;
-  card.physicalState = false;
-  card.triggerFlag = false;
-  card.currentValue = 0;
-  card.startOnMs = 0;
-  card.startOffMs = 0;
-  card.repeatCounter = 0;
-
-  card.setA_ID = globalId;
-  card.setB_ID = globalId;
-  card.resetA_ID = globalId;
-  card.resetB_ID = globalId;
-  card.setA_Operator = Op_AlwaysFalse;
-  card.setB_Operator = Op_AlwaysFalse;
-  card.resetA_Operator = Op_AlwaysFalse;
-  card.resetB_Operator = Op_AlwaysFalse;
-  card.setA_Threshold = 0;
-  card.setB_Threshold = 0;
-  card.resetA_Threshold = 0;
-  card.resetB_Threshold = 0;
-  card.setCombine = Combine_None;
-  card.resetCombine = Combine_None;
-
-  if (globalId < DO_START) {
-    card.type = DigitalInput;
-    card.index = globalId - DI_START;
-    card.hwPin = DI_Pins[card.index];
-    // DI defaults: debounced edge input behavior.
-    card.setting1 = 50;  // debounce window
-    card.setting2 = 0;   // reserved
-    card.setting3 = 0;   // reserved
-    card.mode = Mode_DI_Rising;
-    card.state = State_DI_Idle;
-    return;
-  }
-
-  if (globalId < AI_START) {
-    card.type = DigitalOutput;
-    card.index = globalId - DO_START;
-    card.hwPin = DO_Pins[card.index];
-    // DO defaults: safe one-shot profile, but disabled by condition defaults.
-    card.setting1 = 1000;  // delay before ON
-    card.setting2 = 1000;  // ON duration
-    card.setting3 = 1;     // one cycle
-    card.mode = Mode_DO_Normal;
-    card.state = State_DO_Idle;
-    return;
-  }
-
-  if (globalId < SIO_START) {
-    card.type = AnalogInput;
-    card.index = globalId - AI_START;
-    card.hwPin = AI_Pins[card.index];
-    // AI defaults: raw ADC range with moderate smoothing and 0..100.00 output.
-    card.setting1 = 0;        // input minimum
-    card.setting2 = 4095;     // input maximum
-    card.setting3 = 250;      // EMA alpha = 0.25 (stored as 250/1000)
-    card.startOnMs = 0;       // output minimum (centiunits)
-    card.startOffMs = 10000;  // output maximum (centiunits)
-    card.mode = Mode_AI_Continuous;
-    card.state = State_AI_Streaming;
-    return;
-  }
-
-  if (globalId < MATH_START) {
-    card.type = SoftIO;
-    card.index = globalId - SIO_START;
-    card.hwPin = SIO_Pins[card.index];
-    // SoftIO defaults follow DO defaults (virtual output).
-    card.setting1 = 1000;
-    card.setting2 = 1000;
-    card.setting3 = 1;
-    card.mode = Mode_DO_Normal;
-    card.state = State_DO_Idle;
-    return;
-  }
-
-  if (globalId < RTC_START) {
-    card.type = MathCard;
-    card.index = globalId - MATH_START;
-    card.hwPin = 255;
-    // MATH defaults: enabled by set/reset gating, simple arithmetic seed.
-    card.setting1 = 0;      // inputA/future source config
-    card.setting2 = 0;      // inputB/future source config
-    card.setting3 = 0;      // fallback value
-    card.startOnMs = 0;     // clamp min
-    card.startOffMs = 0;    // clamp max (disabled when max < min)
-    card.mode = Mode_None;  // reserved for V3 typed math modes
-    card.state = State_None;
-    return;
-  }
-
-  card.type = RtcCard;
-  card.index = globalId - RTC_START;
-  card.hwPin = 255;
-  // RTC defaults: minute scheduler sources with inactive output.
-  card.setting1 = 60000;  // trigger window (ms) bridge until typed schema lands
-  card.setting2 = 0;
-  card.setting3 = 0;
-  card.mode = Mode_None;
-  card.state = State_None;
-}
-
 void initializeAllCardsSafeDefaults() {
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    initializeCardSafeDefaults(logicCards[i], i);
-  }
+  profileInitializeCardArraySafeDefaults(logicCards, kLegacyCardLayout);
   syncRuntimeStateFromCards();
   refreshRuntimeSignalsFromRuntime(gRuntimeCardMeta, gRuntimeStore,
                                    gRuntimeSignals, TOTAL_CARDS);
@@ -485,7 +262,7 @@ void printLogicCardsJsonToSerial(const char* label) {
   JsonArray array = doc.to<JsonArray>();
   for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
     JsonObject obj = array.add<JsonObject>();
-    serializeCardToJson(logicCards[i], obj);
+    profileSerializeCardToJson(logicCards[i], obj);
   }
 
   Serial.println(label);
@@ -1633,265 +1410,17 @@ void buildV3ConfigEnvelope(const LogicCard* sourceCards, JsonDocument& doc,
 }
 
 void initializeCardArraySafeDefaults(LogicCard* cards) {
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    initializeCardSafeDefaults(cards[i], i);
-  }
+  profileInitializeCardArraySafeDefaults(cards, kLegacyCardLayout);
 }
 
 bool deserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards) {
-  if (array.size() != TOTAL_CARDS) return false;
-  initializeCardArraySafeDefaults(outCards);
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    JsonVariantConst item = array[i];
-    if (!item.is<JsonObjectConst>()) return false;
-    deserializeCardFromJson(item, outCards[i]);
-  }
-  sanitizeConfigCardsRuntimeFields(outCards, TOTAL_CARDS);
-  return true;
+  return profileDeserializeCardsFromArray(array, outCards, kLegacyCardLayout);
 }
 
 bool validateConfigCardsArray(JsonArrayConst array, String& reason) {
-  if (array.size() != TOTAL_CARDS) {
-    reason = "cards size mismatch";
-    return false;
-  }
-
-  auto cardTypeFromString = [](const char* s) -> logicCardType {
-    return parseOrDefault(s, DigitalInput);
-  };
-  auto isModeAllowed = [](logicCardType type, const char* mode) -> bool {
-    if (mode == nullptr) return false;
-    if (type == DigitalInput) {
-      return strcmp(mode, "Mode_DI_Rising") == 0 ||
-             strcmp(mode, "Mode_DI_Falling") == 0 ||
-             strcmp(mode, "Mode_DI_Change") == 0;
-    }
-    if (type == AnalogInput) return strcmp(mode, "Mode_AI_Continuous") == 0;
-    if (type == DigitalOutput || type == SoftIO) {
-      return strcmp(mode, "Mode_DO_Normal") == 0 ||
-             strcmp(mode, "Mode_DO_Immediate") == 0 ||
-             strcmp(mode, "Mode_DO_Gated") == 0;
-    }
-    if (type == MathCard || type == RtcCard) {
-      return strcmp(mode, "Mode_None") == 0;
-    }
-    return false;
-  };
-  auto isAlwaysOp = [](const char* op) -> bool {
-    return op != nullptr && (strcmp(op, "Op_AlwaysTrue") == 0 ||
-                             strcmp(op, "Op_AlwaysFalse") == 0);
-  };
-  auto isNumericOp = [](const char* op) -> bool {
-    return op != nullptr &&
-           (strcmp(op, "Op_GT") == 0 || strcmp(op, "Op_LT") == 0 ||
-            strcmp(op, "Op_EQ") == 0 || strcmp(op, "Op_NEQ") == 0 ||
-            strcmp(op, "Op_GTE") == 0 || strcmp(op, "Op_LTE") == 0);
-  };
-  auto isStateOp = [](const char* op) -> bool {
-    return op != nullptr && (strcmp(op, "Op_LogicalTrue") == 0 ||
-                             strcmp(op, "Op_LogicalFalse") == 0 ||
-                             strcmp(op, "Op_PhysicalOn") == 0 ||
-                             strcmp(op, "Op_PhysicalOff") == 0);
-  };
-  auto isTriggerOp = [](const char* op) -> bool {
-    return op != nullptr && (strcmp(op, "Op_Triggered") == 0 ||
-                             strcmp(op, "Op_TriggerCleared") == 0);
-  };
-  auto isProcessOp = [](const char* op) -> bool {
-    return op != nullptr &&
-           (strcmp(op, "Op_Running") == 0 || strcmp(op, "Op_Finished") == 0 ||
-            strcmp(op, "Op_Stopped") == 0);
-  };
-  auto isOperatorAllowedForTarget = [&](logicCardType targetType,
-                                        const char* op) -> bool {
-    if (isAlwaysOp(op)) return true;
-    if (targetType == AnalogInput) return isNumericOp(op);
-    if (targetType == DigitalInput)
-      return isStateOp(op) || isTriggerOp(op) || isNumericOp(op);
-    if (targetType == DigitalOutput || targetType == SoftIO) {
-      return isStateOp(op) || isTriggerOp(op) || isNumericOp(op) ||
-             isProcessOp(op);
-    }
-    if (targetType == MathCard) return isNumericOp(op);
-    if (targetType == RtcCard) {
-      return isStateOp(op) || isTriggerOp(op) || isNumericOp(op);
-    }
-    return false;
-  };
-  auto isNonNegativeNumber = [](JsonVariantConst v) -> bool {
-    if (v.is<uint64_t>()) return true;
-    if (v.is<int64_t>()) return v.as<int64_t>() >= 0;
-    if (v.is<double>()) return v.as<double>() >= 0.0;
-    if (v.is<float>()) return v.as<float>() >= 0.0f;
-    return false;
-  };
-  auto ensureNonNegativeField = [&](JsonObjectConst card, const char* fieldName,
-                                    const char* label) -> bool {
-    JsonVariantConst v = card[fieldName];
-    if (!isNonNegativeNumber(v)) {
-      reason = String(label) + " must be non-negative";
-      return false;
-    }
-    return true;
-  };
-  auto rejectFieldIfPresent = [&](JsonObjectConst card, const char* fieldName,
-                                  const char* label) -> bool {
-    if (!card[fieldName].isUnbound()) {
-      reason = String(label) + " is runtime-only and not allowed in config";
-      return false;
-    }
-    return true;
-  };
-
-  bool seenId[TOTAL_CARDS] = {};
-  logicCardType typeById[TOTAL_CARDS] = {};
-  bool typeKnown[TOTAL_CARDS] = {};
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    JsonVariantConst item = array[i];
-    if (!item.is<JsonObjectConst>()) {
-      reason = "cards[] item is not object";
-      return false;
-    }
-    JsonObjectConst card = item.as<JsonObjectConst>();
-    uint8_t id = card["id"] | 255;
-    if (id >= TOTAL_CARDS) {
-      reason = "card id out of range";
-      return false;
-    }
-    if (seenId[id]) {
-      reason = "duplicate card id";
-      return false;
-    }
-    seenId[id] = true;
-    typeById[id] = cardTypeFromString(card["type"] | "DigitalInput");
-    typeKnown[id] = true;
-    logicCardType expectedType = DigitalInput;
-    if (id < DO_START) {
-      expectedType = DigitalInput;
-    } else if (id < AI_START) {
-      expectedType = DigitalOutput;
-    } else if (id < SIO_START) {
-      expectedType = AnalogInput;
-    } else if (id < MATH_START) {
-      expectedType = SoftIO;
-    } else if (id < RTC_START) {
-      expectedType = MathCard;
-    } else {
-      expectedType = RtcCard;
-    }
-    if (typeById[id] != expectedType) {
-      reason = "card type does not match fixed family slot";
-      return false;
-    }
-
-    uint8_t setAId = card["setA_ID"] | 255;
-    uint8_t setBId = card["setB_ID"] | 255;
-    uint8_t resetAId = card["resetA_ID"] | 255;
-    uint8_t resetBId = card["resetB_ID"] | 255;
-    if (setAId >= TOTAL_CARDS || setBId >= TOTAL_CARDS ||
-        resetAId >= TOTAL_CARDS || resetBId >= TOTAL_CARDS) {
-      reason = "set/reset reference id out of range";
-      return false;
-    }
-  }
-
-  for (uint8_t i = 0; i < TOTAL_CARDS; ++i) {
-    JsonObjectConst card = array[i].as<JsonObjectConst>();
-    uint8_t id = card["id"] | 255;
-    if (id >= TOTAL_CARDS || !typeKnown[id]) {
-      reason = "card id/type map error";
-      return false;
-    }
-
-    const char* mode = card["mode"] | "";
-    if (!isModeAllowed(typeById[id], mode)) {
-      reason = "mode not valid for card type (id=" + String(id) +
-               ", type=" + String(toString(typeById[id])) +
-               ", mode=" + String(mode) + ")";
-      return false;
-    }
-
-    if (!ensureNonNegativeField(card, "hwPin", "hwPin")) return false;
-    if (!ensureNonNegativeField(card, "setting1", "setting1")) return false;
-    if (!ensureNonNegativeField(card, "setting2", "setting2")) return false;
-    if (!ensureNonNegativeField(card, "setting3", "setting3")) return false;
-    if (!rejectFieldIfPresent(card, "logicalState", "logicalState")) return false;
-    if (!rejectFieldIfPresent(card, "physicalState", "physicalState")) return false;
-    if (!rejectFieldIfPresent(card, "triggerFlag", "triggerFlag")) return false;
-    if (!rejectFieldIfPresent(card, "currentValue", "currentValue")) return false;
-    if (!rejectFieldIfPresent(card, "repeatCounter", "repeatCounter")) return false;
-    if (!rejectFieldIfPresent(card, "state", "state")) return false;
-
-    if (typeById[id] == AnalogInput || typeById[id] == MathCard) {
-      if (!ensureNonNegativeField(card, "startOnMs", "startOnMs")) return false;
-      if (!ensureNonNegativeField(card, "startOffMs", "startOffMs")) return false;
-    } else {
-      if (!card["startOnMs"].isUnbound()) {
-        reason = "startOnMs is only allowed for AI/MATH cards";
-        return false;
-      }
-      if (!card["startOffMs"].isUnbound()) {
-        reason = "startOffMs is only allowed for AI/MATH cards";
-        return false;
-      }
-    }
-    if (!ensureNonNegativeField(card, "setA_Threshold", "setA_Threshold"))
-      return false;
-    if (!ensureNonNegativeField(card, "setB_Threshold", "setB_Threshold"))
-      return false;
-    if (!ensureNonNegativeField(card, "resetA_Threshold", "resetA_Threshold"))
-      return false;
-    if (!ensureNonNegativeField(card, "resetB_Threshold", "resetB_Threshold"))
-      return false;
-
-    if (typeById[id] == AnalogInput) {
-      const double alpha = card["setting3"] | 0.0;
-      if (alpha < 0.0 || alpha > 1.0) {
-        reason = "AI setting3 alpha out of range (0..1)";
-        return false;
-      }
-    }
-
-    if (typeById[id] == RtcCard) {
-      const char* setAOp = card["setA_Operator"] | "";
-      const char* setBOp = card["setB_Operator"] | "";
-      const char* resetAOp = card["resetA_Operator"] | "";
-      const char* resetBOp = card["resetB_Operator"] | "";
-      const char* setCombine = card["setCombine"] | "";
-      const char* resetCombine = card["resetCombine"] | "";
-      const bool rtcSetResetDisabled =
-          strcmp(setAOp, "Op_AlwaysFalse") == 0 &&
-          strcmp(setBOp, "Op_AlwaysFalse") == 0 &&
-          strcmp(resetAOp, "Op_AlwaysFalse") == 0 &&
-          strcmp(resetBOp, "Op_AlwaysFalse") == 0 &&
-          strcmp(setCombine, "Combine_None") == 0 &&
-          strcmp(resetCombine, "Combine_None") == 0;
-      if (!rtcSetResetDisabled) {
-        reason = "RTC set/reset is unsupported";
-        return false;
-      }
-    }
-
-    uint8_t setAId = card["setA_ID"] | 255;
-    uint8_t setBId = card["setB_ID"] | 255;
-    uint8_t resetAId = card["resetA_ID"] | 255;
-    uint8_t resetBId = card["resetB_ID"] | 255;
-    const char* setAOp = card["setA_Operator"] | "";
-    const char* setBOp = card["setB_Operator"] | "";
-    const char* resetAOp = card["resetA_Operator"] | "";
-    const char* resetBOp = card["resetB_Operator"] | "";
-
-    if (!isOperatorAllowedForTarget(typeById[setAId], setAOp) ||
-        !isOperatorAllowedForTarget(typeById[setBId], setBOp) ||
-        !isOperatorAllowedForTarget(typeById[resetAId], resetAOp) ||
-        !isOperatorAllowedForTarget(typeById[resetBId], resetBOp)) {
-      reason = "operator not valid for referenced card type";
-      return false;
-    }
-  }
-
-  reason = "";
-  return true;
+  return validateLegacyConfigCardsArray(array, TOTAL_CARDS, DO_START, AI_START,
+                                        SIO_START, MATH_START, RTC_START,
+                                        reason);
 }
 
 bool writeJsonToPath(const char* path, JsonDocument& doc) {
