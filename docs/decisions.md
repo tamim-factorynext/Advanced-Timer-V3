@@ -42,7 +42,7 @@ Use one short entry per decision with this structure:
 - Context: Runtime snapshots already include `lastEvalUs` in examples, but the field intent was not explicitly documented.
 - Decision: Keep `lastEvalUs` as a standard per-card runtime snapshot field to expose card evaluation duration in microseconds.
 - Impact: Supports deterministic observability and timing regression detection; enables tooling/UI to detect outlier cards without recomputing runtime internals; keeps this field runtime-only and out of config payload requirements.
-- References: `docs/api-contract-v3.md` (Section 5.1 rules), `requirements-v3-contract.md` (artifact set and change-control linkage), `README.md` (working method linkage).
+- References: `docs/api-contract-v3.md` (Section 5.1 rules), `requirements-v3-contract.md` (artifact set and change-control linkage), `docs/legacy/v2-poc-contract.md` (working method linkage).
 
 ## DEC-0002: Compile-Time Family Capacities Across All Card Types
 - Date: 2026-02-28
@@ -81,4 +81,44 @@ Use one short entry per decision with this structure:
 - Impact: Avoids false precision and reduces configuration ambiguity.
 - Impact: Trigger matching must evaluate on minute boundaries (`year/month/day/hour/minute/weekday` only).
 - References: `requirements-v3-contract.md` (Section 8.6), `docs/schema-v3.md` (RTC schema and validation), `docs/acceptance-matrix-v3.md` (RTC acceptance cases).
+
+## DEC-0006: RTC Schedule Evaluation Ownership On Networking Core
+- Date: 2026-03-01
+- Status: Accepted
+- Context: RTC schedule matching is minute-granularity and does not require per-scan deterministic execution, while scheduler-card capacity can grow significantly (for example 24 cards).
+- Decision: Run RTC schedule-time checks on networking core only, at a bounded once-per-minute cadence, then deliver state-change intents through the runtime command boundary.
+- Impact: Preserves deterministic scan-loop budget on Core0.
+- Impact: Scales scheduler-card count without coupling minute-tick work to per-scan logic.
+- Impact: Requires queue-path acceptance coverage for minute-tick intent delivery and idempotency.
+- References: `README.md` (Sections 4.2, 8), `requirements-v3-contract.md` (Core ownership and determinism sections), `docs/timing-budget-v3.md`.
+
+## DEC-0007: Non-Deterministic Service Ownership On Networking Core
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Future roadmap includes services such as logging, remote monitoring/control, periodic non-critical sampling, and Modbus RTU master behavior that can introduce variable latency.
+- Decision: All non-time-critical and non-deterministic services must execute on networking core and interact with deterministic state only via defined control/data contracts.
+- Impact: Protects deterministic runtime from service-side jitter.
+- Impact: Enables feature growth without violating kernel timing guarantees.
+- Impact: Sets architectural guardrails for future plugin/service modules.
+- References: `README.md` (Section 4.3), `requirements-v3-contract.md` (architecture and topology sections), `docs/dependency-topology-rules.md`.
+
+## DEC-0008: HIL Rig Baseline Uses Raspberry Pi As Test Master
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Firmware validation needs one repeatable rig for functional, stress/performance, and production test flows across deterministic engine and portal/API surfaces.
+- Decision: Use Raspberry Pi as the primary HIL orchestrator and production test master; optionally add ESP32 helper nodes for electrical/protocol edge-case signal simulation.
+- Impact: Unifies lab and production test automation with one control plane.
+- Impact: Improves scriptability, logging, artifact retention, and station management.
+- Impact: Preserves low-cost MCU-based signal emulation where it adds realism.
+- References: `README.md` (Section 8), `docs/acceptance-matrix-v3.md`, `docs/timing-budget-v3.md`.
+
+## DEC-0009: Remove Dedicated `RUN_SLOW` Mode
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Scan-speed variation is already modeled by configurable scan interval, so a dedicated slow run mode duplicates behavior and increases API/runtime complexity.
+- Decision: Remove `RUN_SLOW` from runtime mode enum and command handling. Normal-mode pacing is controlled only through configurable scan interval (portal slider UX).
+- Impact: Simplifies run-mode state machine and command validation.
+- Impact: `set_run_mode` accepts only `RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT`.
+- Impact: Runtime pacing path now uses configured `scanIntervalMs` without slow-mode overrides.
+- References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-v3.md`.
 

@@ -144,8 +144,6 @@ const char* toString(runMode value) {
       return "RUN_STEP";
     case RUN_BREAKPOINT:
       return "RUN_BREAKPOINT";
-    case RUN_SLOW:
-      return "RUN_SLOW";
     default:
       return "RUN_NORMAL";
   }

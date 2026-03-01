@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-enum runMode { RUN_NORMAL, RUN_STEP, RUN_BREAKPOINT, RUN_SLOW };
+enum runMode { RUN_NORMAL, RUN_STEP, RUN_BREAKPOINT };
 
 enum inputSourceMode {
   InputSource_Real,

@@ -77,8 +77,9 @@ platformio run --target uploadfs
 ## Development Conventions
 
 *   **Authoritative Contracts:**
-    *   For the **current V2 PoC**, `README.md` is the primary contract.
-    *   For the **V3 rewrite**, `requirements-v3-contract.md` is the new, authoritative source of truth.
+    *   V3 project introduction: `README.md`.
+    *   For the **current V2 PoC**, `docs/legacy/v2-poc-contract.md` is the frozen legacy contract.
+    *   For the **V3 rewrite**, `requirements-v3-contract.md` is the authoritative source of truth.
 *   **Strict Separation:** The dual-core boundary is non-negotiable. The kernel must remain deterministic.
 *   **Configuration as Data:** Logic is defined by JSON configuration files, not user code.
 *   **API-Driven:** All external interactions are handled via the documented HTTP and WebSocket APIs.

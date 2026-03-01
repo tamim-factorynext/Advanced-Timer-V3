@@ -2,9 +2,8 @@
  *
  * ADVANCED TIMER FIRMWARE NOTES
  *
- * Canonical behavioral contract lives in README.md.
- * - Primary reference: README.md Section 19 (Kernel Architecture Contract)
- * - Integration/runtime contracts: README.md Sections 3 through 18
+ * Canonical behavioral contracts live in requirements-v3-contract.md and docs/*.
+ * Legacy V2 contract archive: docs/legacy/v2-poc-contract.md.
  *
  * This file should keep only implementation-local comments.
  * Do not duplicate long-form architecture contracts here.
@@ -132,8 +131,6 @@ uint16_t gKernelQueueHighWaterMark = 0;
 uint16_t gKernelQueueCapacity = 0;
 uint32_t gCommandLatencyLastUs = 0;
 uint32_t gCommandLatencyMaxUs = 0;
-
-const uint32_t SLOW_SCAN_INTERVAL_MS = 250;
 
 bool isOutputMasked(uint8_t cardId);
 uint8_t scanOrderCardIdFromCursor(uint16_t cursor);
@@ -2017,8 +2014,7 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
     lastScanMs = nowMs;
   }
 
-  uint32_t scanInterval =
-      (gRunMode == RUN_SLOW) ? SLOW_SCAN_INTERVAL_MS : gScanIntervalMs;
+  uint32_t scanInterval = gScanIntervalMs;
   gScanBudgetUs = scanInterval * 1000;
   if ((nowMs - lastScanMs) < scanInterval) {
     updateSharedRuntimeSnapshot(nowMs, false);
@@ -2157,10 +2153,6 @@ bool applyCommand(JsonObjectConst command) {
     }
     if (strcmp(mode, "RUN_BREAKPOINT") == 0) {
       kernelCommand.mode = RUN_BREAKPOINT;
-      modeMatched = true;
-    }
-    if (strcmp(mode, "RUN_SLOW") == 0) {
-      kernelCommand.mode = RUN_SLOW;
       modeMatched = true;
     }
     if (!modeMatched) return false;

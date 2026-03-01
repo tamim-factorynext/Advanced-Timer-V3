@@ -6,7 +6,8 @@ Purpose: Canonical map of documentation for clean V3 transition.
 ## 1. Source Of Truth
 
 - V3 production rewrite contract: `requirements-v3-contract.md` (root)
-- V2 PoC frozen legacy contract: `README.md` (root)
+- Project-level introduction/orientation: `README.md` (root)
+- V2 PoC frozen legacy contract: `docs/legacy/v2-poc-contract.md`
 
 ## 2. Active V3 Docs (`docs/`)
 
@@ -33,6 +34,7 @@ These files are retained for historical/planning context and are not the active 
 - `docs/legacy/firmware-rewrite-foundations.md`
 - `docs/legacy/production-firmware-kickoff-plan.md`
 - `docs/legacy/plc-problem-statements.md`
+- `docs/legacy/v2-poc-contract.md`
 
 ## 4. Root Folder Policy
 
