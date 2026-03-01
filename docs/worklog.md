@@ -2185,3 +2185,13 @@ Reduced `main.cpp` by extracting large legacy card profile/validation blocks int
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+### Next Session Start Point
+
+1. Extract HTTP/config route handlers from `src/main.cpp` into `src/portal/routes.cpp` (first target: `/api/config/*` handlers).
+2. Move route registration wiring into portal module so `main.cpp` only calls one portal-init entrypoint.
+3. Keep behavior identical; no payload contract changes in this slice.
+4. Re-run acceptance evidence after extraction:
+   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+5. Record resulting `main.cpp` line count delta in this worklog.
+
