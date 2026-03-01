@@ -9,3 +9,4 @@ Planned scope:
 
 Current interfaces:
 - `config_lifecycle.h`
+- `v3_normalizer.h`

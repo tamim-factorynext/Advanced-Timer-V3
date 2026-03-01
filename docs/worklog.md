@@ -717,3 +717,187 @@ Added executable native tests for per-family condition source field/operator con
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (V3 Validation Slice 7: Typed Parse Before Legacy Bridge)
+
+### Session Summary
+
+Refactored normalization so V3 payloads are parsed and validated into typed `V3CardConfig` first, then converted to runtime `LogicCard` via bridge.
+
+### Completed
+
+- Added typed parse stage in `src/main.cpp`:
+  - `parseV3CardToTyped(...)`
+  - Parses card-family config into `V3CardConfig` with family-specific checks.
+
+- Updated normalization conversion flow:
+  - `buildLegacyCardsFromV3Cards(...)` now:
+    - builds source type map,
+    - parses each V3 card into typed model,
+    - converts typed model to `LogicCard` using `v3CardConfigToLegacy(...)`.
+
+- Preserved RTC schedule handoff behavior:
+  - RTC typed config fields are applied to scheduler channel state during bridge conversion phase.
+
+### Evidence
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (5/5)
+
+## 2026-03-01 (V3 Acceptance Slice 8: Payload-Level Fixture Tests For Parse Boundary)
+
+### Session Summary
+
+Added payload-level JSON fixture validation coverage for clause-source semantics and integrated it into normalize/parse flow before typed-card parsing.
+
+### Completed
+
+- Added payload validator module:
+  - `src/kernel/v3_payload_rules.h`
+  - `src/kernel/v3_payload_rules.cpp`
+  - Main entry:
+    - `validateV3PayloadConditionSources(...)`
+
+- Integrated payload validator into parse boundary:
+  - `buildLegacyCardsFromV3Cards(...)` now calls payload validator before typed parse/bridge conversion.
+
+- Added fixture-based native tests:
+  - `test/test_v3_payload_parse/test_main.cpp`
+  - Cases:
+    - reject `AI.logicalState`
+    - reject `RTC.missionState`
+    - reject `missionState` with `NEQ`
+    - accept `DO.missionState` with `EQ`
+
+- Updated native env deps/build filters:
+  - `platformio.ini` (`ArduinoJson` available in native tests, payload rules module included).
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (9/9 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Architecture Slice 9: Storage-Owned Normalize Pipeline)
+
+### Session Summary
+
+Moved V3 config normalization/bridge orchestration out of `main.cpp` into a dedicated storage module, while keeping endpoint behavior stable.
+
+### Completed
+
+- Added storage normalization module:
+  - `src/storage/v3_normalizer.h`
+  - `src/storage/v3_normalizer.cpp`
+  - Entry function:
+    - `normalizeConfigRequestWithLayout(...)`
+
+- Updated main normalization boundary:
+  - `normalizeConfigRequest(...)` in `src/main.cpp` now:
+    - builds profile context (`TOTAL_CARDS`, family start offsets),
+    - supplies baseline cards,
+    - calls storage normalizer,
+    - applies RTC schedule outputs,
+    - performs final legacy-array semantic validation.
+
+- Updated storage layer inventory:
+  - `src/storage/README.md` now lists `v3_normalizer.h`.
+
+### Evidence
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (13/13)
+
+## 2026-03-01 (V3 Runtime Slice 10: DI Runtime Module Activation + Acceptance)
+
+### Session Summary
+
+Activated the extracted DI runtime module in the live scan path and added deterministic native acceptance tests for DI runtime-state transitions.
+
+### Completed
+
+- Resolved typed-model naming collision between config model and runtime module:
+  - renamed runtime config type to `V3DiRuntimeConfig`.
+  - files:
+    - `src/kernel/v3_di_runtime.h`
+    - `src/kernel/v3_di_runtime.cpp`
+    - `src/main.cpp` (`processDICard(...)` runtime call site)
+
+- Kept runtime ownership explicit:
+  - `processDICard(...)` now executes DI behavior through `runV3DiStep(...)` using a runtime-only DTO (`V3DiRuntimeConfig` + `V3DiRuntimeState`).
+
+- Added DI runtime native acceptance tests:
+  - `test/test_v3_di_runtime/test_main.cpp`
+  - coverage includes:
+    - reset-condition inhibition and runtime reset semantics
+    - set-condition false idle semantics
+    - rising-edge qualification path
+    - non-matching edge rejection
+    - debounce-window filtering behavior
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (18/18 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 11: DO Runtime Module Activation + Acceptance)
+
+### Session Summary
+
+Extracted DO runtime transition logic into a dedicated kernel module and switched `processDOCard(...)` to a runtime DTO + step-function path, with deterministic native acceptance coverage.
+
+### Completed
+
+- Added DO runtime kernel module:
+  - `src/kernel/v3_do_runtime.h`
+  - `src/kernel/v3_do_runtime.cpp`
+  - entrypoint:
+    - `runV3DoStep(...)`
+
+- Updated runtime integration in `src/main.cpp`:
+  - `processDOCard(...)` now maps `LogicCard` to `V3DoRuntimeState`, executes `runV3DoStep(...)`, and maps results back.
+  - hardware write ownership remains in `main.cpp` (`driveDOHardware(...)`).
+
+- Removed obsolete transitional state:
+  - deleted `gPrevSetCondition` usage/state reset path (no behavioral impact; retrigger semantics are level-based while idle/finished).
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_do_runtime.h`.
+
+- Added native DO runtime acceptance tests:
+  - `test/test_v3_do_runtime/test_main.cpp`
+  - coverage includes:
+    - reset-condition precedence and idle reset
+    - immediate-mode activation
+    - normal-mode `OnDelay -> Active` transition
+    - repeat-limit completion to `Finished`
+    - gated-mode drop to `Idle` when gate deasserts
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (23/23 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+

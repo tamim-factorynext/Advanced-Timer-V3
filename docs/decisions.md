@@ -181,3 +181,33 @@ Use one short entry per decision with this structure:
 - Impact: Reduces regression risk while runtime remains bridge-based.
 - References: `src/kernel/v3_condition_rules.h`, `src/kernel/v3_condition_rules.cpp`, `test/test_v3_condition_rules/test_main.cpp`, `platformio.ini`.
 
+## DEC-0016: Validate Into Typed V3 Model Before Legacy Runtime Conversion
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Normalization previously mapped V3 JSON directly into transitional `LogicCard`, which blurred schema validation and runtime adaptation responsibilities.
+- Decision: Parse and validate V3 payload cards into typed `V3CardConfig` first, then convert typed cards to `LogicCard` only at the final bridge step.
+- Impact: Strengthens contract-first migration boundaries and makes typed model the primary validation target.
+- Impact: Reduces risk of legacy-field leakage during schema/API evolution.
+- Impact: Keeps deterministic runtime compatibility while migration continues.
+- References: `src/main.cpp` (`parseV3CardToTyped`, `buildLegacyCardsFromV3Cards`), `src/kernel/v3_card_types.h`, `src/kernel/v3_card_bridge.cpp`.
+
+## DEC-0017: Add Payload-Level JSON Fixture Validation For Clause Source Rules
+- Date: 2026-03-01
+- Status: Accepted
+- Context: Helper-level tests exist, but migration risk remains unless full payload shape is validated at normalize/parse stage with realistic JSON fixtures.
+- Decision: Add `v3_payload_rules` module and native fixture tests that validate cross-family clause source field/operator constraints before typed-card parsing/bridge conversion.
+- Impact: Provides acceptance evidence at payload boundary (`config.cards[*].config.set/reset`), not only utility-function scope.
+- Impact: Prevents invalid payloads from reaching typed parse/legacy bridge stages.
+- Impact: Tightens contract-first behavior for V3 config lifecycle endpoints.
+- References: `src/kernel/v3_payload_rules.h`, `src/kernel/v3_payload_rules.cpp`, `test/test_v3_payload_parse/test_main.cpp`, `src/main.cpp`.
+
+## DEC-0018: Move V3 Normalize/Bridge Pipeline Into Storage Module
+- Date: 2026-03-01
+- Status: Accepted
+- Context: `main.cpp` carried too much config-normalization and bridge orchestration logic, weakening core ownership boundaries and making migration harder to reason about.
+- Decision: Extract normalize/bridge orchestration into `src/storage/v3_normalizer.*` and keep `main.cpp` normalization entrypoint as a thin boundary wrapper with layout/runtime context wiring.
+- Impact: Improves module ownership clarity (`storage` owns config normalization flow).
+- Impact: Reduces direct endpoint coupling to conversion internals.
+- Impact: Preserves runtime behavior while enabling further decomposition from monolithic `main.cpp`.
+- References: `src/storage/v3_normalizer.h`, `src/storage/v3_normalizer.cpp`, `src/main.cpp`, `src/storage/README.md`.
+

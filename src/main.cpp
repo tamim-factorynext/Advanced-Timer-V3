@@ -29,10 +29,14 @@
 #include "kernel/v3_card_bridge.h"
 #include "kernel/v3_condition_rules.h"
 #include "kernel/v3_card_types.h"
+#include "kernel/v3_di_runtime.h"
+#include "kernel/v3_do_runtime.h"
+#include "kernel/v3_payload_rules.h"
 #include "portal/routes.h"
 #include "runtime/shared_snapshot.h"
 #include "runtime/snapshot_json.h"
 #include "storage/config_lifecycle.h"
+#include "storage/v3_normalizer.h"
 
 const uint8_t DI_Pins[] = {13, 12, 14, 27};  // Digital Input pins
 const uint8_t DO_Pins[] = {26, 25, 33, 32};  // Digital Output pins
@@ -92,7 +96,6 @@ const char* kSchemaVersion = "2.0.0";
 #endif
 
 LogicCard logicCards[TOTAL_CARDS] = {};
-bool gPrevSetCondition[TOTAL_CARDS] = {};
 bool gPrevDISample[TOTAL_CARDS] = {};
 bool gPrevDIPrimed[TOTAL_CARDS] = {};
 bool gCardSetResult[TOTAL_CARDS] = {};
@@ -1913,7 +1916,6 @@ bool applyCardsAsActiveConfig(const LogicCard* newCards) {
     return false;
   }
   memcpy(logicCards, newCards, sizeof(logicCards));
-  memset(gPrevSetCondition, 0, sizeof(gPrevSetCondition));
   memset(gPrevDISample, 0, sizeof(gPrevDISample));
   memset(gPrevDIPrimed, 0, sizeof(gPrevDIPrimed));
   updateSharedRuntimeSnapshot(millis(), false);
@@ -2104,51 +2106,86 @@ bool mapV3ConditionBlock(JsonObjectConst block, uint8_t& outAId,
   return true;
 }
 
-bool applyV3CardToLegacy(LogicCard& target, JsonObjectConst v3Card, String& reason,
-                         const logicCardType* sourceTypeById) {
+V3CardFamily v3FamilyFromLogicType(logicCardType type) {
+  switch (type) {
+    case DigitalInput:
+      return V3CardFamily::DI;
+    case DigitalOutput:
+      return V3CardFamily::DO;
+    case AnalogInput:
+      return V3CardFamily::AI;
+    case SoftIO:
+      return V3CardFamily::SIO;
+    case MathCard:
+      return V3CardFamily::MATH;
+    case RtcCard:
+      return V3CardFamily::RTC;
+    default:
+      return V3CardFamily::DI;
+  }
+}
+
+bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeById,
+                        V3CardConfig& out, String& reason) {
   const uint8_t cardId = v3Card["cardId"] | 255;
   const char* cardType = v3Card["cardType"] | "";
   const logicCardType expectedType = expectedTypeForCardId(cardId);
-  bool typeMatches = false;
-  if (expectedType == DigitalInput) typeMatches = strcmp(cardType, "DI") == 0;
-  if (expectedType == DigitalOutput) typeMatches = strcmp(cardType, "DO") == 0;
-  if (expectedType == AnalogInput) typeMatches = strcmp(cardType, "AI") == 0;
-  if (expectedType == SoftIO) typeMatches = strcmp(cardType, "SIO") == 0;
-  if (expectedType == MathCard) typeMatches = strcmp(cardType, "MATH") == 0;
-  if (expectedType == RtcCard) typeMatches = strcmp(cardType, "RTC") == 0;
-  if (!typeMatches) {
+  logicCardType parsedType = DigitalInput;
+  if (!parseV3CardTypeToken(cardType, parsedType)) {
+    reason = "invalid cardType";
+    return false;
+  }
+  if (parsedType != expectedType) {
     reason = "cardType does not match cardId family slot";
     return false;
   }
 
+  out.cardId = cardId;
+  out.family = v3FamilyFromLogicType(expectedType);
+  out.enabled = v3Card["enabled"] | true;
+  out.faultPolicy = V3FaultPolicy::WARN;
+
+  const char* faultPolicy = v3Card["faultPolicy"] | "WARN";
+  if (strcmp(faultPolicy, "INFO") == 0) out.faultPolicy = V3FaultPolicy::INFO;
+  if (strcmp(faultPolicy, "CRITICAL") == 0)
+    out.faultPolicy = V3FaultPolicy::CRITICAL;
+
   JsonObjectConst cfg = v3Card["config"].as<JsonObjectConst>();
+  if (cfg.isNull()) {
+    reason = "missing card config";
+    return false;
+  }
+
   if (expectedType == DigitalInput) {
-    target.invert = cfg["invert"] | false;
-    target.setting1 = cfg["debounceTime"] | target.setting1;
+    out.di.channel = cfg["channel"] | cardId;
+    out.di.invert = cfg["invert"] | false;
+    out.di.debounceTimeMs = cfg["debounceTime"] | 0U;
     const char* edgeMode = cfg["edgeMode"] | "RISING";
-    cardMode diMode = target.mode;
+    cardMode diMode = Mode_DI_Rising;
     if (!mapV3ModeToLegacy(expectedType, edgeMode, diMode)) {
       reason = "invalid DI edgeMode";
       return false;
     }
-    target.mode = diMode;
-    if (cfg["set"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), target.setA_ID,
-                               target.setA_Operator, target.setA_Threshold,
-                               target.setB_ID, target.setB_Operator,
-                               target.setB_Threshold, target.setCombine,
-                               reason, sourceTypeById)) {
-        return false;
-      }
+    out.di.edgeMode = diMode;
+    if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
+      reason = "DI require set and reset blocks";
+      return false;
     }
-    if (cfg["reset"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(), target.resetA_ID,
-                               target.resetA_Operator, target.resetA_Threshold,
-                               target.resetB_ID, target.resetB_Operator,
-                               target.resetB_Threshold, target.resetCombine,
-                               reason, sourceTypeById)) {
-        return false;
-      }
+    if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), out.di.set.clauseAId,
+                             out.di.set.clauseAOperator,
+                             out.di.set.clauseAThreshold, out.di.set.clauseBId,
+                             out.di.set.clauseBOperator,
+                             out.di.set.clauseBThreshold, out.di.set.combiner,
+                             reason, sourceTypeById)) {
+      return false;
+    }
+    if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(),
+                             out.di.reset.clauseAId, out.di.reset.clauseAOperator,
+                             out.di.reset.clauseAThreshold, out.di.reset.clauseBId,
+                             out.di.reset.clauseBOperator,
+                             out.di.reset.clauseBThreshold, out.di.reset.combiner,
+                             reason, sourceTypeById)) {
+      return false;
     }
     return true;
   }
@@ -2156,77 +2193,107 @@ bool applyV3CardToLegacy(LogicCard& target, JsonObjectConst v3Card, String& reas
   if (expectedType == AnalogInput) {
     JsonObjectConst inputRange = cfg["inputRange"].as<JsonObjectConst>();
     JsonObjectConst outputRange = cfg["outputRange"].as<JsonObjectConst>();
-    target.setting1 = inputRange["min"] | target.setting1;
-    target.setting2 = inputRange["max"] | target.setting2;
+    out.ai.channel = cfg["channel"] | cardId;
+    out.ai.inputMin = inputRange["min"] | 0U;
+    out.ai.inputMax = inputRange["max"] | 4095U;
     const uint32_t emaAlphaX100 = cfg["emaAlpha"] | 100U;
     if (emaAlphaX100 > 100U) {
       reason = "AI emaAlpha out of range";
       return false;
     }
-    target.setting3 = emaAlphaX100 * 10U;
-    target.startOnMs = outputRange["min"] | target.startOnMs;
-    target.startOffMs = outputRange["max"] | target.startOffMs;
-    target.mode = Mode_AI_Continuous;
+    out.ai.emaAlphaX100 = emaAlphaX100;
+    out.ai.outputMin = outputRange["min"] | 0U;
+    out.ai.outputMax = outputRange["max"] | 10000U;
     return true;
   }
 
   if (expectedType == DigitalOutput || expectedType == SoftIO) {
     const char* mode = cfg["mode"] | "Normal";
-    cardMode outMode = target.mode;
+    cardMode outMode = Mode_DO_Normal;
     if (!mapV3ModeToLegacy(expectedType, mode, outMode)) {
       reason = "invalid DO/SIO mode";
       return false;
     }
-    target.mode = outMode;
-    target.setting1 = cfg["delayBeforeON"] | target.setting1;
-    target.setting2 = cfg["onDuration"] | target.setting2;
-    target.setting3 = cfg["repeatCount"] | target.setting3;
+    if (expectedType == DigitalOutput) {
+      out.dout.channel = cfg["channel"] | cardId;
+      out.dout.mode = outMode;
+      out.dout.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
+      out.dout.onDurationMs = cfg["onDuration"] | 0U;
+      out.dout.repeatCount = cfg["repeatCount"] | 1U;
+    } else {
+      out.sio.mode = outMode;
+      out.sio.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
+      out.sio.onDurationMs = cfg["onDuration"] | 0U;
+      out.sio.repeatCount = cfg["repeatCount"] | 1U;
+    }
     if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
       reason = "DO/SIO require set and reset blocks";
       return false;
     }
-    if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), target.setA_ID,
-                             target.setA_Operator, target.setA_Threshold,
-                             target.setB_ID, target.setB_Operator,
-                             target.setB_Threshold, target.setCombine, reason,
-                             sourceTypeById)) {
-      return false;
-    }
-    if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(), target.resetA_ID,
-                             target.resetA_Operator, target.resetA_Threshold,
-                             target.resetB_ID, target.resetB_Operator,
-                             target.resetB_Threshold, target.resetCombine,
-                             reason, sourceTypeById)) {
-      return false;
+    if (expectedType == DigitalOutput) {
+      if (!mapV3ConditionBlock(
+              cfg["set"].as<JsonObjectConst>(), out.dout.set.clauseAId,
+              out.dout.set.clauseAOperator, out.dout.set.clauseAThreshold,
+              out.dout.set.clauseBId, out.dout.set.clauseBOperator,
+              out.dout.set.clauseBThreshold, out.dout.set.combiner, reason,
+              sourceTypeById)) {
+        return false;
+      }
+      if (!mapV3ConditionBlock(
+              cfg["reset"].as<JsonObjectConst>(), out.dout.reset.clauseAId,
+              out.dout.reset.clauseAOperator, out.dout.reset.clauseAThreshold,
+              out.dout.reset.clauseBId, out.dout.reset.clauseBOperator,
+              out.dout.reset.clauseBThreshold, out.dout.reset.combiner, reason,
+              sourceTypeById)) {
+        return false;
+      }
+    } else {
+      if (!mapV3ConditionBlock(
+              cfg["set"].as<JsonObjectConst>(), out.sio.set.clauseAId,
+              out.sio.set.clauseAOperator, out.sio.set.clauseAThreshold,
+              out.sio.set.clauseBId, out.sio.set.clauseBOperator,
+              out.sio.set.clauseBThreshold, out.sio.set.combiner, reason,
+              sourceTypeById)) {
+        return false;
+      }
+      if (!mapV3ConditionBlock(
+              cfg["reset"].as<JsonObjectConst>(), out.sio.reset.clauseAId,
+              out.sio.reset.clauseAOperator, out.sio.reset.clauseAThreshold,
+              out.sio.reset.clauseBId, out.sio.reset.clauseBOperator,
+              out.sio.reset.clauseBThreshold, out.sio.reset.combiner, reason,
+              sourceTypeById)) {
+        return false;
+      }
     }
     return true;
   }
 
   if (expectedType == MathCard) {
-    target.setting3 = cfg["fallbackValue"] | target.setting3;
+    out.math.fallbackValue = cfg["fallbackValue"] | 0U;
     JsonObjectConst standard = cfg["standard"].as<JsonObjectConst>();
     JsonObjectConst inputA = standard["inputA"].as<JsonObjectConst>();
     JsonObjectConst inputB = standard["inputB"].as<JsonObjectConst>();
-    target.setting1 = inputA["value"] | target.setting1;
-    target.setting2 = inputB["value"] | target.setting2;
-    target.startOnMs = standard["clampMin"] | target.startOnMs;
-    target.startOffMs = standard["clampMax"] | target.startOffMs;
-    target.mode = Mode_None;
+    out.math.inputA = inputA["value"] | 0U;
+    out.math.inputB = inputB["value"] | 0U;
+    out.math.clampMin = standard["clampMin"] | 0U;
+    out.math.clampMax = standard["clampMax"] | 0U;
     if (cfg["set"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), target.setA_ID,
-                               target.setA_Operator, target.setA_Threshold,
-                               target.setB_ID, target.setB_Operator,
-                               target.setB_Threshold, target.setCombine,
-                               reason, sourceTypeById)) {
+      if (!mapV3ConditionBlock(
+              cfg["set"].as<JsonObjectConst>(), out.math.set.clauseAId,
+              out.math.set.clauseAOperator, out.math.set.clauseAThreshold,
+              out.math.set.clauseBId, out.math.set.clauseBOperator,
+              out.math.set.clauseBThreshold, out.math.set.combiner, reason,
+              sourceTypeById)) {
         return false;
       }
     }
     if (cfg["reset"].is<JsonObjectConst>()) {
-      if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(), target.resetA_ID,
-                               target.resetA_Operator, target.resetA_Threshold,
-                               target.resetB_ID, target.resetB_Operator,
-                               target.resetB_Threshold, target.resetCombine,
-                               reason, sourceTypeById)) {
+      if (!mapV3ConditionBlock(
+              cfg["reset"].as<JsonObjectConst>(), out.math.reset.clauseAId,
+              out.math.reset.clauseAOperator, out.math.reset.clauseAThreshold,
+              out.math.reset.clauseBId, out.math.reset.clauseBOperator,
+              out.math.reset.clauseBThreshold, out.math.reset.combiner, reason,
+              sourceTypeById)) {
         return false;
       }
     }
@@ -2234,26 +2301,20 @@ bool applyV3CardToLegacy(LogicCard& target, JsonObjectConst v3Card, String& reas
   }
 
   if (expectedType == RtcCard) {
-    target.mode = Mode_None;
-    target.setA_Operator = Op_AlwaysFalse;
-    target.setB_Operator = Op_AlwaysFalse;
-    target.resetA_Operator = Op_AlwaysFalse;
-    target.resetB_Operator = Op_AlwaysFalse;
-    target.setCombine = Combine_None;
-    target.resetCombine = Combine_None;
     JsonObjectConst schedule = cfg["schedule"].as<JsonObjectConst>();
-    const int slot = cardId - RTC_START;
-    if (slot >= 0 && slot < NUM_RTC_SCHED_CHANNELS) {
-      gRtcScheduleChannels[slot].enabled = true;
-      gRtcScheduleChannels[slot].year = schedule["year"] | -1;
-      gRtcScheduleChannels[slot].month = schedule["month"] | -1;
-      gRtcScheduleChannels[slot].day = schedule["day"] | -1;
-      gRtcScheduleChannels[slot].weekday = schedule["weekday"] | -1;
-      gRtcScheduleChannels[slot].hour = schedule["hour"] | -1;
-      gRtcScheduleChannels[slot].minute = schedule["minute"] | -1;
-      gRtcScheduleChannels[slot].rtcCardId = cardId;
-    }
-    target.setting1 = cfg["triggerDuration"] | target.setting1;
+    out.rtc.hasYear = schedule["year"].is<int>() || schedule["year"].is<uint32_t>();
+    out.rtc.hasMonth =
+        schedule["month"].is<int>() || schedule["month"].is<uint32_t>();
+    out.rtc.hasDay = schedule["day"].is<int>() || schedule["day"].is<uint32_t>();
+    out.rtc.hasWeekday =
+        schedule["weekday"].is<int>() || schedule["weekday"].is<uint32_t>();
+    out.rtc.year = schedule["year"] | 0;
+    out.rtc.month = schedule["month"] | 0;
+    out.rtc.day = schedule["day"] | 0;
+    out.rtc.weekday = schedule["weekday"] | 0;
+    out.rtc.hour = schedule["hour"] | 0;
+    out.rtc.minute = schedule["minute"] | 0;
+    out.rtc.triggerDurationMs = cfg["triggerDuration"] | 0U;
     return true;
   }
 
@@ -2263,7 +2324,18 @@ bool applyV3CardToLegacy(LogicCard& target, JsonObjectConst v3Card, String& reas
 
 bool buildLegacyCardsFromV3Cards(JsonArrayConst v3Cards, JsonDocument& doc,
                                  JsonArrayConst& outCards, String& reason) {
+  {
+    std::string payloadReason;
+    if (!validateV3PayloadConditionSources(v3Cards, TOTAL_CARDS, DO_START,
+                                           AI_START, SIO_START, MATH_START,
+                                           RTC_START, payloadReason)) {
+      reason = payloadReason.c_str();
+      return false;
+    }
+  }
+
   LogicCard mapped[TOTAL_CARDS];
+  V3CardConfig typedCards[TOTAL_CARDS] = {};
   initializeCardArraySafeDefaults(mapped);
   bool seen[TOTAL_CARDS] = {};
   logicCardType sourceTypeById[TOTAL_CARDS] = {};
@@ -2315,8 +2387,40 @@ bool buildLegacyCardsFromV3Cards(JsonArrayConst v3Cards, JsonDocument& doc,
       reason = "missing card config";
       return false;
     }
-    if (!applyV3CardToLegacy(mapped[cardId], card, reason, sourceTypeById))
+    if (!parseV3CardToTyped(card, sourceTypeById, typedCards[cardId], reason))
       return false;
+  }
+
+  for (uint8_t id = 0; id < TOTAL_CARDS; ++id) {
+    if (!seen[id]) continue;
+    if (!v3CardConfigToLegacy(typedCards[id], mapped[id])) {
+      reason = "failed to convert typed card to runtime card";
+      return false;
+    }
+    if (typedCards[id].family == V3CardFamily::RTC) {
+      const int slot = static_cast<int>(id) - static_cast<int>(RTC_START);
+      if (slot >= 0 && slot < NUM_RTC_SCHED_CHANNELS) {
+        gRtcScheduleChannels[slot].enabled = true;
+        gRtcScheduleChannels[slot].year =
+            typedCards[id].rtc.hasYear ? static_cast<int16_t>(typedCards[id].rtc.year)
+                                       : static_cast<int16_t>(-1);
+        gRtcScheduleChannels[slot].month = typedCards[id].rtc.hasMonth
+                                               ? static_cast<int8_t>(typedCards[id].rtc.month)
+                                               : static_cast<int8_t>(-1);
+        gRtcScheduleChannels[slot].day = typedCards[id].rtc.hasDay
+                                             ? static_cast<int8_t>(typedCards[id].rtc.day)
+                                             : static_cast<int8_t>(-1);
+        gRtcScheduleChannels[slot].weekday =
+            typedCards[id].rtc.hasWeekday
+                ? static_cast<int8_t>(typedCards[id].rtc.weekday)
+                : static_cast<int8_t>(-1);
+        gRtcScheduleChannels[slot].hour =
+            static_cast<int8_t>(typedCards[id].rtc.hour);
+        gRtcScheduleChannels[slot].minute =
+            static_cast<int8_t>(typedCards[id].rtc.minute);
+        gRtcScheduleChannels[slot].rtcCardId = id;
+      }
+    }
   }
 
   JsonObject normalized = doc["config"].to<JsonObject>();
@@ -2350,66 +2454,38 @@ bool normalizeConfigRequest(JsonObjectConst root, JsonDocument& normalizedDoc,
                             JsonArrayConst& outCards, String& reason,
                             const char*& outErrorCode,
                             bool& usedLegacyBridge) {
-  usedLegacyBridge = false;
-  outErrorCode = "VALIDATION_FAILED";
-  const char* requestId = root["requestId"] | "";
-  const char* apiVersion = root["apiVersion"].as<const char*>();
-  const char* schemaVersion = root["schemaVersion"].as<const char*>();
+  V3CardLayout layout = {TOTAL_CARDS, DO_START, AI_START,
+                         SIO_START,  MATH_START, RTC_START};
+  LogicCard baseline[TOTAL_CARDS];
+  initializeCardArraySafeDefaults(baseline);
+  V3RtcScheduleChannel rtcOut[NUM_RTC_SCHED_CHANNELS] = {};
 
-  if (apiVersion != nullptr && strcmp(apiVersion, kApiVersion) != 0) {
-    reason = "unsupported apiVersion";
-    outErrorCode = "UNSUPPORTED_API_VERSION";
+  if (!normalizeConfigRequestWithLayout(
+          root, layout, kApiVersion, kSchemaVersion, baseline, TOTAL_CARDS,
+          normalizedDoc, outCards, reason, outErrorCode, usedLegacyBridge,
+          rtcOut, NUM_RTC_SCHED_CHANNELS)) {
     return false;
   }
-  if (schemaVersion != nullptr && strcmp(schemaVersion, kSchemaVersion) != 0) {
-    reason = "unsupported schemaVersion";
-    outErrorCode = "UNSUPPORTED_SCHEMA_VERSION";
-    return false;
-  }
-  if (!root["config"].is<JsonObjectConst>()) {
-    reason = "missing config object";
-    outErrorCode = "INVALID_REQUEST";
-    return false;
-  }
-  JsonObjectConst config = root["config"].as<JsonObjectConst>();
-  if (!config["cards"].is<JsonArrayConst>()) {
-    reason = "missing config.cards array";
-    outErrorCode = "INVALID_REQUEST";
-    return false;
-  }
-  JsonArrayConst inputCards = config["cards"].as<JsonArrayConst>();
 
-  normalizedDoc["requestId"] = requestId;
-  normalizedDoc["apiVersion"] = kApiVersion;
-  normalizedDoc["schemaVersion"] = kSchemaVersion;
-
-  if (hasLegacyCardsShape(inputCards)) {
-    usedLegacyBridge = true;
-    Serial.println("Config bridge: accepted legacy cards payload");
-    JsonObject outConfig = normalizedDoc["config"].to<JsonObject>();
-    JsonArray out = outConfig["cards"].to<JsonArray>();
-    for (JsonVariantConst v : inputCards) {
-      out.add(v);
-    }
-    outCards = out;
-  } else if (hasV3CardsShape(inputCards)) {
-    if (!buildLegacyCardsFromV3Cards(inputCards, normalizedDoc, outCards, reason)) {
-      return false;
+  if (!usedLegacyBridge) {
+    for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
+      gRtcScheduleChannels[i].enabled = rtcOut[i].enabled;
+      gRtcScheduleChannels[i].year = rtcOut[i].year;
+      gRtcScheduleChannels[i].month = rtcOut[i].month;
+      gRtcScheduleChannels[i].day = rtcOut[i].day;
+      gRtcScheduleChannels[i].weekday = rtcOut[i].weekday;
+      gRtcScheduleChannels[i].hour = rtcOut[i].hour;
+      gRtcScheduleChannels[i].minute = rtcOut[i].minute;
+      gRtcScheduleChannels[i].rtcCardId = rtcOut[i].rtcCardId;
     }
   } else {
-    reason = "cards payload shape is unsupported";
-    outErrorCode = "INVALID_REQUEST";
-    return false;
+    Serial.println("Config bridge: accepted legacy cards payload");
   }
 
   if (!validateConfigCardsArray(outCards, reason)) {
     outErrorCode = "VALIDATION_FAILED";
     return false;
   }
-
-  JsonObject meta = normalizedDoc["bridge"].to<JsonObject>();
-  meta["usedLegacyCardsBridge"] = usedLegacyBridge;
-  meta["bridgeVersion"] = 1;
   return true;
 }
 
@@ -2699,15 +2775,6 @@ bool evalCondition(uint8_t aId, logicOperator aOp, uint32_t aTh, uint8_t bId,
   return false;
 }
 
-void resetDIRuntime(LogicCard& card) {
-  card.logicalState = false;
-  card.triggerFlag = false;
-  card.currentValue = 0;
-  card.startOnMs = 0;
-  card.startOffMs = 0;
-  card.repeatCounter = 0;
-}
-
 void processDICard(LogicCard& card, uint32_t nowMs) {
   bool sample = false;
   inputSourceMode sourceMode = InputSource_Real;
@@ -2723,7 +2790,6 @@ void processDICard(LogicCard& card, uint32_t nowMs) {
     sample = (digitalRead(card.hwPin) == HIGH);
   }
   if (card.invert) sample = !sample;
-  card.physicalState = sample;
 
   const bool setCondition = evalCondition(
       card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
@@ -2732,69 +2798,53 @@ void processDICard(LogicCard& card, uint32_t nowMs) {
       evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
                     card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
                     card.resetCombine);
+
+  V3DiRuntimeConfig cfg = {};
+  cfg.debounceTimeMs = card.setting1;
+  cfg.edgeMode = card.mode;
+
+  V3DiRuntimeState runtime = {};
+  runtime.logicalState = card.logicalState;
+  runtime.physicalState = card.physicalState;
+  runtime.triggerFlag = card.triggerFlag;
+  runtime.currentValue = card.currentValue;
+  runtime.startOnMs = card.startOnMs;
+  runtime.startOffMs = card.startOffMs;
+  runtime.repeatCounter = card.repeatCounter;
+  runtime.state = card.state;
+
+  V3DiStepInput in = {};
+  in.nowMs = nowMs;
+  in.sample = sample;
+  in.setCondition = setCondition;
+  in.resetCondition = resetCondition;
   if (card.id < TOTAL_CARDS) {
-    gCardSetResult[card.id] = setCondition;
-    gCardResetResult[card.id] = resetCondition;
-    gCardResetOverride[card.id] = setCondition && resetCondition;
+    in.prevSample = gPrevDISample[card.id];
+    in.prevSampleValid = gPrevDIPrimed[card.id];
+  } else {
+    in.prevSample = sample;
+    in.prevSampleValid = false;
   }
 
-  if (resetCondition) {
-    resetDIRuntime(card);
-    card.state = State_DI_Inhibited;
-    return;
-  }
+  V3DiStepOutput out = {};
+  runV3DiStep(cfg, runtime, in, out);
 
-  if (!setCondition) {
-    card.triggerFlag = false;
-    card.state = State_DI_Idle;
-    return;
-  }
+  card.logicalState = runtime.logicalState;
+  card.physicalState = runtime.physicalState;
+  card.triggerFlag = runtime.triggerFlag;
+  card.currentValue = runtime.currentValue;
+  card.startOnMs = runtime.startOnMs;
+  card.startOffMs = runtime.startOffMs;
+  card.repeatCounter = runtime.repeatCounter;
+  card.state = runtime.state;
 
-  bool previousSample = sample;
   if (card.id < TOTAL_CARDS) {
-    if (gPrevDIPrimed[card.id]) {
-      previousSample = gPrevDISample[card.id];
-    }
-    gPrevDISample[card.id] = sample;
-    gPrevDIPrimed[card.id] = true;
+    gPrevDISample[card.id] = out.nextPrevSample;
+    gPrevDIPrimed[card.id] = out.nextPrevSampleValid;
+    gCardSetResult[card.id] = out.setResult;
+    gCardResetResult[card.id] = out.resetResult;
+    gCardResetOverride[card.id] = out.resetOverride;
   }
-
-  const bool risingEdge = (!previousSample && sample);
-  const bool fallingEdge = (previousSample && !sample);
-  bool edgeMatchesMode = false;
-  switch (card.mode) {
-    case Mode_DI_Rising:
-      edgeMatchesMode = risingEdge;
-      break;
-    case Mode_DI_Falling:
-      edgeMatchesMode = fallingEdge;
-      break;
-    case Mode_DI_Change:
-      edgeMatchesMode = risingEdge || fallingEdge;
-      break;
-    default:
-      edgeMatchesMode = false;
-      break;
-  }
-
-  if (!edgeMatchesMode) {
-    card.triggerFlag = false;
-    card.state = State_DI_Idle;
-    return;
-  }
-
-  const uint32_t elapsed = nowMs - card.startOnMs;
-  if (card.setting1 > 0 && elapsed < card.setting1) {
-    card.triggerFlag = false;
-    card.state = State_DI_Filtering;
-    return;
-  }
-
-  card.triggerFlag = true;
-  card.currentValue += 1;
-  card.logicalState = sample;
-  card.startOnMs = nowMs;
-  card.state = State_DI_Qualified;
 }
 
 uint32_t clampUInt32(uint32_t value, uint32_t lo, uint32_t hi) {
@@ -2849,17 +2899,6 @@ void processAICard(LogicCard& card) {
   card.state = State_AI_Streaming;
 }
 
-void forceDOIdle(LogicCard& card, bool clearCounter = false) {
-  card.logicalState = false;
-  card.physicalState = false;
-  card.triggerFlag = false;
-  card.startOnMs = 0;
-  card.startOffMs = 0;
-  card.repeatCounter = 0;
-  if (clearCounter) card.currentValue = 0;
-  card.state = State_DO_Idle;
-}
-
 void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
                      bool masked) {
   if (!driveHardware) return;
@@ -2869,7 +2908,6 @@ void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
 }
 
 void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
-  const bool previousPhysical = card.physicalState;
   const bool setCondition = evalCondition(
       card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
       card.setB_Operator, card.setB_Threshold, card.setCombine);
@@ -2883,99 +2921,40 @@ void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
     gCardResetOverride[card.id] = setCondition && resetCondition;
   }
 
-  bool prevSet = false;
-  if (card.id < TOTAL_CARDS) {
-    prevSet = gPrevSetCondition[card.id];
-    gPrevSetCondition[card.id] = setCondition;
-  }
-  const bool setRisingEdge = setCondition && !prevSet;
+  V3DoRuntimeConfig cfg = {};
+  cfg.mode = card.mode;
+  cfg.delayBeforeOnMs = card.setting1;
+  cfg.onDurationMs = card.setting2;
+  cfg.repeatCount = card.setting3;
 
-  if (resetCondition) {
-    forceDOIdle(card, true);
-    driveDOHardware(card, driveHardware, false, isOutputMasked(card.id));
-    return;
-  }
+  V3DoRuntimeState runtime = {};
+  runtime.logicalState = card.logicalState;
+  runtime.physicalState = card.physicalState;
+  runtime.triggerFlag = card.triggerFlag;
+  runtime.currentValue = card.currentValue;
+  runtime.startOnMs = card.startOnMs;
+  runtime.startOffMs = card.startOffMs;
+  runtime.repeatCounter = card.repeatCounter;
+  runtime.state = card.state;
 
-  const bool retriggerable =
-      (card.state == State_DO_Idle || card.state == State_DO_Finished);
-  // Re-arm behavior: when DO/SIO is idle/finished, allow retrigger even if
-  // setCondition stays high (level retrigger), while still supporting edge
-  // trigger semantics for normal transitions.
-  card.triggerFlag = retriggerable && (setRisingEdge || setCondition);
+  V3DoStepInput in = {};
+  in.nowMs = nowMs;
+  in.setCondition = setCondition;
+  in.resetCondition = resetCondition;
 
-  if (card.triggerFlag) {
-    card.logicalState = true;
-    card.repeatCounter = 0;
-    if (card.mode == Mode_DO_Immediate) {
-      card.state = State_DO_Active;
-      card.startOffMs = nowMs;
-    } else {
-      card.state = State_DO_OnDelay;
-      card.startOnMs = nowMs;
-    }
-  }
+  V3DoStepOutput out = {};
+  runV3DoStep(cfg, runtime, in, out);
 
-  if (card.mode == Mode_DO_Gated && isDoRunningState(card.state) &&
-      !setCondition) {
-    forceDOIdle(card);
-    driveDOHardware(card, driveHardware, false, isOutputMasked(card.id));
-    return;
-  }
+  card.logicalState = runtime.logicalState;
+  card.physicalState = runtime.physicalState;
+  card.triggerFlag = runtime.triggerFlag;
+  card.currentValue = runtime.currentValue;
+  card.startOnMs = runtime.startOnMs;
+  card.startOffMs = runtime.startOffMs;
+  card.repeatCounter = runtime.repeatCounter;
+  card.state = runtime.state;
 
-  bool effectiveOutput = false;
-  switch (card.state) {
-    case State_DO_OnDelay: {
-      effectiveOutput = false;
-      if (card.setting1 == 0) {
-        break;
-      }
-      if ((nowMs - card.startOnMs) >= card.setting1) {
-        card.state = State_DO_Active;
-        card.startOffMs = nowMs;
-        effectiveOutput = true;
-      }
-      break;
-    }
-    case State_DO_Active: {
-      effectiveOutput = true;
-      if (card.setting2 == 0) {
-        break;
-      }
-      if ((nowMs - card.startOffMs) >= card.setting2) {
-        card.repeatCounter += 1;
-        effectiveOutput = false;
-
-        if (card.setting3 == 0) {
-          card.state = State_DO_OnDelay;
-          card.startOnMs = nowMs;
-          break;
-        }
-
-        if (card.repeatCounter >= card.setting3) {
-          card.logicalState = false;
-          card.state = State_DO_Finished;
-          break;
-        }
-
-        card.state = State_DO_OnDelay;
-        card.startOnMs = nowMs;
-      }
-      break;
-    }
-    case State_DO_Finished:
-    case State_DO_Idle:
-    default:
-      effectiveOutput = false;
-      break;
-  }
-
-  // DO/SIO cycle counter: count each OFF->ON transition of effective output.
-  if (!previousPhysical && effectiveOutput) {
-    card.currentValue += 1;
-  }
-
-  card.physicalState = effectiveOutput;
-  driveDOHardware(card, driveHardware, effectiveOutput,
+  driveDOHardware(card, driveHardware, out.effectiveOutput,
                   isOutputMasked(card.id));
 }
 
