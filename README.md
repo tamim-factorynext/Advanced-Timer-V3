@@ -52,6 +52,23 @@ Legacy archive:
 - No hidden alternate execution path that bypasses deterministic rules.
 - No mandatory dependency on one fixed hardware model.
 
+### 3.3 Landscape and Positioning
+
+The control/automation landscape already includes:
+- Traditional PLC platforms (high-end and budget lines).
+- OpenPLC and PLC-like open ecosystems.
+- ESP32 PLC-style hardware projects that usually expect custom firmware development.
+- Single/dual-channel timer products, including RTC timer variants.
+- Home automation/control ecosystems (`Home Assistant`, `ESPHome`, `Tasmota`).
+- Firmware development stacks (`Arduino`, `PlatformIO`, `ESP-IDF`, `MicroPython`).
+- IoT cloud ecosystems (`Blynk`, `Particle`, `The Things Network`).
+
+Advanced Timer V3 is positioned as:
+- A deterministic, contract-driven controller firmware platform.
+- More structured and production-oriented than DIY "write-your-own-firmware" ESP32 projects.
+- More flexible and transparent than many fixed-function timer products.
+- Complementary to, not a replacement for, cloud/home-automation ecosystems (it can integrate at system boundaries while keeping deterministic local control).
+
 ## 4. System Architecture (Firmware + Portal)
 
 ### 4.1 Two-Core Ownership
