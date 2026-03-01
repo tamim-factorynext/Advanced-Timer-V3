@@ -27,10 +27,15 @@
 #include "kernel/card_model.h"
 #include "kernel/enum_codec.h"
 #include "kernel/v3_card_bridge.h"
+#include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_condition_rules.h"
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
+#include "kernel/v3_math_runtime.h"
+#include "kernel/v3_sio_runtime.h"
+#include "kernel/v3_rtc_runtime.h"
+#include "kernel/v3_status_runtime.h"
 #include "kernel/v3_payload_rules.h"
 #include "portal/routes.h"
 #include "runtime/shared_snapshot.h"
@@ -154,16 +159,7 @@ uint32_t gRtcIntentEnqueueCount = 0;
 uint32_t gRtcIntentEnqueueFailCount = 0;
 uint32_t gRtcLastEvalMs = 0;
 
-struct RtcScheduleChannel {
-  bool enabled;
-  int16_t year;  // -1 means wildcard
-  int8_t month;  // -1 means wildcard
-  int8_t day;    // -1 means wildcard
-  int8_t weekday;  // -1 means wildcard
-  int8_t hour;     // -1 means wildcard
-  int8_t minute;   // -1 means wildcard
-  uint8_t rtcCardId;
-};
+using RtcScheduleChannel = V3RtcScheduleChannel;
 
 RtcScheduleChannel gRtcScheduleChannels[NUM_RTC_SCHED_CHANNELS] = {
     {false, -1, -1, -1, -1, -1, -1, RTC_START},
@@ -2609,8 +2605,12 @@ bool setRtcCardStateCommand(uint8_t cardId, bool state) {
   card.physicalState = state;
   card.triggerFlag = state;  // one-minute assertion edge for condition logic
   card.currentValue = state ? 1 : 0;
+  if (state) {
+    card.startOnMs = millis();
+  }
   if (!state) {
     card.triggerFlag = false;
+    card.startOnMs = 0;
   }
   return true;
 }
@@ -2751,11 +2751,11 @@ bool evalOperator(const LogicCard& target, logicOperator op,
     case Op_LTE:
       return target.currentValue <= threshold;
     case Op_Running:
-      return isDoRunningState(target.state);
+      return isMissionRunning(target.type, target.state);
     case Op_Finished:
-      return target.state == State_DO_Finished;
+      return isMissionFinished(target.type, target.state);
     case Op_Stopped:
-      return target.state == State_DO_Idle || target.state == State_DO_Finished;
+      return isMissionStopped(target.type, target.state);
     default:
       return false;
   }
@@ -2847,12 +2847,6 @@ void processDICard(LogicCard& card, uint32_t nowMs) {
   }
 }
 
-uint32_t clampUInt32(uint32_t value, uint32_t lo, uint32_t hi) {
-  if (value < lo) return lo;
-  if (value > hi) return hi;
-  return value;
-}
-
 void processAICard(LogicCard& card) {
   if (card.id < TOTAL_CARDS) {
     gCardSetResult[card.id] = false;
@@ -2871,32 +2865,26 @@ void processAICard(LogicCard& card) {
     raw = static_cast<uint32_t>(analogRead(card.hwPin));
   }
 
-  const uint32_t inMin =
-      (card.setting1 < card.setting2) ? card.setting1 : card.setting2;
-  const uint32_t inMax =
-      (card.setting1 < card.setting2) ? card.setting2 : card.setting1;
-  const uint32_t clamped = clampUInt32(raw, inMin, inMax);
+  V3AiRuntimeConfig cfg = {};
+  cfg.inputMin = card.setting1;
+  cfg.inputMax = card.setting2;
+  cfg.outputMin = card.startOnMs;
+  cfg.outputMax = card.startOffMs;
+  cfg.emaAlphaX1000 = card.setting3;
 
-  uint32_t scaled = card.startOnMs;
-  if (inMax != inMin) {
-    const int64_t outMin = static_cast<int64_t>(card.startOnMs);
-    const int64_t outMax = static_cast<int64_t>(card.startOffMs);
-    const int64_t outDelta = outMax - outMin;
-    const int64_t inDelta = static_cast<int64_t>(inMax - inMin);
-    const int64_t inOffset = static_cast<int64_t>(clamped - inMin);
-    int64_t mapped = outMin + ((inOffset * outDelta) / inDelta);
-    if (mapped < 0) mapped = 0;
-    scaled = static_cast<uint32_t>(mapped);
-  }
+  V3AiRuntimeState runtime = {};
+  runtime.currentValue = card.currentValue;
+  runtime.mode = card.mode;
+  runtime.state = card.state;
 
-  const uint32_t alpha = (card.setting3 > 1000) ? 1000 : card.setting3;
-  const uint64_t filtered =
-      ((static_cast<uint64_t>(alpha) * scaled) +
-       (static_cast<uint64_t>(1000 - alpha) * card.currentValue)) /
-      1000ULL;
-  card.currentValue = static_cast<uint32_t>(filtered);
-  card.mode = Mode_AI_Continuous;
-  card.state = State_AI_Streaming;
+  V3AiStepInput in = {};
+  in.rawSample = raw;
+
+  runV3AiStep(cfg, runtime, in);
+
+  card.currentValue = runtime.currentValue;
+  card.mode = runtime.mode;
+  card.state = runtime.state;
 }
 
 void driveDOHardware(const LogicCard& card, bool driveHardware, bool level,
@@ -2959,7 +2947,51 @@ void processDOCard(LogicCard& card, uint32_t nowMs, bool driveHardware) {
 }
 
 void processSIOCard(LogicCard& card, uint32_t nowMs) {
-  processDOCard(card, nowMs, false);
+  const bool setCondition = evalCondition(
+      card.setA_ID, card.setA_Operator, card.setA_Threshold, card.setB_ID,
+      card.setB_Operator, card.setB_Threshold, card.setCombine);
+  const bool resetCondition =
+      evalCondition(card.resetA_ID, card.resetA_Operator, card.resetA_Threshold,
+                    card.resetB_ID, card.resetB_Operator, card.resetB_Threshold,
+                    card.resetCombine);
+  if (card.id < TOTAL_CARDS) {
+    gCardSetResult[card.id] = setCondition;
+    gCardResetResult[card.id] = resetCondition;
+    gCardResetOverride[card.id] = setCondition && resetCondition;
+  }
+
+  V3SioRuntimeConfig cfg = {};
+  cfg.mode = card.mode;
+  cfg.delayBeforeOnMs = card.setting1;
+  cfg.onDurationMs = card.setting2;
+  cfg.repeatCount = card.setting3;
+
+  V3SioRuntimeState runtime = {};
+  runtime.logicalState = card.logicalState;
+  runtime.physicalState = card.physicalState;
+  runtime.triggerFlag = card.triggerFlag;
+  runtime.currentValue = card.currentValue;
+  runtime.startOnMs = card.startOnMs;
+  runtime.startOffMs = card.startOffMs;
+  runtime.repeatCounter = card.repeatCounter;
+  runtime.state = card.state;
+
+  V3SioStepInput in = {};
+  in.nowMs = nowMs;
+  in.setCondition = setCondition;
+  in.resetCondition = resetCondition;
+
+  V3SioStepOutput out = {};
+  runV3SioStep(cfg, runtime, in, out);
+
+  card.logicalState = runtime.logicalState;
+  card.physicalState = runtime.physicalState;
+  card.triggerFlag = runtime.triggerFlag;
+  card.currentValue = runtime.currentValue;
+  card.startOnMs = runtime.startOnMs;
+  card.startOffMs = runtime.startOffMs;
+  card.repeatCounter = runtime.repeatCounter;
+  card.state = runtime.state;
 }
 
 void processMathCard(LogicCard& card) {
@@ -2976,49 +3008,66 @@ void processMathCard(LogicCard& card) {
     gCardResetOverride[card.id] = setCondition && resetCondition;
   }
 
-  if (resetCondition) {
-    card.logicalState = false;
-    card.physicalState = false;
-    card.triggerFlag = false;
-    card.currentValue = card.setting3;
-    card.state = State_None;
-    return;
-  }
+  V3MathRuntimeConfig cfg = {};
+  cfg.inputA = card.setting1;
+  cfg.inputB = card.setting2;
+  cfg.fallbackValue = card.setting3;
+  cfg.clampMin = card.startOnMs;
+  cfg.clampMax = card.startOffMs;
+  cfg.clampEnabled = (card.startOffMs >= card.startOnMs);
 
-  if (!setCondition) {
-    card.logicalState = false;
-    card.physicalState = false;
-    card.triggerFlag = false;
-    card.state = State_None;
-    return;
-  }
+  V3MathRuntimeState runtime = {};
+  runtime.logicalState = card.logicalState;
+  runtime.physicalState = card.physicalState;
+  runtime.triggerFlag = card.triggerFlag;
+  runtime.currentValue = card.currentValue;
+  runtime.state = card.state;
 
-  card.logicalState = true;
-  card.physicalState = true;
-  card.triggerFlag = true;
+  V3MathStepInput in = {};
+  in.setCondition = setCondition;
+  in.resetCondition = resetCondition;
 
-  // Transitional deterministic math bridge: constant inputA/inputB add path.
-  const uint64_t raw =
-      static_cast<uint64_t>(card.setting1) + static_cast<uint64_t>(card.setting2);
-  uint32_t value =
-      (raw > static_cast<uint64_t>(UINT32_MAX)) ? UINT32_MAX : static_cast<uint32_t>(raw);
-  if (card.startOffMs >= card.startOnMs) {
-    value = clampUInt32(value, card.startOnMs, card.startOffMs);
-  }
-  card.currentValue = value;
-  card.state = State_None;
+  V3MathStepOutput out = {};
+  runV3MathStep(cfg, runtime, in, out);
+
+  card.logicalState = runtime.logicalState;
+  card.physicalState = runtime.physicalState;
+  card.triggerFlag = runtime.triggerFlag;
+  card.currentValue = runtime.currentValue;
+  card.state = runtime.state;
 }
 
-void processRtcCard(LogicCard& card) {
+void processRtcCard(LogicCard& card, uint32_t nowMs) {
   if (card.id < TOTAL_CARDS) {
     gCardSetResult[card.id] = false;
     gCardResetResult[card.id] = false;
     gCardResetOverride[card.id] = false;
   }
-  card.mode = Mode_None;
-  card.state = State_None;
-  card.physicalState = card.logicalState;
-  if (!card.logicalState) card.triggerFlag = false;
+
+  V3RtcRuntimeConfig cfg = {};
+  cfg.triggerDurationMs = card.setting1;
+
+  V3RtcRuntimeState runtime = {};
+  runtime.logicalState = card.logicalState;
+  runtime.physicalState = card.physicalState;
+  runtime.triggerFlag = card.triggerFlag;
+  runtime.currentValue = card.currentValue;
+  runtime.triggerStartMs = card.startOnMs;
+  runtime.mode = card.mode;
+  runtime.state = card.state;
+
+  V3RtcStepInput in = {};
+  in.nowMs = nowMs;
+
+  runV3RtcStep(cfg, runtime, in);
+
+  card.logicalState = runtime.logicalState;
+  card.physicalState = runtime.physicalState;
+  card.triggerFlag = runtime.triggerFlag;
+  card.currentValue = runtime.currentValue;
+  card.startOnMs = runtime.triggerStartMs;
+  card.mode = runtime.mode;
+  card.state = runtime.state;
 }
 
 void processCardById(uint8_t cardId, uint32_t nowMs) {
@@ -3041,7 +3090,7 @@ void processCardById(uint8_t cardId, uint32_t nowMs) {
       processMathCard(card);
       return;
     case RtcCard:
-      processRtcCard(card);
+      processRtcCard(card, nowMs);
       return;
     default:
       return;
@@ -3119,21 +3168,6 @@ void runEngineIteration(uint32_t nowMs, uint32_t& lastScanMs) {
   updateSharedRuntimeSnapshot(nowMs, true);
 }
 
-bool rtcFieldMatches(int fieldValue, int scheduleValue) {
-  return scheduleValue < 0 || fieldValue == scheduleValue;
-}
-
-bool rtcChannelMatchesMinute(const RtcScheduleChannel& channel,
-                             const DateTime& dt) {
-  if (!channel.enabled) return false;
-  return rtcFieldMatches(dt.year(), channel.year) &&
-         rtcFieldMatches(dt.month(), channel.month) &&
-         rtcFieldMatches(dt.day(), channel.day) &&
-         rtcFieldMatches(dt.dayOfTheWeek(), channel.weekday) &&
-         rtcFieldMatches(dt.hour(), channel.hour) &&
-         rtcFieldMatches(dt.minute(), channel.minute);
-}
-
 void serviceRtcMinuteScheduler(uint32_t nowMs) {
   if (!gRtcClockInitialized) return;
 
@@ -3142,11 +3176,15 @@ void serviceRtcMinuteScheduler(uint32_t nowMs) {
   lastPollMs = nowMs;
 
   DateTime now = gRtcClock.now();
-  const int32_t minuteKey =
-      (((now.year() * 100 + now.month()) * 100 + now.day()) * 100 +
-       now.hour()) *
-          100 +
-      now.minute();
+  V3RtcMinuteStamp stamp = {};
+  stamp.year = now.year();
+  stamp.month = now.month();
+  stamp.day = now.day();
+  stamp.weekday = now.dayOfTheWeek();
+  stamp.hour = now.hour();
+  stamp.minute = now.minute();
+
+  const int32_t minuteKey = v3RtcMinuteKey(stamp);
   if (minuteKey == gRtcLastMinuteKey) return;
 
   gRtcLastMinuteKey = minuteKey;
@@ -3175,7 +3213,16 @@ void serviceRtcMinuteScheduler(uint32_t nowMs) {
 
   for (uint8_t i = 0; i < NUM_RTC_SCHED_CHANNELS; ++i) {
     const RtcScheduleChannel& channel = gRtcScheduleChannels[i];
-    if (!rtcChannelMatchesMinute(channel, now)) continue;
+    V3RtcScheduleView view = {};
+    view.enabled = channel.enabled;
+    view.year = channel.year;
+    view.month = channel.month;
+    view.day = channel.day;
+    view.weekday = channel.weekday;
+    view.hour = channel.hour;
+    view.minute = channel.minute;
+    view.rtcCardId = channel.rtcCardId;
+    if (!v3RtcChannelMatchesMinute(view, stamp)) continue;
     KernelCommand cmd = {};
     cmd.type = KernelCmd_SetRtcCardState;
     cmd.cardId = channel.rtcCardId;

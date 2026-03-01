@@ -901,3 +901,208 @@ Extracted DO runtime transition logic into a dedicated kernel module and switche
   - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
   - Result: `SUCCESS`
 
+## 2026-03-01 (V3 Runtime Slice 12: SIO Runtime Boundary + Acceptance)
+
+### Session Summary
+
+Established explicit SIO runtime ownership by introducing a dedicated SIO runtime boundary module and wiring `processSIOCard(...)` directly to runtime step execution.
+
+### Completed
+
+- Added SIO runtime boundary module:
+  - `src/kernel/v3_sio_runtime.h`
+  - `src/kernel/v3_sio_runtime.cpp`
+  - entrypoint:
+    - `runV3SioStep(...)`
+
+- Updated runtime integration:
+  - `src/main.cpp` now executes SIO state transitions through `runV3SioStep(...)` instead of delegating to `processDOCard(...)`.
+  - SIO keeps service/runtime semantics explicit while sharing DO state machine implementation via runtime wrapper internals.
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_sio_runtime.h`.
+
+- Added native SIO runtime acceptance tests:
+  - `test/test_v3_sio_runtime/test_main.cpp`
+  - coverage includes:
+    - reset-condition precedence to `Idle`
+    - immediate activation to running mission state
+    - normal-mode completion to `Finished`
+    - gated-mode drop to `Idle` when gate deasserts
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (27/27 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 13: MATH Runtime Module Activation + Acceptance)
+
+### Session Summary
+
+Extracted transitional MATH evaluation behavior into a dedicated runtime module and switched `processMathCard(...)` to execute via typed runtime DTO + step API.
+
+### Completed
+
+- Added MATH runtime module:
+  - `src/kernel/v3_math_runtime.h`
+  - `src/kernel/v3_math_runtime.cpp`
+  - entrypoint:
+    - `runV3MathStep(...)`
+
+- Updated runtime integration:
+  - `src/main.cpp` `processMathCard(...)` now maps legacy card fields into `V3MathRuntimeConfig`/`V3MathRuntimeState`, executes `runV3MathStep(...)`, and maps results back.
+  - Preserved existing transitional deterministic semantics:
+    - reset uses fallback value (`setting3`)
+    - set=false clears flags without recompute
+    - set=true computes `inputA + inputB` with uint32 saturation
+    - optional clamp window applies when `startOffMs >= startOnMs`
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_math_runtime.h`.
+
+- Added native MATH runtime acceptance tests:
+  - `test/test_v3_math_runtime/test_main.cpp`
+  - coverage includes:
+    - reset fallback behavior
+    - set=false behavior
+    - sum behavior
+    - clamp behavior
+    - uint32 saturation behavior
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (32/32 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 14: RTC Runtime Module + Minute Semantics Tests)
+
+### Session Summary
+
+Extracted RTC runtime-state handling into a dedicated module, wired minute-scheduler matching through shared RTC runtime helpers, and added native acceptance tests for trigger-window and minute-level matching semantics.
+
+### Completed
+
+- Added RTC runtime module:
+  - `src/kernel/v3_rtc_runtime.h`
+  - `src/kernel/v3_rtc_runtime.cpp`
+  - runtime entrypoints/helpers:
+    - `runV3RtcStep(...)`
+    - `v3RtcChannelMatchesMinute(...)`
+    - `v3RtcMinuteKey(...)`
+
+- Updated runtime integration in `src/main.cpp`:
+  - `processRtcCard(...)` now executes via `runV3RtcStep(...)`.
+  - `setRtcCardStateCommand(...)` records trigger start timestamp on assert.
+  - minute scheduler matching now uses shared RTC runtime minute helpers.
+  - preserved scheduler ownership on service core while making minute matching logic reusable/testable.
+
+- Added native RTC runtime acceptance tests:
+  - `test/test_v3_rtc_runtime/test_main.cpp`
+  - coverage includes:
+    - logical-false trigger clear behavior
+    - trigger window hold/expiry behavior
+    - minute wildcard matching behavior
+    - minute key progression behavior
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_rtc_runtime.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (37/37 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 15: AI Runtime Module + Typed Field Semantics)
+
+### Session Summary
+
+Covered AI before operator/state cleanup by extracting AI processing into a dedicated runtime module with card-specific field semantics (`inputMin/inputMax/outputMin/outputMax/emaAlpha`) and wiring `processAICard(...)` through it.
+
+### Completed
+
+- Added AI runtime module:
+  - `src/kernel/v3_ai_runtime.h`
+  - `src/kernel/v3_ai_runtime.cpp`
+  - entrypoint:
+    - `runV3AiStep(...)`
+
+- Updated runtime integration:
+  - `src/main.cpp` `processAICard(...)` now maps legacy fields to `V3AiRuntimeConfig` and executes `runV3AiStep(...)`.
+  - Removed local AI-only math helpers from `main.cpp` by moving mapping/filtering logic into kernel runtime module.
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_ai_runtime.h`.
+
+- Added native AI runtime acceptance tests:
+  - `test/test_v3_ai_runtime/test_main.cpp`
+  - coverage includes:
+    - alpha `1000` direct tracking
+    - alpha `0` hold behavior
+    - input bounds order-independence
+    - equal-range mapping behavior
+    - alpha clamp at upper bound
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (42/42 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
+## 2026-03-01 (V3 Runtime Slice 16: Family-Aware Mission Status Cleanup)
+
+### Session Summary
+
+Completed operator/status cleanup after AI extraction by replacing DO-only mission-state assumptions with explicit family-aware status helpers for `DO/SIO`.
+
+### Completed
+
+- Added status runtime helper module:
+  - `src/kernel/v3_status_runtime.h`
+  - `src/kernel/v3_status_runtime.cpp`
+  - helpers:
+    - `isMissionRunning(...)`
+    - `isMissionFinished(...)`
+    - `isMissionStopped(...)`
+
+- Updated operator evaluation in `src/main.cpp`:
+  - `Op_Running`, `Op_Finished`, `Op_Stopped` now route through family-aware helper functions instead of direct DO-state checks.
+
+- Added native status acceptance tests:
+  - `test/test_v3_status_runtime/test_main.cpp`
+  - coverage includes:
+    - DO mission-state truth table
+    - SIO mission-state truth table
+    - non-mission families rejected for mission-state operators
+
+- Updated kernel layer inventory:
+  - `src/kernel/README.md` now lists `v3_status_runtime.h`.
+
+### Evidence
+
+- Native tests:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe test -e native`
+  - Result: `PASSED` (45/45 total across native suites)
+
+- Firmware build:
+  - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+
