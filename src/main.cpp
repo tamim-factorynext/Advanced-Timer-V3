@@ -124,6 +124,16 @@ void applyKernelCommands(uint32_t nowUs) {
         gKernelLastAppliedRequestId = command.value;
         gKernel.requestStepOnce();
         break;
+      case KernelCmd_SetInputForce:
+        gKernelLastAppliedRequestId = command.value;
+        if (command.inputMode == InputSource_Real) {
+          gKernel.setDiForce(command.cardId, false, false);
+        } else if (command.inputMode == InputSource_ForcedHigh) {
+          gKernel.setDiForce(command.cardId, true, true);
+        } else if (command.inputMode == InputSource_ForcedLow) {
+          gKernel.setDiForce(command.cardId, true, false);
+        }
+        break;
       default:
         break;
     }
@@ -154,6 +164,11 @@ void dispatchPortalRequestsToControl() {
         break;
       case v3::portal::PortalCommandType::StepOnce:
         accepted = gControl.requestStepOnce(request.enqueuedUs, request.requestId);
+        break;
+      case v3::portal::PortalCommandType::SetInputForce:
+        accepted = gControl.requestSetInputForce(request.cardId, request.inputMode,
+                                                 request.enqueuedUs,
+                                                 request.requestId);
         break;
       default:
         accepted = false;

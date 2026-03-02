@@ -26,6 +26,31 @@ Do not mark skeleton phase complete until all of these are `DONE`:
 - `M20` Command Path Observability Parity (transport -> ingress -> control -> kernel correlation fields)
 - `M21` Skeleton Freeze Review (code/docs consistency pass + explicit handoff note)
 
+## 1.2 Major Workstreams (Feature Phase)
+
+- Card engine completion (DI/DO/AI/SIO/MATH/RTC behavior parity and edge cases)
+- Config contract and lifecycle (staged save/validate/commit/restore/rollback)
+- Storage reliability (atomic writes, corruption handling, recovery)
+- Control/command pipeline hardening (full command set, reject semantics, idempotency)
+- Runtime snapshot and telemetry completeness (authoritative fields, revisions, metrics)
+- Portal backend API completion (endpoint parity, envelope/error consistency)
+- Real-time transport reliability (WebSocket ordering/reconnect/backpressure)
+- Live monitoring features (runtime dashboards, alarms/faults, diagnostics)
+- Simulation/force features (safe operator paths, clear simulated-vs-real state)
+- WiFi/connectivity hardening and observability (policy behavior + diagnostics under load)
+- Watchdog/fault-recovery validation (timeout/recovery path evidence)
+- HIL and acceptance execution (AT matrix coverage + evidence)
+- Portal frontend V3 completion (runtime/config/validation/maintenance/settings)
+- Documentation and traceability discipline (milestones/decisions/worklog/HIL evidence)
+
+## 1.3 Deferred Scope (Current Plan)
+
+- Role-based permissions (`VIEWER`/`OPERATOR`/`ENGINEER`/`ADMIN`)
+- Protected operation enforcement
+- Audit logging
+
+Deferred items remain out of current execution scope until core functional parity and HIL baseline are complete.
+
 ## 2. Milestone Ledger
 
 ## M0: Branch Safety Baseline
@@ -655,3 +680,70 @@ Do not mark skeleton phase complete until all of these are `DONE`:
   - Duration: `00:00:29.027`
   - RAM: `58596 / 327680` (17.9%)
   - Flash: `868349 / 1310720` (66.2%)
+
+## M24: DI Family First Active Runtime Integration
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: move DI from scaffold-only modules to active scan execution path with config-backed defaults.
+- Implemented outputs:
+  - storage DI config extension:
+    - `channel`, `edgeMode`, `setEnabled`, `resetEnabled`
+    - decoder defaults for omitted fields
+    - DI mode validation
+    - files:
+      - `src/storage/v3_config_contract.h`
+      - `src/storage/v3_config_decoder.cpp`
+      - `src/storage/v3_config_validator.h`
+      - `src/storage/v3_config_validator.cpp`
+  - active kernel DI scan execution:
+    - DI slots bound from validated config at boot
+    - per-scan DI runtime step execution
+    - raw sample via `digitalRead(channel)`
+    - kernel-local force hook (`setDiForce(...)`) prepared
+    - files:
+      - `src/kernel/kernel_service.h`
+      - `src/kernel/kernel_service.cpp`
+      - `src/kernel/v3_di_runtime.cpp`
+  - diagnostics projection:
+    - `diTotalQualifiedEdges`
+    - `diInhibitedCount`
+    - portal diagnostics `binding.diRuntime`
+    - files:
+      - `src/runtime/runtime_service.h`
+      - `src/runtime/runtime_service.cpp`
+      - `src/portal/portal_service.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:21.063`
+  - RAM: `62332 / 327680` (19.0%)
+  - Flash: `873225 / 1310720` (66.6%)
+
+## M25: DI Condition-Block Evaluation Over Global Signal Tree
+- Status: `IN_PROGRESS`
+- Date: 2026-03-02
+- Summary: replace temporary DI boolean gates with condition-block evaluation against runtime signal tree.
+- Implemented outputs:
+  - storage DI condition contract:
+    - `ConditionOperator`, `ConditionCombiner`, `ConditionClause`, `ConditionBlock`
+    - DI params now include `setCondition`/`resetCondition`
+    - file: `src/storage/v3_config_contract.h`
+  - decoder support + backward-compatible defaults:
+    - parses `params.set` / `params.reset` blocks when provided
+    - falls back to derived defaults from legacy `setEnabled`/`resetEnabled` fields
+    - file: `src/storage/v3_config_decoder.cpp`
+  - validator rules:
+    - validates condition block IDs/operators/combiners for DI
+    - new error code `invalid_condition_block`
+    - files:
+      - `src/storage/v3_config_validator.h`
+      - `src/storage/v3_config_validator.cpp`
+  - kernel DI gating source migrated:
+    - `setCondition`/`resetCondition` now evaluated each scan from global runtime signals
+    - supports boolean, numeric, trigger, and mission-state operator families
+    - files:
+      - `src/kernel/kernel_service.h`
+      - `src/kernel/kernel_service.cpp`
+- Remaining:
+  - user IDE build evidence for this slice.

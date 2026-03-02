@@ -451,3 +451,62 @@ Use one short entry per decision with this structure:
 - Impact: Preserves runtime architecture boundaries (storage validates policy; platform executes policy; main wires dependencies).
 - References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/platform/wifi_runtime.h`, `src/platform/wifi_runtime.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
 
+## DEC-0043: Defer RBAC/Protected Ops/Audit Until Post-Parity Stabilization
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Current feature phase still has high-priority core gaps (card behavior parity, config lifecycle completion, portal backend/frontend completion, and HIL acceptance execution).
+- Decision: Defer role-based permissions, protected operation enforcement, and audit logging from the active execution scope until core functional parity and HIL baseline are complete.
+- Impact: Reduces scope contention and keeps delivery focused on deterministic/runtime/portal functional completion first.
+- Impact: Avoids introducing cross-cutting security complexity before API/behavior contracts are stable.
+- Impact: Requires explicit re-entry milestone for security track once parity and HIL gate is satisfied.
+- References: `docs/milestones-v3.md` (Major Workstreams + Deferred Scope), `docs/acceptance-matrix-v3.md`, `docs/hil-task-list-v3.md`.
+
+## DEC-0044: DI First Integration Uses Decoder Defaults + Kernel-Local Force Hook
+- Date: 2026-03-02
+- Status: Accepted
+- Context: DI runtime rules were aligned, but active kernel scan loop had no card execution path and current config model needed practical defaults for incomplete DI payload fields.
+- Decision: Extend storage DI params with `channel`, `edgeMode`, `setEnabled`, `resetEnabled` and apply decoder defaults (`channel=cardId`, `edgeMode=RISING`, `setEnabled=true`, `resetEnabled=false`), then wire DI runtime execution into `KernelService` with a kernel-local force hook (`setDiForce`) ready for future portal/API binding.
+- Impact: Activates first real card-family runtime execution in production scan loop without waiting for full portal force command implementation.
+- Impact: Makes new-device/factory-default behavior deterministic when DI fields are omitted.
+- Impact: Keeps DI force policy aligned with contract intent (force value path before invert) while transport wiring is staged separately.
+- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_di_runtime.cpp`, `docs/worklog.md`.
+
+## DEC-0045: DI Runtime Fields Are Global Signal-Tree Sources
+- Date: 2026-03-02
+- Status: Accepted
+- Context: DI family is being integrated first, and downstream card families will consume cross-card variables for conditions and parameter bindings.
+- Decision: Treat DI `physicalState`, `logicalState`, and `currentValue` as authoritative global signal-tree outputs every scan; these must remain available to other cards where binding/condition rules allow.
+- Impact: Prevents DI values from being treated as local-only runtime details.
+- Impact: Preserves compatibility with condition evaluation and future parameter source binding semantics.
+- Impact: Establishes a non-negotiable integration rule for upcoming DO/AI/SIO/MATH/RTC wiring.
+- References: `requirements-v3-contract.md` (runtime ownership + binding rules), `src/kernel/v3_runtime_signals.h`, `src/kernel/v3_runtime_signals.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0046: DI Force Control Uses Existing Command Queue Contract
+- Date: 2026-03-02
+- Status: Accepted
+- Context: DI runtime had a kernel-local force hook, but portal/API needed a controlled way to activate/deactivate forcing without bypassing command boundaries.
+- Decision: Add `setDiForce` transport command and route it through existing `Portal -> Control -> Kernel command queue` path using `KernelCmd_SetInputForce` with mode `REAL|FORCED_HIGH|FORCED_LOW`.
+- Impact: Preserves command ownership boundaries and observability parity while enabling DI force control from portal/API.
+- Impact: Keeps force semantics explicit and reversible (`REAL` clears force).
+- Impact: Adds diagnostics visibility via `binding.diRuntime.forcedCount`.
+- References: `src/portal/transport_command_stub.cpp`, `src/portal/portal_service.cpp`, `src/control/control_service.cpp`, `src/main.cpp`, `src/kernel/kernel_service.cpp`, `docs/worklog.md`.
+
+## DEC-0047: Enforce DI Debounce In 10 ms Centiunit Steps
+- Date: 2026-03-02
+- Status: Accepted
+- Context: DI debounce setting is defined by centiunit timing policy and must align to 10 ms increments for predictable configuration semantics.
+- Decision: Add validator rule for DI cards: `debounceMs` must be a multiple of `10`; `0` remains valid as explicit no-debounce behavior.
+- Impact: Prevents ambiguous/non-aligned debounce values in persisted config.
+- Impact: Keeps runtime behavior consistent with centiunit configuration policy.
+- References: `src/storage/v3_config_validator.h`, `src/storage/v3_config_validator.cpp`, `docs/worklog.md`.
+
+## DEC-0048: DI Set/Reset Gating Uses Condition Blocks Over Runtime Signal Tree
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Initial DI integration used temporary `setEnabled/resetEnabled` booleans, which was insufficient for cross-card logic intent and global variable-tree semantics.
+- Decision: Evaluate DI `set` and `reset` each scan using condition blocks (`clauseA/clauseB/combiner`) against runtime signal tree values (`logicalState`, `physicalState`, `triggerFlag`, `currentValue`, mission state), with backward-compatible defaults derived from legacy boolean fields when explicit blocks are not present.
+- Impact: Aligns DI gating with contract-style cross-card condition semantics.
+- Impact: Preserves compatibility for existing simplified payloads while enabling richer condition logic.
+- Impact: Establishes reusable condition-eval pattern for subsequent card-family migrations.
+- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_runtime_signals.h`, `docs/milestones-v3.md`.
+

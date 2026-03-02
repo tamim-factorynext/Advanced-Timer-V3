@@ -32,6 +32,8 @@ const char* rejectReasonToString(v3::control::CommandRejectReason reason) {
       return "queue_full";
     case v3::control::CommandRejectReason::InvalidRunMode:
       return "invalid_run_mode";
+    case v3::control::CommandRejectReason::InvalidInputMode:
+      return "invalid_input_mode";
     case v3::control::CommandRejectReason::StepRequiresRunStep:
       return "step_requires_run_step";
     default:
@@ -47,6 +49,10 @@ const char* errorCodeToMessage(const char* errorCode) {
   if (strcmp(errorCode, "missing_command") == 0) return "Command field is missing.";
   if (strcmp(errorCode, "invalid_run_mode") == 0)
     return "Run mode value is invalid.";
+  if (strcmp(errorCode, "invalid_card_id") == 0)
+    return "Card ID is missing or out of range.";
+  if (strcmp(errorCode, "invalid_input_mode") == 0)
+    return "Input force mode must be REAL, FORCED_HIGH, or FORCED_LOW.";
   if (strcmp(errorCode, "unsupported_command") == 0)
     return "Command is not supported.";
   if (strcmp(errorCode, "queue_full") == 0)
@@ -68,6 +74,23 @@ bool parseRunMode(const char* rawMode, runMode& outMode) {
   }
   if (strcmp(rawMode, "RUN_BREAKPOINT") == 0) {
     outMode = RUN_BREAKPOINT;
+    return true;
+  }
+  return false;
+}
+
+bool parseInputMode(const char* rawMode, inputSourceMode& outMode) {
+  if (rawMode == nullptr) return false;
+  if (strcmp(rawMode, "REAL") == 0) {
+    outMode = InputSource_Real;
+    return true;
+  }
+  if (strcmp(rawMode, "FORCED_HIGH") == 0) {
+    outMode = InputSource_ForcedHigh;
+    return true;
+  }
+  if (strcmp(rawMode, "FORCED_LOW") == 0) {
+    outMode = InputSource_ForcedLow;
     return true;
   }
   return false;
@@ -136,6 +159,16 @@ TransportCommandResponse handleTransportCommandStub(
     submit = portal.submitSetRunMode(mode, nowUs);
   } else if (strcmp(command, "stepOnce") == 0) {
     submit = portal.submitStepOnce(nowUs);
+  } else if (strcmp(command, "setDiForce") == 0) {
+    if (!doc["cardId"].is<uint8_t>()) {
+      return buildError(422, sourceLabel, "invalid_card_id");
+    }
+    inputSourceMode inputMode = InputSource_Real;
+    if (!parseInputMode(doc["mode"].as<const char*>(), inputMode)) {
+      return buildError(422, sourceLabel, "invalid_input_mode");
+    }
+    submit = portal.submitSetInputForce(doc["cardId"].as<uint8_t>(), inputMode,
+                                        nowUs);
   } else {
     return buildError(422, sourceLabel, "unsupported_command");
   }

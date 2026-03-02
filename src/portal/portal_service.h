@@ -11,6 +11,7 @@ namespace v3::portal {
 enum class PortalCommandType : uint8_t {
   SetRunMode,
   StepOnce,
+  SetInputForce,
 };
 
 struct PortalCommandSubmitResult {
@@ -22,6 +23,8 @@ struct PortalCommandSubmitResult {
 struct PortalCommandRequest {
   PortalCommandType type;
   runMode mode;
+  uint8_t cardId;
+  inputSourceMode inputMode;
   uint32_t requestId;
   uint32_t enqueuedUs;
 };
@@ -51,9 +54,14 @@ class PortalService {
   void tick(uint32_t nowMs, const v3::runtime::RuntimeSnapshot& snapshot);
   PortalCommandSubmitResult submitSetRunMode(runMode mode, uint32_t enqueuedUs);
   PortalCommandSubmitResult submitStepOnce(uint32_t enqueuedUs);
+  PortalCommandSubmitResult submitSetInputForce(uint8_t cardId,
+                                                inputSourceMode inputMode,
+                                                uint32_t enqueuedUs);
   bool enqueueSetRunModeRequest(runMode mode, uint32_t requestId,
                                 uint32_t enqueuedUs);
   bool enqueueStepOnceRequest(uint32_t requestId, uint32_t enqueuedUs);
+  bool enqueueSetInputForceRequest(uint8_t cardId, inputSourceMode inputMode,
+                                   uint32_t requestId, uint32_t enqueuedUs);
   bool dequeueCommandRequest(PortalCommandRequest& out);
   void recordCommandResult(uint32_t requestId, bool accepted,
                            v3::control::CommandRejectReason reason);

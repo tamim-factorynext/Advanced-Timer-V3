@@ -23,6 +23,7 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/worklog.md` - Consolidated session worklog.
 - `docs/milestones-v3.md` - Milestone checkpoint ledger for V3 execution status.
 - `docs/hil-task-list-v3.md` - Hardware-in-the-loop execution checklist and evidence tracking.
+- `docs/user-guide-v3-draft.md` - End-user guide draft (initial DI behavior section included).
 
 ## 2.1 Market/Strategy Research
 

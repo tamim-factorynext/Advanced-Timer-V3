@@ -67,6 +67,35 @@ bool ControlService::requestStepOnce(uint32_t nowUs, uint32_t requestId) {
   return true;
 }
 
+bool ControlService::requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
+                                          uint32_t nowUs, uint32_t requestId) {
+  diagnostics_.requestedCount += 1;
+
+  if (inputMode != InputSource_Real && inputMode != InputSource_ForcedHigh &&
+      inputMode != InputSource_ForcedLow) {
+    diagnostics_.rejectedCount += 1;
+    diagnostics_.lastRejectReason = CommandRejectReason::InvalidInputMode;
+    return false;
+  }
+
+  KernelCommand command = {};
+  command.type = KernelCmd_SetInputForce;
+  command.cardId = cardId;
+  command.inputMode = inputMode;
+  command.enqueuedUs = nowUs;
+  command.value = requestId;
+
+  if (!enqueueCommand(command)) {
+    diagnostics_.rejectedCount += 1;
+    diagnostics_.lastRejectReason = CommandRejectReason::QueueFull;
+    return false;
+  }
+
+  diagnostics_.acceptedCount += 1;
+  diagnostics_.lastRejectReason = CommandRejectReason::None;
+  return true;
+}
+
 bool ControlService::dequeueCommand(KernelCommand& out) {
   if (depth_ == 0) return false;
 

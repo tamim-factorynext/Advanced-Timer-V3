@@ -10,6 +10,7 @@ enum class CommandRejectReason : uint8_t {
   None,
   QueueFull,
   InvalidRunMode,
+  InvalidInputMode,
   StepRequiresRunStep,
 };
 
@@ -28,6 +29,8 @@ class ControlService {
   void tick(uint32_t nowMs);
   bool requestSetRunMode(runMode mode, uint32_t nowUs, uint32_t requestId = 0);
   bool requestStepOnce(uint32_t nowUs, uint32_t requestId = 0);
+  bool requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
+                            uint32_t nowUs, uint32_t requestId = 0);
   bool dequeueCommand(KernelCommand& out);
   const ControlDiagnostics& diagnostics() const;
 

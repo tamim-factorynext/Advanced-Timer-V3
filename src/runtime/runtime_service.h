@@ -58,6 +58,9 @@ struct RuntimeSnapshot {
   bool bindingConsistent;
   runMode mode;
   uint32_t stepAppliedCount;
+  uint32_t diTotalQualifiedEdges;
+  uint8_t diInhibitedCount;
+  uint8_t diForcedCount;
   bool bootstrapUsedFileConfig;
   bool storageHasActiveConfig;
   v3::storage::ConfigErrorCode storageBootstrapError;

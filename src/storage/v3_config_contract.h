@@ -13,9 +13,49 @@ constexpr uint8_t kMaxWiFiPasswordLen = 64;
 
 enum class CardFamily : uint8_t { DI, DO, AI, SIO, MATH, RTC };
 
+enum class ConditionOperator : uint8_t {
+  AlwaysTrue,
+  AlwaysFalse,
+  LogicalTrue,
+  LogicalFalse,
+  PhysicalOn,
+  PhysicalOff,
+  Triggered,
+  TriggerCleared,
+  GT,
+  LT,
+  EQ,
+  NEQ,
+  GTE,
+  LTE,
+  Running,
+  Finished,
+  Stopped,
+};
+
+enum class ConditionCombiner : uint8_t { None, And, Or };
+
+struct ConditionClause {
+  uint8_t sourceCardId;
+  ConditionOperator op;
+  uint32_t threshold;
+};
+
+struct ConditionBlock {
+  ConditionClause clauseA;
+  ConditionClause clauseB;
+  ConditionCombiner combiner;
+};
+
 struct DiParams {
+  uint8_t channel;
   bool invert;
   uint32_t debounceMs;
+  uint8_t edgeMode;
+  bool setEnabled;
+  bool resetEnabled;
+  ConditionBlock setCondition;
+  ConditionBlock resetCondition;
 };
 
 struct DoParams {

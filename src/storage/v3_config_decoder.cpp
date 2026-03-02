@@ -6,6 +6,152 @@ namespace v3::storage {
 
 namespace {
 
+v3::storage::ConditionOperator defaultOperatorForEnabled(bool enabled) {
+  return enabled ? v3::storage::ConditionOperator::AlwaysTrue
+                 : v3::storage::ConditionOperator::AlwaysFalse;
+}
+
+void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfCardId,
+                               bool enabled) {
+  block.combiner = v3::storage::ConditionCombiner::None;
+  block.clauseA.sourceCardId = selfCardId;
+  block.clauseA.op = defaultOperatorForEnabled(enabled);
+  block.clauseA.threshold = 0;
+  block.clauseB.sourceCardId = selfCardId;
+  block.clauseB.op = v3::storage::ConditionOperator::AlwaysFalse;
+  block.clauseB.threshold = 0;
+}
+
+bool parseConditionOperator(const char* token, v3::storage::ConditionOperator& out) {
+  if (token == nullptr) return false;
+  if (strcmp(token, "ALWAYS_TRUE") == 0 || strcmp(token, "Op_AlwaysTrue") == 0) {
+    out = v3::storage::ConditionOperator::AlwaysTrue;
+    return true;
+  }
+  if (strcmp(token, "ALWAYS_FALSE") == 0 || strcmp(token, "Op_AlwaysFalse") == 0) {
+    out = v3::storage::ConditionOperator::AlwaysFalse;
+    return true;
+  }
+  if (strcmp(token, "LOGICAL_TRUE") == 0 || strcmp(token, "Op_LogicalTrue") == 0) {
+    out = v3::storage::ConditionOperator::LogicalTrue;
+    return true;
+  }
+  if (strcmp(token, "LOGICAL_FALSE") == 0 ||
+      strcmp(token, "Op_LogicalFalse") == 0) {
+    out = v3::storage::ConditionOperator::LogicalFalse;
+    return true;
+  }
+  if (strcmp(token, "PHYSICAL_ON") == 0 || strcmp(token, "Op_PhysicalOn") == 0) {
+    out = v3::storage::ConditionOperator::PhysicalOn;
+    return true;
+  }
+  if (strcmp(token, "PHYSICAL_OFF") == 0 || strcmp(token, "Op_PhysicalOff") == 0) {
+    out = v3::storage::ConditionOperator::PhysicalOff;
+    return true;
+  }
+  if (strcmp(token, "TRIGGERED") == 0 || strcmp(token, "Op_Triggered") == 0) {
+    out = v3::storage::ConditionOperator::Triggered;
+    return true;
+  }
+  if (strcmp(token, "TRIGGER_CLEARED") == 0 ||
+      strcmp(token, "Op_TriggerCleared") == 0) {
+    out = v3::storage::ConditionOperator::TriggerCleared;
+    return true;
+  }
+  if (strcmp(token, "GT") == 0 || strcmp(token, "Op_GT") == 0) {
+    out = v3::storage::ConditionOperator::GT;
+    return true;
+  }
+  if (strcmp(token, "LT") == 0 || strcmp(token, "Op_LT") == 0) {
+    out = v3::storage::ConditionOperator::LT;
+    return true;
+  }
+  if (strcmp(token, "EQ") == 0 || strcmp(token, "Op_EQ") == 0) {
+    out = v3::storage::ConditionOperator::EQ;
+    return true;
+  }
+  if (strcmp(token, "NEQ") == 0 || strcmp(token, "Op_NEQ") == 0) {
+    out = v3::storage::ConditionOperator::NEQ;
+    return true;
+  }
+  if (strcmp(token, "GTE") == 0 || strcmp(token, "Op_GTE") == 0) {
+    out = v3::storage::ConditionOperator::GTE;
+    return true;
+  }
+  if (strcmp(token, "LTE") == 0 || strcmp(token, "Op_LTE") == 0) {
+    out = v3::storage::ConditionOperator::LTE;
+    return true;
+  }
+  if (strcmp(token, "RUNNING") == 0 || strcmp(token, "Op_Running") == 0) {
+    out = v3::storage::ConditionOperator::Running;
+    return true;
+  }
+  if (strcmp(token, "FINISHED") == 0 || strcmp(token, "Op_Finished") == 0) {
+    out = v3::storage::ConditionOperator::Finished;
+    return true;
+  }
+  if (strcmp(token, "STOPPED") == 0 || strcmp(token, "Op_Stopped") == 0) {
+    out = v3::storage::ConditionOperator::Stopped;
+    return true;
+  }
+  return false;
+}
+
+bool parseConditionCombiner(const char* token, v3::storage::ConditionCombiner& out) {
+  if (token == nullptr) return false;
+  if (strcmp(token, "NONE") == 0) {
+    out = v3::storage::ConditionCombiner::None;
+    return true;
+  }
+  if (strcmp(token, "AND") == 0) {
+    out = v3::storage::ConditionCombiner::And;
+    return true;
+  }
+  if (strcmp(token, "OR") == 0) {
+    out = v3::storage::ConditionCombiner::Or;
+    return true;
+  }
+  return false;
+}
+
+bool parseConditionClause(JsonObjectConst obj, v3::storage::ConditionClause& outClause) {
+  if (!obj["sourceCardId"].is<uint8_t>()) return false;
+  if (!obj["threshold"].is<uint32_t>()) return false;
+  const char* opToken = obj["operator"].as<const char*>();
+  v3::storage::ConditionOperator op = v3::storage::ConditionOperator::AlwaysFalse;
+  if (!parseConditionOperator(opToken, op)) return false;
+  outClause.sourceCardId = obj["sourceCardId"].as<uint8_t>();
+  outClause.op = op;
+  outClause.threshold = obj["threshold"].as<uint32_t>();
+  return true;
+}
+
+bool parseConditionBlockOptional(JsonObjectConst obj, v3::storage::ConditionBlock& outBlock) {
+  if (obj.isNull()) return false;
+  if (!obj["clauseA"].is<JsonObjectConst>() || !obj["combiner"].is<const char*>()) {
+    return false;
+  }
+  v3::storage::ConditionCombiner combiner = v3::storage::ConditionCombiner::None;
+  if (!parseConditionCombiner(obj["combiner"].as<const char*>(), combiner)) return false;
+  if (!parseConditionClause(obj["clauseA"].as<JsonObjectConst>(), outBlock.clauseA)) {
+    return false;
+  }
+  outBlock.combiner = combiner;
+
+  if (combiner == v3::storage::ConditionCombiner::None) {
+    outBlock.clauseB = outBlock.clauseA;
+    outBlock.clauseB.op = v3::storage::ConditionOperator::AlwaysFalse;
+    outBlock.clauseB.threshold = 0;
+    return true;
+  }
+
+  if (!obj["clauseB"].is<JsonObjectConst>()) return false;
+  if (!parseConditionClause(obj["clauseB"].as<JsonObjectConst>(), outBlock.clauseB)) {
+    return false;
+  }
+  return true;
+}
+
 bool parseStringField(JsonObjectConst obj, const char* key, char* out,
                       size_t outSize) {
   if (!obj[key].is<const char*>()) return false;
@@ -116,8 +262,28 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
+      outCard.di.channel = params["channel"] | outCard.id;
       outCard.di.invert = params["invert"].as<bool>();
       outCard.di.debounceMs = params["debounceMs"].as<uint32_t>();
+      outCard.di.edgeMode = params["edgeMode"] | 0U;  // 0:RISING,1:FALLING,2:CHANGE
+      outCard.di.setEnabled = params["setEnabled"] | true;
+      outCard.di.resetEnabled = params["resetEnabled"] | false;
+      initDefaultConditionBlock(outCard.di.setCondition, outCard.id,
+                                outCard.di.setEnabled);
+      initDefaultConditionBlock(outCard.di.resetCondition, outCard.id,
+                                outCard.di.resetEnabled);
+      JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
+      JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+      if (!setObj.isNull() &&
+          !parseConditionBlockOptional(setObj, outCard.di.setCondition)) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+      if (!resetObj.isNull() &&
+          !parseConditionBlockOptional(resetObj, outCard.di.resetCondition)) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
       return true;
     case CardFamily::DO:
       if (!params["onDelayMs"].is<uint32_t>() ||

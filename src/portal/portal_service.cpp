@@ -44,6 +44,20 @@ bool PortalService::enqueueStepOnceRequest(uint32_t requestId,
   return enqueueRequest(request);
 }
 
+bool PortalService::enqueueSetInputForceRequest(uint8_t cardId,
+                                                inputSourceMode inputMode,
+                                                uint32_t requestId,
+                                                uint32_t enqueuedUs) {
+  PortalCommandRequest request = {};
+  request.type = PortalCommandType::SetInputForce;
+  request.mode = RUN_NORMAL;
+  request.cardId = cardId;
+  request.inputMode = inputMode;
+  request.requestId = requestId;
+  request.enqueuedUs = enqueuedUs;
+  return enqueueRequest(request);
+}
+
 PortalCommandSubmitResult PortalService::submitSetRunMode(runMode mode,
                                                           uint32_t enqueuedUs) {
   PortalCommandSubmitResult result = {};
@@ -61,6 +75,19 @@ PortalCommandSubmitResult PortalService::submitStepOnce(uint32_t enqueuedUs) {
   result.requestId = ++nextRequestId_;
   result.reason = v3::control::CommandRejectReason::None;
   result.accepted = enqueueStepOnceRequest(result.requestId, enqueuedUs);
+  if (!result.accepted) {
+    result.reason = v3::control::CommandRejectReason::QueueFull;
+  }
+  return result;
+}
+
+PortalCommandSubmitResult PortalService::submitSetInputForce(
+    uint8_t cardId, inputSourceMode inputMode, uint32_t enqueuedUs) {
+  PortalCommandSubmitResult result = {};
+  result.requestId = ++nextRequestId_;
+  result.reason = v3::control::CommandRejectReason::None;
+  result.accepted = enqueueSetInputForceRequest(cardId, inputMode, result.requestId,
+                                                enqueuedUs);
   if (!result.accepted) {
     result.reason = v3::control::CommandRejectReason::QueueFull;
   }
@@ -121,6 +148,11 @@ void PortalService::rebuildDiagnosticsJson(
   family["sio"] = snapshot.sioCardCount;
   family["math"] = snapshot.mathCardCount;
   family["rtc"] = snapshot.rtcCardCount;
+
+  JsonObject diRuntime = binding["diRuntime"].to<JsonObject>();
+  diRuntime["totalQualifiedEdges"] = snapshot.diTotalQualifiedEdges;
+  diRuntime["inhibitedCount"] = snapshot.diInhibitedCount;
+  diRuntime["forcedCount"] = snapshot.diForcedCount;
 
   JsonObject bootstrap = doc["bootstrap"].to<JsonObject>();
   bootstrap["usedFileConfig"] = snapshot.bootstrapUsedFileConfig;

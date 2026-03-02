@@ -3077,3 +3077,235 @@ Rewired WiFi runtime to consume validated config policy instead of hardcoded cre
   - RAM: `17.9%` (`58596 / 327680`)
   - Flash: `66.2%` (`868349 / 1310720`)
 
+## 2026-03-02 (Feature-Phase Planning Refresh)
+
+### Session Summary
+
+Captured a consolidated major-workstream list for remaining V3 delivery scope and formally marked security track items as deferred for the current plan.
+
+### Completed
+
+- Added major feature-phase workstreams list to milestone planning header.
+- Added explicit deferred-scope note:
+  - role-based permissions
+  - protected operation enforcement
+  - audit logging
+- Recorded decision `DEC-0043` to lock this scope boundary until parity + HIL baseline are complete.
+
+### Why This Slice
+
+- Prevents scope drift during core parity phase.
+- Preserves traceability for deferred security requirements and planned re-entry later.
+
+## 2026-03-02 (HIL Backlog Expansion For Card Phase + Raspberry Pi Rig)
+
+### Session Summary
+
+Expanded HIL planning to support card-family completion without executing HIL immediately, and added a Raspberry Pi rig backlog to prepare automated station execution later.
+
+### Completed
+
+- Extended `docs/hil-task-list-v3.md` with card-family HIL scenarios:
+  - `HIL-002` DI verification
+  - `HIL-003` DO verification
+  - `HIL-004` AI verification
+  - `HIL-005` SIO verification
+  - `HIL-006` MATH verification
+  - `HIL-007` RTC verification
+  - `HIL-008` portal live monitoring verification
+  - `HIL-009` portal simulation/force safety verification
+- Added Raspberry Pi rig backlog:
+  - `RIG-001` base provisioning
+  - `RIG-002` DUT connectivity harness
+  - `RIG-003` stimulus/measurement module
+  - `RIG-004` automated test orchestrator
+  - `RIG-005` optional CI/regression hook
+
+### Why This Slice
+
+- Keeps development momentum on card/runtime implementation while preserving structured HIL coverage planning.
+- Creates a direct bridge from firmware milestones to future Raspberry Pi station automation.
+
+## 2026-03-02 (DI Runtime Rule Alignment - In Progress)
+
+### Session Summary
+
+Aligned DI runtime step semantics to the agreed behavior model before full DI family integration work.
+
+### Completed
+
+- Updated DI runtime input/config surfaces:
+  - added `invert` in `V3DiRuntimeConfig`
+  - added force-path input fields (`forceActive`, `forcedSample`) in `V3DiStepInput`
+  - file:
+    - `src/kernel/v3_di_runtime.h`
+
+- Updated DI runtime behavior:
+  - force sample selected before invert.
+  - `physicalState` updated from polarity-adjusted effective sample independent of set/reset gating.
+  - `set=false` path now inhibits edge/counter processing without resetting counter.
+  - `reset=true` path resets counter/filter state only and inhibits processing.
+  - debounce window implemented as explicit filtering state before edge qualification.
+  - file:
+    - `src/kernel/v3_di_runtime.cpp`
+
+- Wired invert into DI runtime adapter config mapping:
+  - file:
+    - `src/kernel/v3_runtime_adapters.cpp`
+
+### Open Note
+
+- `runV3DiStep(...)` is currently not wired into active kernel scan execution path yet; this slice aligns DI step behavior logic and data contracts ahead of full DI integration milestone.
+
+## 2026-03-02 (DI First Active Scan Integration + Storage Defaults - In Progress)
+
+### Session Summary
+
+Integrated DI runtime execution into active `KernelService` scan loop and extended storage DI config shape with default behaviors for new-device/factory-default paths.
+
+### Completed
+
+- Storage DI config extension:
+  - added `channel`, `edgeMode`, `setEnabled`, `resetEnabled` in DI params.
+  - decoder defaults for DI when fields are missing:
+    - `channel = card.id`
+    - `edgeMode = RISING`
+    - `setEnabled = true`
+    - `resetEnabled = false`
+  - validator now rejects invalid DI edge mode values.
+  - files:
+    - `src/storage/v3_config_contract.h`
+    - `src/storage/v3_config_decoder.cpp`
+    - `src/storage/v3_config_validator.h`
+    - `src/storage/v3_config_validator.cpp`
+
+- Active DI scan wiring in kernel:
+  - `KernelService` now binds enabled DI cards at boot and runs `runV3DiStep(...)` each scan.
+  - raw sample source currently uses `digitalRead(channel)`.
+  - force path is prepared in kernel (`setDiForce(...)`) and is applied before invert in DI runtime.
+  - DI metrics surfaced in kernel/runtime snapshot:
+    - `diTotalQualifiedEdges`
+    - `diInhibitedCount`
+  - portal diagnostics now include `binding.diRuntime`.
+  - files:
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+    - `src/runtime/runtime_service.h`
+    - `src/runtime/runtime_service.cpp`
+    - `src/portal/portal_service.cpp`
+
+### Default/Factory/New-Device Behavior Note
+
+- New device (no active config file): storage falls back to default config (`cardCount=0`), so DI runtime has no active channels.
+- Factory/default behavior for DI fields when card payload omits them is now explicit via decoder defaults listed above.
+
+### Open Note
+
+- Portal/API command wiring for DI force control is now implemented through transport -> portal -> control -> kernel command flow (`setDiForce` command).
+- DI `physicalState`, `logicalState`, and `currentValue` are mandated as global signal-tree outputs for cross-card condition/binding use in upcoming family integrations (tracked by `DEC-0045`).
+
+### Follow-up (current slice)
+
+- Added DI force command support:
+  - transport command: `setDiForce` with `cardId` and mode (`REAL|FORCED_HIGH|FORCED_LOW`)
+  - control command API: `requestSetInputForce(...)`
+  - kernel queue apply path: maps to `KernelService::setDiForce(...)`
+  - diagnostics: added `binding.diRuntime.forcedCount`
+  - files:
+    - `src/portal/transport_command_stub.cpp`
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+    - `src/control/control_service.h`
+    - `src/control/control_service.cpp`
+    - `src/main.cpp`
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+    - `src/runtime/runtime_service.h`
+    - `src/runtime/runtime_service.cpp`
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:21.063`
+  - RAM: `19.0%` (`62332 / 327680`)
+  - Flash: `66.6%` (`873225 / 1310720`)
+
+## 2026-03-02 (DI Debounce Centiunit Validation Rule)
+
+### Session Summary
+
+Added DI debounce validation policy so only 10 ms step values are accepted by config validation.
+
+### Completed
+
+- Added new validation error code:
+  - `InvalidDiDebounceStep`
+  - file:
+    - `src/storage/v3_config_validator.h`
+
+- Added DI debounce step rule:
+  - DI `debounceMs` must be multiple of `10`
+  - `0` remains valid as explicit no-debounce
+  - files:
+    - `src/storage/v3_config_validator.cpp`
+
+- Added error string mapping:
+  - `invalid_di_debounce_step`
+  - file:
+    - `src/storage/v3_config_validator.cpp`
+
+### Why This Slice
+
+- Enforces centiunit timing discipline for DI debounce configuration.
+- Prevents off-step values from entering runtime behavior.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:21.308`
+  - RAM: `19.0%` (`62332 / 327680`)
+  - Flash: `66.6%` (`873281 / 1310720`)
+
+## 2026-03-02 (M25: DI Condition-Block Evaluation Wiring - In Progress)
+
+### Session Summary
+
+Replaced DI temporary boolean gate usage with condition-block evaluation against runtime signal tree in active kernel scan.
+
+### Completed
+
+- Extended storage DI condition model:
+  - added condition operator/combiner/clause/block structs.
+  - DI params now include `setCondition` and `resetCondition`.
+  - file:
+    - `src/storage/v3_config_contract.h`
+
+- Added decoder parsing for DI `set`/`reset` blocks:
+  - supports explicit block parsing from payload.
+  - retains backward compatibility by deriving defaults from existing `setEnabled/resetEnabled`.
+  - file:
+    - `src/storage/v3_config_decoder.cpp`
+
+- Added validator checks for DI condition blocks:
+  - validates source IDs, operators, and combiner values.
+  - new error mapping: `invalid_condition_block`.
+  - files:
+    - `src/storage/v3_config_validator.h`
+    - `src/storage/v3_config_validator.cpp`
+
+- Migrated kernel DI gating source:
+  - per-scan evaluates DI `set` and `reset` conditions from runtime signal tree.
+  - supports boolean/numeric/trigger/mission-state operator families.
+  - files:
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+
+### Why This Slice
+
+- Aligns DI gating with global variable-tree and cross-card logic model.
+- Removes temporary gate dependency from active runtime behavior.
+

@@ -7,6 +7,7 @@
 struct V3DiRuntimeConfig {
   uint32_t debounceTimeMs;
   cardMode edgeMode;
+  bool invert;
 };
 
 struct V3DiRuntimeState {
@@ -23,6 +24,8 @@ struct V3DiRuntimeState {
 struct V3DiStepInput {
   uint32_t nowMs;
   bool sample;
+  bool forcedSample;
+  bool forceActive;
   bool setCondition;
   bool resetCondition;
   bool prevSample;

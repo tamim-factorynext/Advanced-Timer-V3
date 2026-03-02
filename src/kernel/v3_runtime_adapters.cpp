@@ -5,6 +5,7 @@ V3DiRuntimeConfig makeDiRuntimeConfig(const LogicCard& card) {
   V3DiRuntimeConfig cfg = {};
   cfg.debounceTimeMs = legacyDiDebounceMs(card);
   cfg.edgeMode = card.mode;
+  cfg.invert = card.invert;
   return cfg;
 }
 

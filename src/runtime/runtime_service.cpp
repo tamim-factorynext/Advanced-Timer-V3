@@ -25,6 +25,9 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.bindingConsistent = kernelMetrics.bindingConsistent;
   snapshot_.mode = kernelMetrics.mode;
   snapshot_.stepAppliedCount = kernelMetrics.stepAppliedCount;
+  snapshot_.diTotalQualifiedEdges = kernelMetrics.diTotalQualifiedEdges;
+  snapshot_.diInhibitedCount = kernelMetrics.diInhibitedCount;
+  snapshot_.diForcedCount = kernelMetrics.diForcedCount;
   snapshot_.bootstrapUsedFileConfig =
       (storageDiagnostics.source == v3::storage::BootstrapSource::FileConfig);
   snapshot_.storageHasActiveConfig = storageDiagnostics.hasActiveConfig;

@@ -17,6 +17,30 @@ bool isDuplicateCardId(const SystemConfig& cfg, uint8_t count) {
   return false;
 }
 
+bool isValidConditionOperator(v3::storage::ConditionOperator op) {
+  return op >= v3::storage::ConditionOperator::AlwaysTrue &&
+         op <= v3::storage::ConditionOperator::Stopped;
+}
+
+bool isValidConditionCombiner(v3::storage::ConditionCombiner combiner) {
+  return combiner == v3::storage::ConditionCombiner::None ||
+         combiner == v3::storage::ConditionCombiner::And ||
+         combiner == v3::storage::ConditionCombiner::Or;
+}
+
+bool validateConditionBlock(const v3::storage::ConditionBlock& block, uint8_t cardCount) {
+  if (!isValidConditionCombiner(block.combiner)) return false;
+  if (block.clauseA.sourceCardId >= cardCount ||
+      block.clauseB.sourceCardId >= cardCount) {
+    return false;
+  }
+  if (!isValidConditionOperator(block.clauseA.op) ||
+      !isValidConditionOperator(block.clauseB.op)) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
@@ -59,6 +83,25 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
   for (uint8_t i = 0; i < candidate.cardCount; ++i) {
     const CardConfig& card = candidate.cards[i];
 
+    if (card.family == CardFamily::DI && card.di.edgeMode > 2U) {
+      result.error.code = ConfigErrorCode::InvalidDiMode;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.family == CardFamily::DI &&
+        (card.di.debounceMs % 10U) != 0U) {
+      result.error.code = ConfigErrorCode::InvalidDiDebounceStep;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.family == CardFamily::DI &&
+        (!validateConditionBlock(card.di.setCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.di.resetCondition, candidate.cardCount))) {
+      result.error.code = ConfigErrorCode::InvalidConditionBlock;
+      result.error.cardIndex = i;
+      return result;
+    }
+
     if (card.ai.inputMin > card.ai.inputMax ||
         card.ai.outputMin > card.ai.outputMax) {
       result.error.code = ConfigErrorCode::InvalidAiRange;
@@ -96,6 +139,12 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
       return "card_count_out_of_range";
     case ConfigErrorCode::DuplicateCardId:
       return "duplicate_card_id";
+    case ConfigErrorCode::InvalidDiMode:
+      return "invalid_di_mode";
+    case ConfigErrorCode::InvalidDiDebounceStep:
+      return "invalid_di_debounce_step";
+    case ConfigErrorCode::InvalidConditionBlock:
+      return "invalid_condition_block";
     case ConfigErrorCode::InvalidAiRange:
       return "invalid_ai_range";
     case ConfigErrorCode::InvalidMathClamp:
