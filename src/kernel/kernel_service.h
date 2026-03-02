@@ -66,6 +66,8 @@ class KernelService {
     bool prevSampleValid;
     V3DiRuntimeConfig cfg;
     V3DiRuntimeState state;
+    bool lastSetResult;
+    bool lastResetResult;
   };
 
   struct AiSlot {
@@ -86,6 +88,8 @@ class KernelService {
     v3::storage::ConditionBlock resetCondition;
     V3DoRuntimeConfig cfg;
     V3DoRuntimeState state;
+    bool lastSetResult;
+    bool lastResetResult;
   };
 
   struct SioSlot {
@@ -95,6 +99,8 @@ class KernelService {
     v3::storage::ConditionBlock resetCondition;
     V3SioRuntimeConfig cfg;
     V3SioRuntimeState state;
+    bool lastSetResult;
+    bool lastResetResult;
   };
 
   struct MathSlot {
@@ -104,6 +110,8 @@ class KernelService {
     v3::storage::ConditionBlock resetCondition;
     V3MathRuntimeConfig cfg;
     V3MathRuntimeState state;
+    bool lastSetResult;
+    bool lastResetResult;
   };
 
   void bindDiSlotsFromConfig();

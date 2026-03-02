@@ -218,6 +218,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
+          out.setResult = slot.lastSetResult;
+          out.resetResult = slot.lastResetResult;
           break;
         }
         break;
@@ -235,6 +237,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
+          out.setResult = slot.lastSetResult;
+          out.resetResult = slot.lastResetResult;
           break;
         }
         break;
@@ -264,6 +268,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
+          out.setResult = slot.lastSetResult;
+          out.resetResult = slot.lastResetResult;
           break;
         }
         break;
@@ -278,6 +284,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.triggerFlag = slot.state.triggerFlag;
           out.state = slot.state.state;
           out.currentValue = slot.state.currentValue;
+          out.setResult = slot.lastSetResult;
+          out.resetResult = slot.lastResetResult;
           break;
         }
         break;
@@ -367,6 +375,8 @@ void KernelService::bindDiSlotsFromConfig() {
     slot.forcedSample = false;
     slot.prevSample = false;
     slot.prevSampleValid = false;
+    slot.lastSetResult = false;
+    slot.lastResetResult = false;
 
     slot.cfg.debounceTimeMs = card.di.debounceMs;
     slot.cfg.invert = card.di.invert;
@@ -413,6 +423,8 @@ void KernelService::bindDoSlotsFromConfig() {
     slot.cfg.delayBeforeOnMs = card.dout.delayBeforeOnMs;
     slot.cfg.activeDurationMs = card.dout.activeDurationMs;
     slot.cfg.repeatCount = card.dout.repeatCount;
+    slot.lastSetResult = false;
+    slot.lastResetResult = false;
 
     slot.state = {};
     slot.state.state = State_DO_Idle;
@@ -445,6 +457,8 @@ void KernelService::bindSioSlotsFromConfig() {
     slot.cfg.delayBeforeOnMs = card.sio.delayBeforeOnMs;
     slot.cfg.activeDurationMs = card.sio.activeDurationMs;
     slot.cfg.repeatCount = card.sio.repeatCount;
+    slot.lastSetResult = false;
+    slot.lastResetResult = false;
     slot.state = {};
     slot.state.state = State_DO_Idle;
     slot.state.physicalState = slot.cfg.invert;
@@ -477,6 +491,8 @@ void KernelService::bindMathSlotsFromConfig() {
     slot.cfg.outputMax = card.math.outputMax;
     slot.cfg.emaAlphaX100 = card.math.emaAlphaX100;
     slot.cfg.fallbackValue = card.math.fallbackValue;
+    slot.lastSetResult = false;
+    slot.lastResetResult = false;
 
     slot.state = {};
     slot.state.currentValue = slot.cfg.fallbackValue;
@@ -576,6 +592,8 @@ void KernelService::runDiScan(uint32_t nowMs) {
 
     V3DiStepOutput out = {};
     runV3DiStep(slot.cfg, slot.state, in, out);
+    slot.lastSetResult = out.setResult;
+    slot.lastResetResult = out.resetResult;
 
     slot.prevSample = out.nextPrevSample;
     slot.prevSampleValid = out.nextPrevSampleValid;
@@ -624,6 +642,8 @@ void KernelService::runDoScan(uint32_t nowMs) {
 
     V3DoStepOutput out = {};
     runV3DoStep(slot.cfg, slot.state, in, out);
+    slot.lastSetResult = out.setResult;
+    slot.lastResetResult = out.resetResult;
     if (platform_ != nullptr) {
       platform_->writeDigitalOutput(slot.channel, slot.state.physicalState);
     }
@@ -655,6 +675,8 @@ void KernelService::runSioScan(uint32_t nowMs) {
 
     V3SioStepOutput out = {};
     runV3SioStep(slot.cfg, slot.state, in, out);
+    slot.lastSetResult = out.setResult;
+    slot.lastResetResult = out.resetResult;
     if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
       activeCount += 1;
     }
@@ -681,6 +703,8 @@ void KernelService::runMathScan() {
 
     V3MathStepOutput out = {};
     runV3MathStep(slot.cfg, slot.state, in, out);
+    slot.lastSetResult = out.setResult;
+    slot.lastResetResult = out.resetResult;
   }
 }
 

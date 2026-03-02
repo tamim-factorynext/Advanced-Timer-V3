@@ -36,6 +36,5 @@ struct SharedRuntimeSnapshotT {
   bool breakpointEnabled[N];
   bool setResult[N];
   bool resetResult[N];
-  bool resetOverride[N];
   uint32_t evalCounter[N];
 };

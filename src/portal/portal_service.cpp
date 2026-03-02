@@ -301,6 +301,8 @@ void PortalService::rebuildSnapshotJson(
       item["startOnMs"] = card.startOnMs;
       item["startOffMs"] = card.startOffMs;
       item["repeatCounter"] = card.repeatCounter;
+      item["setResult"] = card.setResult;
+      item["resetResult"] = card.resetResult;
     }
   }
 

@@ -79,6 +79,8 @@ Message type: `runtime_snapshot`
       "startOnMs": 1740738600000,
       "startOffMs": 1740738600000,
       "repeatCounter": 0,
+      "setResult": true,
+      "resetResult": false,
       "maskForced": {
         "inputSource": "REAL",
         "forcedAIValue": 0,
@@ -88,7 +90,6 @@ Message type: `runtime_snapshot`
       "breakpointEnabled": false,
       "setResult": true,
       "resetResult": false,
-      "resetOverride": false,
       "evalCounter": 120,
       "debug": {
         "evalCounter": 120,

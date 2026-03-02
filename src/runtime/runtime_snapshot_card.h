@@ -17,4 +17,6 @@ struct RuntimeSnapshotCard {
   uint32_t startOnMs;
   uint32_t startOffMs;
   uint32_t repeatCounter;
+  bool setResult;
+  bool resetResult;
 };
