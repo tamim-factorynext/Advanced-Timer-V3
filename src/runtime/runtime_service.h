@@ -62,6 +62,8 @@ struct RuntimeSnapshot {
   uint8_t diInhibitedCount;
   uint8_t diForcedCount;
   uint8_t aiForcedCount;
+  uint8_t doActiveCount;
+  uint8_t sioActiveCount;
   bool bootstrapUsedFileConfig;
   bool storageHasActiveConfig;
   v3::storage::ConfigErrorCode storageBootstrapError;

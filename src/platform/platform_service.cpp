@@ -12,12 +12,20 @@ uint32_t PlatformService::nowMs() const { return millis(); }
 
 void PlatformService::configureInputPin(uint8_t pin) const { pinMode(pin, INPUT); }
 
+void PlatformService::configureOutputPin(uint8_t pin) const {
+  pinMode(pin, OUTPUT);
+}
+
 bool PlatformService::readDigitalInput(uint8_t pin) const {
   return digitalRead(pin) != 0;
 }
 
 uint32_t PlatformService::readAnalogInput(uint8_t pin) const {
   return static_cast<uint32_t>(analogRead(pin));
+}
+
+void PlatformService::writeDigitalOutput(uint8_t pin, bool value) const {
+  digitalWrite(pin, value ? HIGH : LOW);
 }
 
 bool PlatformService::initTaskWatchdog(uint32_t timeoutSeconds,

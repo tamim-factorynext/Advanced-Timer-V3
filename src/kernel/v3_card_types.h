@@ -56,6 +56,7 @@ struct V3DiConfig {
 
 struct V3DoConfig {
   uint8_t channel;
+  bool invert;
   cardMode mode;
   uint32_t delayBeforeOnMs;
   uint32_t onDurationMs;
@@ -74,6 +75,7 @@ struct V3AiConfig {
 };
 
 struct V3SioConfig {
+  bool invert;
   cardMode mode;
   uint32_t delayBeforeOnMs;
   uint32_t onDurationMs;

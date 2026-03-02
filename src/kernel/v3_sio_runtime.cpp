@@ -4,8 +4,9 @@ void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
                   const V3SioStepInput& in, V3SioStepOutput& out) {
   V3DoRuntimeConfig doCfg = {};
   doCfg.mode = cfg.mode;
+  doCfg.invert = cfg.invert;
   doCfg.delayBeforeOnMs = cfg.delayBeforeOnMs;
-  doCfg.onDurationMs = cfg.onDurationMs;
+  doCfg.activeDurationMs = cfg.activeDurationMs;
   doCfg.repeatCount = cfg.repeatCount;
 
   V3DoRuntimeState doState = {};
@@ -40,4 +41,3 @@ void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
   out.resetOverride = doOut.resetOverride;
   out.effectiveOutput = doOut.effectiveOutput;
 }
-

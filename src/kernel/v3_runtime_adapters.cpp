@@ -60,8 +60,9 @@ void applyAiRuntimeState(LogicCard& card, const V3AiRuntimeState& runtime) {
 V3DoRuntimeConfig makeDoRuntimeConfig(const LogicCard& card) {
   V3DoRuntimeConfig cfg = {};
   cfg.mode = card.mode;
+  cfg.invert = card.invert;
   cfg.delayBeforeOnMs = legacyDoDelayBeforeOnMs(card);
-  cfg.onDurationMs = legacyDoOnDurationMs(card);
+  cfg.activeDurationMs = legacyDoOnDurationMs(card);
   cfg.repeatCount = legacyDoRepeatCount(card);
   return cfg;
 }
@@ -93,8 +94,9 @@ void applyDoRuntimeState(LogicCard& card, const V3DoRuntimeState& runtime) {
 V3SioRuntimeConfig makeSioRuntimeConfig(const LogicCard& card) {
   V3SioRuntimeConfig cfg = {};
   cfg.mode = card.mode;
+  cfg.invert = card.invert;
   cfg.delayBeforeOnMs = legacyDoDelayBeforeOnMs(card);
-  cfg.onDurationMs = legacyDoOnDurationMs(card);
+  cfg.activeDurationMs = legacyDoOnDurationMs(card);
   cfg.repeatCount = legacyDoRepeatCount(card);
   return cfg;
 }

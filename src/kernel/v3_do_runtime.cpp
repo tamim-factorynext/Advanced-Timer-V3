@@ -7,7 +7,6 @@ bool isDoRunningState(cardState state) {
 
 void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
   runtime.logicalState = false;
-  runtime.physicalState = false;
   runtime.triggerFlag = false;
   runtime.startOnMs = 0;
   runtime.startOffMs = 0;
@@ -27,17 +26,21 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   out.effectiveOutput = false;
 
   const bool previousPhysical = runtime.physicalState;
+  const bool idlePhysical = cfg.invert;
 
   if (in.resetCondition) {
     forceDoIdle(runtime, true);
+    runtime.physicalState = idlePhysical;
+    out.effectiveOutput = runtime.physicalState;
     return;
   }
 
   const bool retriggerable =
       (runtime.state == State_DO_Idle || runtime.state == State_DO_Finished);
-  runtime.triggerFlag = retriggerable && in.setCondition;
+  const bool startMission = retriggerable && in.setCondition;
+  runtime.triggerFlag = false;
 
-  if (runtime.triggerFlag) {
+  if (startMission) {
     runtime.logicalState = true;
     runtime.repeatCounter = 0;
     if (cfg.mode == Mode_DO_Immediate) {
@@ -52,31 +55,36 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   if (cfg.mode == Mode_DO_Gated && isDoRunningState(runtime.state) &&
       !in.setCondition) {
     forceDoIdle(runtime, false);
+    runtime.physicalState = idlePhysical;
+    out.effectiveOutput = runtime.physicalState;
     return;
   }
 
-  bool effectiveOutput = false;
+  bool missionOutput = false;
   switch (runtime.state) {
     case State_DO_OnDelay: {
-      effectiveOutput = false;
+      missionOutput = false;
       if (cfg.delayBeforeOnMs == 0) {
+        runtime.state = State_DO_Active;
+        runtime.startOffMs = in.nowMs;
+        missionOutput = true;
         break;
       }
       if ((in.nowMs - runtime.startOnMs) >= cfg.delayBeforeOnMs) {
         runtime.state = State_DO_Active;
         runtime.startOffMs = in.nowMs;
-        effectiveOutput = true;
+        missionOutput = true;
       }
       break;
     }
     case State_DO_Active: {
-      effectiveOutput = true;
-      if (cfg.onDurationMs == 0) {
+      missionOutput = true;
+      if (cfg.activeDurationMs == 0) {
         break;
       }
-      if ((in.nowMs - runtime.startOffMs) >= cfg.onDurationMs) {
+      if ((in.nowMs - runtime.startOffMs) >= cfg.activeDurationMs) {
         runtime.repeatCounter += 1;
-        effectiveOutput = false;
+        missionOutput = false;
 
         if (cfg.repeatCount == 0) {
           runtime.state = State_DO_OnDelay;
@@ -98,15 +106,17 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
     case State_DO_Finished:
     case State_DO_Idle:
     default:
-      effectiveOutput = false;
+      missionOutput = false;
       break;
   }
 
-  if (!previousPhysical && effectiveOutput) {
+  const bool effectiveOutput = cfg.invert ? !missionOutput : missionOutput;
+  const bool risingPhysical = (!previousPhysical && effectiveOutput);
+  if (risingPhysical) {
     runtime.currentValue += 1;
   }
+  runtime.triggerFlag = risingPhysical;
 
   runtime.physicalState = effectiveOutput;
   out.effectiveOutput = effectiveOutput;
 }
-

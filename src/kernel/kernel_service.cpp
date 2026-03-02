@@ -1,5 +1,7 @@
 #include "kernel/kernel_service.h"
 
+#include <string.h>
+
 #include "kernel/v3_status_runtime.h"
 
 namespace v3::kernel {
@@ -74,8 +76,12 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
   metrics_.diInhibitedCount = 0;
   metrics_.diForcedCount = 0;
   metrics_.aiForcedCount = 0;
+  metrics_.doActiveCount = 0;
+  metrics_.sioActiveCount = 0;
   bindAiSlotsFromConfig();
   bindDiSlotsFromConfig();
+  bindDoSlotsFromConfig();
+  bindSioSlotsFromConfig();
   nextScanDueMs_ = 0;
   stepPending_ = false;
 }
@@ -93,6 +99,8 @@ void KernelService::tick(uint32_t nowMs) {
   }
   runAiScan();
   runDiScan(nowMs);
+  runDoScan(nowMs);
+  runSioScan(nowMs);
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
 }
@@ -222,15 +230,73 @@ void KernelService::bindDiSlotsFromConfig() {
   }
 }
 
-void KernelService::runDiScan(uint32_t nowMs) {
-  uint32_t totalEdges = 0;
-  uint8_t inhibited = 0;
-  uint8_t forced = 0;
-  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
+void KernelService::bindDoSlotsFromConfig() {
+  doSlotCount_ = 0;
+  for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
+    doSlots_[i] = {};
+  }
 
+  for (uint8_t i = 0; i < config_.system.cardCount; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (card.family != v3::storage::CardFamily::DO || !card.enabled) continue;
+    if (doSlotCount_ >= v3::storage::kMaxCards) break;
+
+    DoSlot& slot = doSlots_[doSlotCount_++];
+    slot.active = true;
+    slot.cardId = card.id;
+    slot.channel = card.dout.channel;
+    slot.setCondition = card.dout.setCondition;
+    slot.resetCondition = card.dout.resetCondition;
+
+    slot.cfg.mode = static_cast<cardMode>(card.dout.mode);
+    slot.cfg.invert = card.dout.invert;
+    slot.cfg.delayBeforeOnMs = card.dout.delayBeforeOnMs;
+    slot.cfg.activeDurationMs = card.dout.activeDurationMs;
+    slot.cfg.repeatCount = card.dout.repeatCount;
+
+    slot.state = {};
+    slot.state.state = State_DO_Idle;
+    slot.state.physicalState = slot.cfg.invert;
+    if (platform_ != nullptr) {
+      platform_->configureOutputPin(slot.channel);
+      platform_->writeDigitalOutput(slot.channel, slot.state.physicalState);
+    }
+  }
+}
+
+void KernelService::bindSioSlotsFromConfig() {
+  sioSlotCount_ = 0;
+  for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
+    sioSlots_[i] = {};
+  }
+
+  for (uint8_t i = 0; i < config_.system.cardCount; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (card.family != v3::storage::CardFamily::SIO || !card.enabled) continue;
+    if (sioSlotCount_ >= v3::storage::kMaxCards) break;
+
+    SioSlot& slot = sioSlots_[sioSlotCount_++];
+    slot.active = true;
+    slot.cardId = card.id;
+    slot.setCondition = card.sio.setCondition;
+    slot.resetCondition = card.sio.resetCondition;
+    slot.cfg.mode = static_cast<cardMode>(card.sio.mode);
+    slot.cfg.invert = card.sio.invert;
+    slot.cfg.delayBeforeOnMs = card.sio.delayBeforeOnMs;
+    slot.cfg.activeDurationMs = card.sio.activeDurationMs;
+    slot.cfg.repeatCount = card.sio.repeatCount;
+    slot.state = {};
+    slot.state.state = State_DO_Idle;
+    slot.state.physicalState = slot.cfg.invert;
+  }
+}
+
+void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
+                                        uint8_t signalCount) const {
+  if (signals == nullptr) return;
   for (uint8_t i = 0; i < diSlotCount_; ++i) {
     const DiSlot& slot = diSlots_[i];
-    if (!slot.active || slot.cardId >= v3::storage::kMaxCards) continue;
+    if (!slot.active || slot.cardId >= signalCount) continue;
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = DigitalInput;
     signal.state = slot.state.state;
@@ -239,10 +305,9 @@ void KernelService::runDiScan(uint32_t nowMs) {
     signal.triggerFlag = slot.state.triggerFlag;
     signal.currentValue = slot.state.currentValue;
   }
-
   for (uint8_t i = 0; i < aiSlotCount_; ++i) {
     const AiSlot& slot = aiSlots_[i];
-    if (!slot.active || slot.cardId >= v3::storage::kMaxCards) continue;
+    if (!slot.active || slot.cardId >= signalCount) continue;
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = AnalogInput;
     signal.state = slot.state.state;
@@ -251,6 +316,37 @@ void KernelService::runDiScan(uint32_t nowMs) {
     signal.triggerFlag = false;
     signal.currentValue = slot.state.currentValue;
   }
+  for (uint8_t i = 0; i < doSlotCount_; ++i) {
+    const DoSlot& slot = doSlots_[i];
+    if (!slot.active || slot.cardId >= signalCount) continue;
+    V3RuntimeSignal& signal = signals[slot.cardId];
+    signal.type = DigitalOutput;
+    signal.state = slot.state.state;
+    signal.logicalState = slot.state.logicalState;
+    signal.physicalState = slot.state.physicalState;
+    signal.triggerFlag = slot.state.triggerFlag;
+    signal.currentValue = slot.state.currentValue;
+  }
+  for (uint8_t i = 0; i < sioSlotCount_; ++i) {
+    const SioSlot& slot = sioSlots_[i];
+    if (!slot.active || slot.cardId >= signalCount) continue;
+    V3RuntimeSignal& signal = signals[slot.cardId];
+    signal.type = SoftIO;
+    signal.state = slot.state.state;
+    signal.logicalState = slot.state.logicalState;
+    signal.physicalState = slot.state.physicalState;
+    signal.triggerFlag = slot.state.triggerFlag;
+    signal.currentValue = slot.state.currentValue;
+  }
+}
+
+void KernelService::runDiScan(uint32_t nowMs) {
+  uint32_t totalEdges = 0;
+  uint8_t inhibited = 0;
+  uint8_t forced = 0;
+  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
+
+  buildSignalSnapshot(signals, v3::storage::kMaxCards);
 
   for (uint8_t i = 0; i < diSlotCount_; ++i) {
     DiSlot& slot = diSlots_[i];
@@ -299,6 +395,65 @@ void KernelService::runDiScan(uint32_t nowMs) {
   metrics_.diTotalQualifiedEdges = totalEdges;
   metrics_.diInhibitedCount = inhibited;
   metrics_.diForcedCount = forced;
+}
+
+void KernelService::runDoScan(uint32_t nowMs) {
+  uint8_t activeCount = 0;
+  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
+
+  for (uint8_t i = 0; i < doSlotCount_; ++i) {
+    DoSlot& slot = doSlots_[i];
+    if (!slot.active) continue;
+
+    memset(signals, 0, sizeof(signals));
+    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+
+    V3DoStepInput in = {};
+    in.nowMs = nowMs;
+    in.setCondition =
+        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
+    in.resetCondition =
+        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+
+    V3DoStepOutput out = {};
+    runV3DoStep(slot.cfg, slot.state, in, out);
+    if (platform_ != nullptr) {
+      platform_->writeDigitalOutput(slot.channel, slot.state.physicalState);
+    }
+    if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
+      activeCount += 1;
+    }
+  }
+
+  metrics_.doActiveCount = activeCount;
+}
+
+void KernelService::runSioScan(uint32_t nowMs) {
+  uint8_t activeCount = 0;
+  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
+
+  for (uint8_t i = 0; i < sioSlotCount_; ++i) {
+    SioSlot& slot = sioSlots_[i];
+    if (!slot.active) continue;
+
+    memset(signals, 0, sizeof(signals));
+    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+
+    V3SioStepInput in = {};
+    in.nowMs = nowMs;
+    in.setCondition =
+        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
+    in.resetCondition =
+        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+
+    V3SioStepOutput out = {};
+    runV3SioStep(slot.cfg, slot.state, in, out);
+    if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
+      activeCount += 1;
+    }
+  }
+
+  metrics_.sioActiveCount = activeCount;
 }
 
 bool KernelService::evalConditionBlock(const v3::storage::ConditionBlock& block,

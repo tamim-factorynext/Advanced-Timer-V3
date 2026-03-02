@@ -61,6 +61,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
     }
     case DigitalOutput: {
       out.dout.channel = legacy.index;
+      out.dout.invert = legacy.invert;
       out.dout.mode = legacy.mode;
       out.dout.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
       out.dout.onDurationMs = legacyDoOnDurationMs(legacy);
@@ -80,6 +81,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       return true;
     }
     case SoftIO: {
+      out.sio.invert = legacy.invert;
       out.sio.mode = legacy.mode;
       out.sio.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
       out.sio.onDurationMs = legacyDoOnDurationMs(legacy);
@@ -143,6 +145,7 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
     case V3CardFamily::DO:
       out.type = DigitalOutput;
       out.index = v3.dout.channel;
+      out.invert = v3.dout.invert;
       out.mode = v3.dout.mode;
       setLegacyDoDelayBeforeOnMs(out, v3.dout.delayBeforeOnMs);
       setLegacyDoOnDurationMs(out, v3.dout.onDurationMs);
@@ -174,6 +177,7 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       return true;
     case V3CardFamily::SIO:
       out.type = SoftIO;
+      out.invert = v3.sio.invert;
       out.mode = v3.sio.mode;
       setLegacyDoDelayBeforeOnMs(out, v3.sio.delayBeforeOnMs);
       setLegacyDoOnDurationMs(out, v3.sio.onDurationMs);

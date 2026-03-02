@@ -316,11 +316,13 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     }
     if (expectedType == DigitalOutput) {
       out.dout.channel = cfg["channel"] | cardId;
+      out.dout.invert = cfg["invert"] | false;
       out.dout.mode = outMode;
       out.dout.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
       out.dout.onDurationMs = cfg["onDuration"] | 0U;
       out.dout.repeatCount = cfg["repeatCount"] | 1U;
     } else {
+      out.sio.invert = cfg["invert"] | false;
       out.sio.mode = outMode;
       out.sio.delayBeforeOnMs = cfg["delayBeforeON"] | 0U;
       out.sio.onDurationMs = cfg["onDuration"] | 0U;

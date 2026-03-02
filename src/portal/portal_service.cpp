@@ -160,6 +160,12 @@ void PortalService::rebuildDiagnosticsJson(
   JsonObject aiRuntime = binding["aiRuntime"].to<JsonObject>();
   aiRuntime["forcedCount"] = snapshot.aiForcedCount;
 
+  JsonObject doRuntime = binding["doRuntime"].to<JsonObject>();
+  doRuntime["activeCount"] = snapshot.doActiveCount;
+
+  JsonObject sioRuntime = binding["sioRuntime"].to<JsonObject>();
+  sioRuntime["activeCount"] = snapshot.sioActiveCount;
+
   JsonObject bootstrap = doc["bootstrap"].to<JsonObject>();
   bootstrap["usedFileConfig"] = snapshot.bootstrapUsedFileConfig;
   bootstrap["hasActiveConfig"] = snapshot.storageHasActiveConfig;

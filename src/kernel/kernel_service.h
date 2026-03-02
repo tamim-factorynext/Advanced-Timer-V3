@@ -5,7 +5,9 @@
 #include "control/command_dto.h"
 #include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_di_runtime.h"
+#include "kernel/v3_do_runtime.h"
 #include "kernel/v3_runtime_signals.h"
+#include "kernel/v3_sio_runtime.h"
 #include "platform/platform_service.h"
 #include "storage/v3_config_contract.h"
 #include "storage/v3_config_validator.h"
@@ -32,6 +34,8 @@ struct KernelMetrics {
   uint8_t diInhibitedCount;
   uint8_t diForcedCount;
   uint8_t aiForcedCount;
+  uint8_t doActiveCount;
+  uint8_t sioActiveCount;
 };
 
 class KernelService {
@@ -70,10 +74,34 @@ class KernelService {
     V3AiRuntimeState state;
   };
 
+  struct DoSlot {
+    bool active;
+    uint8_t cardId;
+    uint8_t channel;
+    v3::storage::ConditionBlock setCondition;
+    v3::storage::ConditionBlock resetCondition;
+    V3DoRuntimeConfig cfg;
+    V3DoRuntimeState state;
+  };
+
+  struct SioSlot {
+    bool active;
+    uint8_t cardId;
+    v3::storage::ConditionBlock setCondition;
+    v3::storage::ConditionBlock resetCondition;
+    V3SioRuntimeConfig cfg;
+    V3SioRuntimeState state;
+  };
+
   void bindDiSlotsFromConfig();
   void bindAiSlotsFromConfig();
+  void bindDoSlotsFromConfig();
+  void bindSioSlotsFromConfig();
   void runAiScan();
   void runDiScan(uint32_t nowMs);
+  void runDoScan(uint32_t nowMs);
+  void runSioScan(uint32_t nowMs);
+  void buildSignalSnapshot(V3RuntimeSignal* signals, uint8_t signalCount) const;
   bool evalConditionBlock(const v3::storage::ConditionBlock& block,
                           const V3RuntimeSignal* signals,
                           uint8_t signalCount) const;
@@ -87,6 +115,10 @@ class KernelService {
   uint8_t diSlotCount_ = 0;
   AiSlot aiSlots_[v3::storage::kMaxCards] = {};
   uint8_t aiSlotCount_ = 0;
+  DoSlot doSlots_[v3::storage::kMaxCards] = {};
+  uint8_t doSlotCount_ = 0;
+  SioSlot sioSlots_[v3::storage::kMaxCards] = {};
+  uint8_t sioSlotCount_ = 0;
   uint32_t nextScanDueMs_ = 0;
   bool stepPending_ = false;
   v3::platform::PlatformService* platform_ = nullptr;

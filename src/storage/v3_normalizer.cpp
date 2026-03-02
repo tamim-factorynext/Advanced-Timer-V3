@@ -3,8 +3,6 @@
 #include <cstring>
 #include <string>
 
-#include "kernel/enum_codec.h"
-#include "kernel/v3_card_bridge.h"
 #include "kernel/v3_condition_rules.h"
 #include "kernel/v3_card_types.h"
 #include "kernel/v3_payload_rules.h"
@@ -40,42 +38,6 @@ bool hasV3CardsShape(JsonArrayConst cards) {
   return false;
 }
 
-void serializeLegacyCardToJson(const LogicCard& card, JsonObject& json) {
-  json["id"] = card.id;
-  json["type"] = toString(card.type);
-  json["index"] = card.index;
-  json["hwPin"] = card.hwPin;
-  json["invert"] = card.invert;
-
-  json["setting1"] = card.setting1;
-  json["setting2"] = card.setting2;
-  if (card.type == AnalogInput) {
-    json["setting3"] = static_cast<double>(card.setting3) / 1000.0;
-  } else {
-    json["setting3"] = card.setting3;
-  }
-  json["mode"] = toString(card.mode);
-  if (card.type == AnalogInput || card.type == MathCard) {
-    json["startOnMs"] = card.startOnMs;
-    json["startOffMs"] = card.startOffMs;
-  }
-
-  json["setA_ID"] = card.setA_ID;
-  json["setA_Operator"] = toString(card.setA_Operator);
-  json["setA_Threshold"] = card.setA_Threshold;
-  json["setB_ID"] = card.setB_ID;
-  json["setB_Operator"] = toString(card.setB_Operator);
-  json["setB_Threshold"] = card.setB_Threshold;
-  json["setCombine"] = toString(card.setCombine);
-
-  json["resetA_ID"] = card.resetA_ID;
-  json["resetA_Operator"] = toString(card.resetA_Operator);
-  json["resetA_Threshold"] = card.resetA_Threshold;
-  json["resetB_ID"] = card.resetB_ID;
-  json["resetB_Operator"] = toString(card.resetB_Operator);
-  json["resetB_Threshold"] = card.resetB_Threshold;
-  json["resetCombine"] = toString(card.resetCombine);
-}
 }  // namespace
 
 bool normalizeConfigRequestWithLayout(
@@ -157,7 +119,6 @@ bool normalizeConfigRequestWithLayout(
     return false;
   }
 
-  LogicCard mapped[255] = {};
   V3CardConfig typedCards[255] = {};
   bool seen[255] = {};
 
@@ -174,7 +135,7 @@ bool normalizeConfigRequestWithLayout(
 
   logicCardType sourceTypeById[255] = {};
   for (uint8_t i = 0; i < layout.totalCards; ++i) {
-    mapped[i] = baselineCards[i];
+    (void)baselineCards;
     sourceTypeById[i] = expectedTypeForCardId(layout, i);
   }
 
@@ -220,14 +181,11 @@ bool normalizeConfigRequestWithLayout(
   }
 
   for (uint8_t id = 0; id < layout.totalCards; ++id) {
-    if (!seen[id]) continue;
-    LogicCard converted = mapped[id];
-    if (!v3CardConfigToLegacy(typedCards[id], converted)) {
-      reason = "failed to convert typed card to runtime card";
-      outErrorCode = "INTERNAL_ERROR";
+    if (!seen[id]) {
+      reason = "missing cardId in v3 payload";
+      outErrorCode = "VALIDATION_FAILED";
       return false;
     }
-    mapped[id] = converted;
 
     if (typedCards[id].family == V3CardFamily::RTC) {
       int slot = static_cast<int>(id) - static_cast<int>(layout.rtcStart);
@@ -255,27 +213,17 @@ bool normalizeConfigRequestWithLayout(
 
   JsonObject outConfig = normalizedDoc["config"].to<JsonObject>();
   JsonArray out = outConfig["cards"].to<JsonArray>();
-  for (uint8_t i = 0; i < layout.totalCards; ++i) {
+  for (JsonVariantConst v : inputCards) {
     JsonObject node = out.add<JsonObject>();
-    serializeLegacyCardToJson(mapped[i], node);
-
-    const int slot = static_cast<int>(i) - static_cast<int>(layout.rtcStart);
-    const V3RtcScheduleChannel* rtc = nullptr;
-    if (slot >= 0 && static_cast<size_t>(slot) < rtcOutCount) {
-      rtc = &rtcOut[slot];
-    }
-    const int16_t rtcYear = (rtc != nullptr) ? rtc->year : -1;
-    const int8_t rtcMonth = (rtc != nullptr) ? rtc->month : -1;
-    const int8_t rtcDay = (rtc != nullptr) ? rtc->day : -1;
-    const int8_t rtcWeekday = (rtc != nullptr) ? rtc->weekday : -1;
-    const int8_t rtcHour = (rtc != nullptr) ? rtc->hour : -1;
-    const int8_t rtcMinute = (rtc != nullptr) ? rtc->minute : -1;
-    if (!legacyToV3CardConfig(mapped[i], rtcYear, rtcMonth, rtcDay, rtcWeekday,
-                              rtcHour, rtcMinute, typedOut[i])) {
-      reason = "failed to convert normalized card to typed card";
+    if (!node.set(v.as<JsonObjectConst>())) {
+      reason = "failed to normalize card payload";
       outErrorCode = "INTERNAL_ERROR";
       return false;
     }
+  }
+
+  for (uint8_t i = 0; i < layout.totalCards; ++i) {
+    typedOut[i] = typedCards[i];
   }
   outCards = out;
   return true;

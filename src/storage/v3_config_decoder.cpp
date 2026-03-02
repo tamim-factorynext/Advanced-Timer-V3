@@ -283,15 +283,40 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       return true;
     }
     case CardFamily::DO:
-      if (!params["onDelayMs"].is<uint32_t>() ||
-          !params["onDurationMs"].is<uint32_t>() ||
-          !params["repeatCount"].is<uint32_t>()) {
+      if ((!params["channel"].isNull() && !params["channel"].is<uint8_t>()) ||
+          (!params["invert"].isNull() && !params["invert"].is<bool>()) ||
+          (!params["mode"].isNull() && !params["mode"].is<uint8_t>()) ||
+          (!params["delayBeforeOnMs"].isNull() &&
+           !params["delayBeforeOnMs"].is<uint32_t>()) ||
+          (!params["activeDurationMs"].isNull() &&
+           !params["activeDurationMs"].is<uint32_t>()) ||
+          (!params["repeatCount"].isNull() &&
+           !params["repeatCount"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
-      outCard.dout.onDelayMs = params["onDelayMs"].as<uint32_t>();
-      outCard.dout.onDurationMs = params["onDurationMs"].as<uint32_t>();
-      outCard.dout.repeatCount = params["repeatCount"].as<uint32_t>();
+      outCard.dout.channel = params["channel"] | outCard.id;
+      outCard.dout.invert = params["invert"] | false;
+      outCard.dout.mode = params["mode"] | 5U;  // Mode_DO_Normal
+      outCard.dout.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
+      outCard.dout.activeDurationMs = params["activeDurationMs"] | 0U;
+      outCard.dout.repeatCount = params["repeatCount"] | 1U;
+      initDefaultConditionBlock(outCard.dout.setCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.dout.resetCondition, outCard.id, false);
+      {
+        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        if (!setObj.isNull() &&
+            !parseConditionBlockOptional(setObj, outCard.dout.setCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+        if (!resetObj.isNull() &&
+            !parseConditionBlockOptional(resetObj, outCard.dout.resetCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+      }
       return true;
     case CardFamily::AI:
       if ((!params["inputMin"].isNull() && !params["inputMin"].is<uint32_t>()) ||
@@ -313,15 +338,38 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.ai.emaAlphaX100 = params["emaAlphaX100"] | 100U;
       return true;
     case CardFamily::SIO:
-      if (!params["onDelayMs"].is<uint32_t>() ||
-          !params["onDurationMs"].is<uint32_t>() ||
-          !params["repeatCount"].is<uint32_t>()) {
+      if ((!params["invert"].isNull() && !params["invert"].is<bool>()) ||
+          (!params["mode"].isNull() && !params["mode"].is<uint8_t>()) ||
+          (!params["delayBeforeOnMs"].isNull() &&
+           !params["delayBeforeOnMs"].is<uint32_t>()) ||
+          (!params["activeDurationMs"].isNull() &&
+           !params["activeDurationMs"].is<uint32_t>()) ||
+          (!params["repeatCount"].isNull() &&
+           !params["repeatCount"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
-      outCard.sio.onDelayMs = params["onDelayMs"].as<uint32_t>();
-      outCard.sio.onDurationMs = params["onDurationMs"].as<uint32_t>();
-      outCard.sio.repeatCount = params["repeatCount"].as<uint32_t>();
+      outCard.sio.invert = params["invert"] | false;
+      outCard.sio.mode = params["mode"] | 5U;  // Mode_DO_Normal
+      outCard.sio.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
+      outCard.sio.activeDurationMs = params["activeDurationMs"] | 0U;
+      outCard.sio.repeatCount = params["repeatCount"] | 1U;
+      initDefaultConditionBlock(outCard.sio.setCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.sio.resetCondition, outCard.id, false);
+      {
+        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        if (!setObj.isNull() &&
+            !parseConditionBlockOptional(setObj, outCard.sio.setCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+        if (!resetObj.isNull() &&
+            !parseConditionBlockOptional(resetObj, outCard.sio.resetCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+      }
       return true;
     case CardFamily::MATH:
       if (!params["thresholdCentiunits"].is<uint32_t>() ||

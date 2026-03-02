@@ -1,10 +1,7 @@
 #include "storage/v3_config_service.h"
 
-#include <cstring>
 #include <string>
 
-#include "kernel/v3_card_bridge.h"
-#include "kernel/v3_config_sanitize.h"
 #include "kernel/v3_typed_config_rules.h"
 
 bool normalizeV3ConfigRequestTyped(
@@ -63,25 +60,13 @@ bool buildLegacyCardsFromTypedWithBaseline(const V3CardConfig* typedCards,
                                            size_t baselineCount,
                                            LogicCard* outCards,
                                            String& reason) {
-  if (typedCards == nullptr || baselineCards == nullptr || outCards == nullptr) {
-    reason = "typed/baseline/out buffer missing";
-    return false;
-  }
-  if (typedCount == 0 || typedCount != baselineCount) {
-    reason = "typed/baseline count mismatch";
-    return false;
-  }
-
-  std::memcpy(outCards, baselineCards, sizeof(LogicCard) * typedCount);
-  for (size_t i = 0; i < typedCount; ++i) {
-    if (!v3CardConfigToLegacy(typedCards[i], outCards[i])) {
-      reason = "failed to map typed cards into runtime cards";
-      return false;
-    }
-  }
-  sanitizeConfigCardsRuntimeFields(outCards, static_cast<uint8_t>(typedCount));
-  reason = "";
-  return true;
+  (void)typedCards;
+  (void)typedCount;
+  (void)baselineCards;
+  (void)baselineCount;
+  (void)outCards;
+  reason = "legacy runtime card mapping is disabled in V3 path";
+  return false;
 }
 
 void applyRtcScheduleChannelsFromConfig(const V3RtcScheduleChannel* source,

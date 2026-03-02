@@ -59,9 +59,14 @@ struct DiParams {
 };
 
 struct DoParams {
-  uint32_t onDelayMs;
-  uint32_t onDurationMs;
+  uint8_t channel;
+  bool invert;
+  uint8_t mode;
+  uint32_t delayBeforeOnMs;
+  uint32_t activeDurationMs;
   uint32_t repeatCount;
+  ConditionBlock setCondition;
+  ConditionBlock resetCondition;
 };
 
 struct AiParams {
@@ -74,9 +79,13 @@ struct AiParams {
 };
 
 struct SioParams {
-  uint32_t onDelayMs;
-  uint32_t onDurationMs;
+  bool invert;
+  uint8_t mode;
+  uint32_t delayBeforeOnMs;
+  uint32_t activeDurationMs;
   uint32_t repeatCount;
+  ConditionBlock setCondition;
+  ConditionBlock resetCondition;
 };
 
 struct MathParams {

@@ -4,240 +4,128 @@ Date: 2026-03-02
 Status: Draft reference for end-user documentation.  
 Audience: Operators, technicians, and engineers using the completed V3 product.
 
-## 1. DI (Digital Input) Card Guide
+## 1. How To Read This Guide
 
-This section explains how a DI card works end-to-end: sampling, edge qualification, counter behavior, trigger behavior, and cross-card use.
+This guide is written around real runtime behavior:
 
-## 1.1 What A DI Card Provides
+- shared runtime concepts first,
+- then card-by-card behavior (`DI`, `AI`, `DO`, `SIO`),
+- then device networking behavior (`WiFi`).
 
-A DI card exposes these runtime values:
+## 2. Shared Runtime Concepts
 
-- `physicalState`: current effective input state after force selection and invert handling.
-- `logicalState`: qualified state updated only when an edge passes set/reset and debounce rules.
-- `currentValue`: integrated qualified-edge counter.
-- `triggerFlag`: one-scan event pulse when a qualified edge increments the counter.
-- `state`: internal DI runtime state (`IDLE`, `FILTERING`, `QUALIFIED`, `INHIBITED`).
+## 2.1 Scan-Based Execution
 
-These values are part of the global runtime variable tree and can be used by other cards where binding/condition rules allow.
+The device evaluates logic in repeated scan cycles.  
+In each scan, cards read inputs, evaluate conditions, update state, and publish outputs.
 
-## 1.2 DI Configuration Fields
+## 2.2 Global Runtime Variable Tree
 
-Primary DI settings:
+Card outputs are exposed globally and may be referenced by other cards (where allowed by binding rules).  
+Common runtime signals:
 
-- `channel`: hardware input channel/pin mapping.
-- `invert`: whether input polarity is inverted.
-- `edgeMode`:
-  - `RISING`
-  - `FALLING`
-  - `CHANGE`
-- `debounceMs`: debounce window in milliseconds.
-  - must be in 10 ms steps (`0, 10, 20, ...`).
-  - `0` means no debounce window (immediate qualification).
-- `set` condition block: gate that allows DI processing when true.
-- `reset` condition block: dominant reset gate.
+- `physicalState`
+- `logicalState`
+- `triggerFlag`
+- `currentValue`
+- `state` (internal mission/runtime state)
 
-Default safe/inert condition setup (recommended baseline):
+## 2.3 Condition Blocks (`set` / `reset`)
 
-- `set.clauseA`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
-- `set.clauseB`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
-- `set.combiner`: `NONE`
-- `reset.clauseA`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
-- `reset.clauseB`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
-- `reset.combiner`: `NONE`
+Many cards use `set` and `reset` condition blocks.
 
-This keeps the card inactive by default until the user intentionally enables logic.
+- `reset` is dominant over `set` when both are true in the same scan.
+- default factory-safe behavior is inert:
+  - `set` and `reset` both evaluate to false by default (`ALWAYS_FALSE`, self-referenced).
 
-## 1.3 Per-Scan Evaluation Order
+This keeps cards inactive until intentionally configured.
 
-Each scan follows this order:
+## 2.4 Counter Range and Overflow
 
-1. Select sample source:
-   - forced value (if force mode active), else real hardware input.
+Integrated counters use unsigned 32-bit range (`0 ... 4,294,967,295`).
+
+- At max value, next increment wraps to `0`.
+- Plan long-running deployments with wrap behavior in mind.
+
+## 3. DI Card (Digital Input)
+
+## 3.1 What DI Provides
+
+A DI card exposes:
+
+- `physicalState`: effective sampled input after force-source selection and invert.
+- `logicalState`: qualified logical input state.
+- `currentValue`: qualified-edge counter.
+- `triggerFlag`: one-scan pulse when a qualified edge increments counter.
+- `state`: DI runtime state (`IDLE`, `FILTERING`, `QUALIFIED`, `INHIBITED`).
+
+## 3.2 DI Configuration Fields
+
+- `channel`
+- `invert`
+- `edgeMode`: `RISING`, `FALLING`, `CHANGE`
+- `debounceMs` (10 ms step rule: `0, 10, 20, ...`)
+- `set` condition block
+- `reset` condition block
+
+## 3.3 DI Per-Scan Order
+
+1. Select sample source (`forced` if active, else real hardware).
 2. Apply `invert`.
-3. Update `physicalState` from this effective sample.
-4. Evaluate `set` and `reset` conditions.
-5. Apply gating rules:
-   - `reset=true` has top priority.
-   - `set=false` blocks edge processing.
-6. If processing is allowed, evaluate edge mode and debounce.
-7. If edge qualifies, update `logicalState`, increment counter, and pulse `triggerFlag`.
+3. Update `physicalState`.
+4. Evaluate `set` and `reset`.
+5. Apply gating (`reset` first, then `set`).
+6. If allowed, evaluate edge mode and debounce.
+7. On qualified edge, update `logicalState`, increment `currentValue`, pulse `triggerFlag`.
 
-## 1.4 Set/Reset Gating Rules
+## 3.4 DI Gating Rules
 
-- If `reset=true`:
-  - counter is reset to `0`.
-  - `triggerFlag=false`.
-  - DI enters inhibited behavior for that scan.
-- Else if `set=false`:
-  - no edge is processed.
-  - no counter increment.
-  - counter is not reset.
-  - `triggerFlag=false`.
-- Else (`set=true` and `reset=false`):
-  - edge processing continues.
+- `reset=true`:
+  - counter reset to `0`
+  - `triggerFlag=false`
+  - qualification blocked in that scan
+- `set=false` with `reset=false`:
+  - no edge qualification
+  - no increment
+  - counter not reset
+- `set=true` and `reset=false`:
+  - normal edge qualification path
 
-## 1.5 Edge Mode Rules
+## 3.5 DI Debounce and Edge Rules
 
-- `RISING`: only `0 -> 1` edge can qualify.
-- `FALLING`: only `1 -> 0` edge can qualify.
-- `CHANGE`: either rising or falling edge can qualify.
+- `edgeMode=RISING`: only `0 -> 1`
+- `edgeMode=FALLING`: only `1 -> 0`
+- `edgeMode=CHANGE`: either edge
 
-If the observed edge does not match mode, no increment occurs.
+Debounce:
 
-## 1.6 Debounce Rules
+- `debounceMs=0`: immediate qualification.
+- `debounceMs>0`: state must remain stable through full debounce window.
 
-- `debounceMs = 0`:
-  - qualifying edge is accepted immediately in that scan.
-- `debounceMs > 0`:
-  - edge is accepted only if state remains stable for the full debounce window.
-  - unstable transitions during the window cancel the pending qualification.
+## 3.6 DI Force Modes
 
-## 1.7 Trigger Flag Behavior
-
-`triggerFlag` is an event pulse:
-
-- set `true` when a qualified edge increments `currentValue`.
-- cleared back to `false` on non-trigger scans.
-
-This makes it suitable as a one-scan trigger source for other cards.
-
-## 1.8 Counter Behavior
-
-- Counter increments by `+1` for each qualified edge that passes all rules.
-- Counter does not change when:
-  - edge does not match mode,
-  - set gate is false,
-  - debounce is not yet satisfied.
-- Counter resets only when reset gate is true.
-
-Counter range and overflow:
-
-- Counter type is unsigned 32-bit (`0 ... 4,294,967,295`).
-- Current behavior at max value is wrap-around:
-  - if counter is `4,294,967,295`, next qualified increment wraps to `0`.
-- This behavior should be considered during long-duration deployments that can accumulate very high edge counts.
-
-## 1.9 Force Input Behavior
-
-DI supports force modes:
-
-- `REAL`: use hardware sample.
-- `FORCED_HIGH`: force input sample to high.
-- `FORCED_LOW`: force input sample to low.
+- `REAL`
+- `FORCED_HIGH`
+- `FORCED_LOW`
 
 Force is applied before invert.  
-Example: `FORCED_HIGH` with `invert=true` results in effective low.
+Example: `FORCED_HIGH` with `invert=true` becomes effective low.
 
-## 1.10 Practical Examples
+## 4. AI Card (Analog Input, 4-20mA Assumption)
 
-Example A: Rising edge counter with debounce
+## 4.1 What AI Provides
 
-- `edgeMode=RISING`, `debounceMs=50`.
-- Input bounces for 20 ms then stabilizes high.
-- No increment during bounce; one increment after 50 ms stable high.
+- `currentValue`: scaled + filtered analog value
+- `state`: AI runtime state (continuous streaming in current implementation)
 
-Example B: Set gate false
+## 4.2 AI Configuration Fields
 
-- Input edges occur but `set=false`.
-- `physicalState` still updates from effective input.
-- `logicalState` and `currentValue` do not advance.
+- `channel`
+- `inputMin`, `inputMax`
+- `outputMin`, `outputMax`
+- `emaAlphaX100` (`0..100`, where `100 = 1.00`)
 
-Example C: Reset dominance
-
-- `set=true`, `reset=true` in same scan.
-- Reset path wins:
-  - counter reset
-  - no edge qualification/increment in that scan.
-
-Example D: Trigger pulse usage
-
-- Qualified edge occurs in scan `N`:
-  - `triggerFlag=true` in scan `N`.
-- No qualified edge in scan `N+1`:
-  - `triggerFlag=false` in scan `N+1`.
-
-## 1.11 Operator Notes
-
-- Use `currentValue` for accumulated event counting.
-- Use `triggerFlag` for one-scan event triggers.
-- Use `physicalState` for immediate effective input visibility.
-- Use `logicalState` for debounce-qualified logic transitions.
-
-## 2. WiFi Behavior Guide (Draft)
-
-This section describes intended end-user Wi-Fi behavior for commissioning and recovery.
-
-## 2.1 WiFi Roles
-
-- `Master SSID`: reserved for initial setup and recovery access.
-- `User-configured SSID`: normal operational network configured by user.
-
-## 2.2 Intended Connection Strategy
-
-At a high level:
-
-1. Device attempts normal operation using configured user Wi-Fi.
-2. If user Wi-Fi is unavailable or misconfigured, user can intentionally trigger
-   a recovery path to connect through `Master SSID`.
-3. User opens portal over master-network path and updates Wi-Fi settings.
-
-## 2.3 Master SSID Recovery Intent
-
-Master SSID is intended for:
-
-- first-time setup,
-- field recovery if user-configured Wi-Fi is not reachable,
-- controlled fallback access to reconfigure networking.
-
-Planned user flow (subject to final implementation):
-
-- user enables a hotspot/access point using the known master SSID credentials,
-- user restarts device or triggers a recovery action on device,
-- device joins master-network path,
-- user accesses portal and corrects network configuration.
-
-## 2.4 Recovery Trigger (Future Implementation)
-
-Exact trigger mechanism is not finalized yet.  
-Current planned options:
-
-- one dedicated hardware button,
-- or a defined button combination/long-press sequence.
-
-This section will be updated after hardware-input mapping is finalized.
-
-## 2.5 Device IP Visibility (Future Implementation)
-
-Final method for showing device IP is still open and will be decided near project completion.
-
-Planned direction:
-
-- onboard display + buttons will be used for live IO status and system pages,
-- Wi-Fi/IP status page on that display is expected to provide portal access info.
-
-Until then, this guide does not lock a final "how to discover IP" procedure.
-
-## 3. AI (Analog Input) Card Guide
-
-This section defines current V3 AI behavior (4-20mA assumption for this phase).
-
-## 3.1 What An AI Card Provides
-
-An AI card exposes:
-
-- `currentValue`: filtered and scaled engineering value.
-- `state`: AI mission state (currently streaming/continuous).
-
-AI values are part of the global runtime variable tree and can be consumed by other cards through condition logic.
-
-## 3.2 AI Configuration Fields
-
-- `channel`: hardware analog input channel.
-- `inputMin` / `inputMax`: input range (assumed 4..20 for 4-20mA cards in this phase).
-- `outputMin` / `outputMax`: scaled output range.
-- `emaAlphaX100`: filter alpha in centiunit (`0..100` where `100 = 1.00`).
-
-Factory/new-card defaults used by decoder/parser:
+Factory/new-card defaults:
 
 - `channel = cardId`
 - `inputMin = 4`
@@ -246,29 +134,119 @@ Factory/new-card defaults used by decoder/parser:
 - `outputMax = 100`
 - `emaAlphaX100 = 100` (no smoothing)
 
-## 3.3 Per-Scan AI Processing
+## 4.3 AI Per-Scan Processing
 
-Each scan:
+1. Read sample (`forced` if active, else real analog input).
+2. Clamp to input range.
+3. Scale to output range.
+4. Apply EMA filter.
+5. Publish `currentValue`.
 
-1. Read raw analog sample from `channel` unless force mode is active.
-2. Clamp sample to `[inputMin, inputMax]`.
-3. Linearly map clamped value into `[outputMin, outputMax]`.
-4. Apply EMA filter:
-   - `alpha = emaAlphaX100 / 100`
-   - `currentValue = alpha * scaled + (1 - alpha) * previousCurrentValue`
-5. Publish `currentValue` to runtime/global signal tree.
+## 4.4 AI Force Commands
 
-## 3.4 Force Behavior
+- `setAiForce`: use forced numeric sample.
+- `clearAiForce`: return to real hardware.
 
-AI supports force commands:
+## 5. DO Card (Digital Output)
 
-- `setAiForce`: uses provided numeric forced sample as AI input.
-- `clearAiForce`: returns to real hardware sample.
+## 5.1 DO Purpose
 
-Force affects only runtime input selection; it does not change physical wiring/state.
+DO executes a timed mission and drives hardware output.
 
-## 3.5 Alpha Behavior Notes
+## 5.2 DO Configuration Fields
 
-- `emaAlphaX100 = 100`: no smoothing, output follows scaled sample immediately.
-- `emaAlphaX100 = 0`: full hold (output stays at previous value).
-- valid range is `0..100`; higher values are rejected by config validation.
+- `channel`
+- `invert` (default `false`)
+- `mode`: `Normal`, `Immediate`, `Gated`
+- `delayBeforeOnMs`
+- `activeDurationMs`
+- `repeatCount`
+- `set`, `reset` condition blocks
+
+## 5.3 DO Mission Behavior
+
+- Mission starts when `set=true` and card is retriggerable (`IDLE` or `FINISHED`).
+- `reset=true` aborts and returns to idle immediately.
+- In `Gated` mode, dropping `set` while running also aborts to idle.
+- Retrigger while already running is ignored.
+
+## 5.4 DO Timer Semantics
+
+- `delayBeforeOnMs=0`: no delay phase, immediate active.
+- `activeDurationMs=0`: no automatic off timer; stays active until reset (or gated drop).
+- If both are `0`: immediate activation with indefinite hold.
+- In indefinite hold, repeat cycling is not reached, so `repeatCount` has no practical effect.
+
+## 5.5 DO Invert Semantics
+
+Runtime first calculates mission output, then applies invert:
+
+- `physicalState = missionOutput` when `invert=false`
+- `physicalState = !missionOutput` when `invert=true`
+
+Idle/reset mission output is OFF, so:
+
+- idle/reset physical OFF with `invert=false`
+- idle/reset physical ON with `invert=true` (active-low style)
+
+## 5.6 DO Trigger and Counter
+
+- `triggerFlag` pulses for one scan on rising edge of final `physicalState`.
+- `currentValue` increments on the same rising physical edge.
+
+## 6. SIO Card (Soft I/O)
+
+## 6.1 SIO Purpose
+
+SIO follows DO mission/timing behavior but does not drive hardware pins.
+
+## 6.2 SIO Configuration Fields
+
+- `invert` (default `false`)
+- `mode`: `Normal`, `Immediate`, `Gated`
+- `delayBeforeOnMs`
+- `activeDurationMs`
+- `repeatCount`
+- `set`, `reset` condition blocks
+
+## 6.3 SIO Runtime Behavior
+
+SIO uses the same mission engine and timing semantics as DO:
+
+- same start/abort/retrigger rules,
+- same zero-timer behavior,
+- same invert behavior,
+- same `triggerFlag` and `currentValue` edge rules.
+
+Difference from DO:
+
+- SIO does not issue physical GPIO/relay writes.
+
+## 7. WiFi Behavior (Draft)
+
+## 7.1 WiFi Roles
+
+- `Master SSID`: setup/recovery path.
+- `User SSID`: normal operation path.
+
+## 7.2 Connection Strategy
+
+1. Device tries user-configured SSID first.
+2. If unavailable/misconfigured, user can invoke recovery flow.
+3. Recovery uses master SSID path to access portal and fix settings.
+
+## 7.3 Intended Recovery Flow
+
+- user starts hotspot/access path with master credentials,
+- user restarts device or triggers recovery action,
+- device connects through master path,
+- user opens portal and updates user SSID settings.
+
+## 7.4 Pending Finalization
+
+Not finalized yet:
+
+- exact physical trigger method for recovery (button mapping/sequence),
+- final on-device IP display flow.
+
+Planned direction is to use onboard display + buttons for live status and network info pages.

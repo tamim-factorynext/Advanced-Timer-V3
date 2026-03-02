@@ -88,6 +88,18 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       result.error.cardIndex = i;
       return result;
     }
+    if (card.family == CardFamily::DO &&
+        (card.dout.mode < 5U || card.dout.mode > 7U)) {
+      result.error.code = ConfigErrorCode::InvalidDoMode;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.family == CardFamily::SIO &&
+        (card.sio.mode < 5U || card.sio.mode > 7U)) {
+      result.error.code = ConfigErrorCode::InvalidSioMode;
+      result.error.cardIndex = i;
+      return result;
+    }
     if (card.family == CardFamily::DI &&
         (card.di.debounceMs % 10U) != 0U) {
       result.error.code = ConfigErrorCode::InvalidDiDebounceStep;
@@ -97,6 +109,20 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
     if (card.family == CardFamily::DI &&
         (!validateConditionBlock(card.di.setCondition, candidate.cardCount) ||
          !validateConditionBlock(card.di.resetCondition, candidate.cardCount))) {
+      result.error.code = ConfigErrorCode::InvalidConditionBlock;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.family == CardFamily::DO &&
+        (!validateConditionBlock(card.dout.setCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.dout.resetCondition, candidate.cardCount))) {
+      result.error.code = ConfigErrorCode::InvalidConditionBlock;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.family == CardFamily::SIO &&
+        (!validateConditionBlock(card.sio.setCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.sio.resetCondition, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
@@ -142,6 +168,10 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
       return "duplicate_card_id";
     case ConfigErrorCode::InvalidDiMode:
       return "invalid_di_mode";
+    case ConfigErrorCode::InvalidDoMode:
+      return "invalid_do_mode";
+    case ConfigErrorCode::InvalidSioMode:
+      return "invalid_sio_mode";
     case ConfigErrorCode::InvalidDiDebounceStep:
       return "invalid_di_debounce_step";
     case ConfigErrorCode::InvalidConditionBlock:

@@ -11,6 +11,8 @@ enum class ConfigErrorCode : uint8_t {
   CardCountOutOfRange,
   DuplicateCardId,
   InvalidDiMode,
+  InvalidDoMode,
+  InvalidSioMode,
   InvalidDiDebounceStep,
   InvalidConditionBlock,
   InvalidAiRange,

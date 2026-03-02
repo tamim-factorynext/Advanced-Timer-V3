@@ -6,8 +6,9 @@
 
 struct V3DoRuntimeConfig {
   cardMode mode;
+  bool invert;
   uint32_t delayBeforeOnMs;
-  uint32_t onDurationMs;
+  uint32_t activeDurationMs;
   uint32_t repeatCount;
 };
 
@@ -37,4 +38,3 @@ struct V3DoStepOutput {
 
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out);
-
