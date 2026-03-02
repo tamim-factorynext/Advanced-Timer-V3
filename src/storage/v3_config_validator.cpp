@@ -87,6 +87,12 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
       return "invalid_math_clamp";
     case ConfigErrorCode::InvalidRtcTime:
       return "invalid_rtc_time";
+    case ConfigErrorCode::ConfigPayloadInvalidJson:
+      return "config_payload_invalid_json";
+    case ConfigErrorCode::ConfigPayloadInvalidShape:
+      return "config_payload_invalid_shape";
+    case ConfigErrorCode::ConfigPayloadUnknownFamily:
+      return "config_payload_unknown_family";
     default:
       return "unknown";
   }

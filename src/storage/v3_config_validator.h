@@ -12,7 +12,10 @@ enum class ConfigErrorCode : uint8_t {
   DuplicateCardId,
   InvalidAiRange,
   InvalidMathClamp,
-  InvalidRtcTime
+  InvalidRtcTime,
+  ConfigPayloadInvalidJson,
+  ConfigPayloadInvalidShape,
+  ConfigPayloadUnknownFamily
 };
 
 struct ConfigValidationError {

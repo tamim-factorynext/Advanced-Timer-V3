@@ -241,3 +241,63 @@ Use one short entry per decision with this structure:
 - Impact: Keeps architecture aligned with V3 layered boundary rules while maintaining buildability.
 - References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/v3_config_contract.*`, `src/storage/v3_config_validator.*`, `requirements-v3-contract.md` (architecture and validation sections).
 
+## DEC-0022: Bootstrap Config Must Decode To Typed Model Before Validation
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Boot flow initially validated only in-memory default config and lacked a first-class payload decode stage for persisted V3 config JSON.
+- Decision: Add dedicated JSON decoder (`v3_config_decoder`) that maps payload -> `SystemConfig`, then run `validateSystemConfig(...)`; kernel starts only from validated typed config.
+- Impact: Creates explicit decode/validate separation and clearer failure ownership in storage bootstrap.
+- Impact: Adds machine-readable payload error codes for malformed JSON/shape/family mismatches.
+- Impact: Prepares path for API/staged-config ingestion to reuse same typed decode+validate pipeline.
+- References: `src/storage/v3_config_decoder.*`, `src/storage/v3_config_validator.*`, `src/storage/storage_service.cpp`, `src/main.cpp`.
+
+## DEC-0023: Kernel Boot Publishes Typed Config Binding Summary
+- Date: 2026-03-02
+- Status: Accepted
+- Context: After introducing validated typed-config boot, runtime lacked a kernel-owned checkpoint proving how typed card set was bound at startup.
+- Decision: During `KernelService::begin(...)`, compute and store startup binding summary (`configured`, `enabled`, and per-family card counts) from validated typed config, and expose this through runtime snapshot.
+- Impact: Adds deterministic observability for config-to-runtime binding at boot.
+- Impact: Improves early detection of profile/capacity mismatch regressions.
+- Impact: Creates concrete acceptance hooks for future startup invariants.
+- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0024: Add Startup Binding Invariants To Kernel Metrics
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Binding summary counts were visible but not explicitly marked as consistent/inconsistent, which limited automated sanity checks during startup.
+- Decision: Add kernel-owned invariant fields (`familyCountSum`, `bindingConsistent`) derived at startup from validated typed config, and publish them in runtime snapshot.
+- Impact: Provides machine-readable startup integrity flag for config-to-runtime binding.
+- Impact: Enables acceptance checks to assert binding consistency without duplicating count logic in tests/UI.
+- Impact: Reduces ambiguity when diagnosing early boot/config mismatch faults.
+- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0025: Expose Storage Bootstrap Diagnostics In Runtime Snapshot
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Bootstrap behavior depends on whether config came from persisted file or default fallback, but that state was not visible in runtime snapshot.
+- Decision: Add storage diagnostics (`source`, `hasActiveConfig`, `error`) and publish a runtime-facing subset (`bootstrapUsedFileConfig`, `storageHasActiveConfig`, `storageBootstrapError`) each tick.
+- Impact: Improves field/debug observability for startup path selection and bootstrap failures.
+- Impact: Reduces dependence on serial logs for understanding boot source/error context.
+- Impact: Creates stable telemetry hooks for future portal diagnostics panels.
+- References: `src/storage/storage_service.h`, `src/storage/storage_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0026: Portal Diagnostics Payload Mirrors Runtime Binding/Bootstrap State
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Runtime now tracks binding and bootstrap diagnostics, but portal module needed a stable, transport-ready payload contract for commissioning visibility.
+- Decision: Add a portal diagnostics state API that maintains serialized JSON payload with `binding` and `bootstrap` sections, derived directly from runtime snapshot each tick.
+- Impact: Establishes a clear portal-side diagnostics contract before route/UI wiring.
+- Impact: Keeps diagnostics semantics centralized and aligned with runtime source-of-truth fields.
+- Impact: Enables incremental addition of HTTP/WebSocket/UI diagnostics without reworking data shape.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `docs/milestones-v3.md`.
+
+## DEC-0027: Introduce Pinned Dual-Core Task Skeleton In Composition Root
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Skeleton had single-loop execution and did not yet enforce V3 runtime core ownership split.
+- Decision: Move scheduling into two pinned FreeRTOS tasks: Core0 runs kernel tick ownership; Core1 runs control/runtime/portal services. Keep cross-core handoff minimal via protected shared kernel metrics while queue channels are not yet introduced.
+- Impact: Enforces architectural intent early and reduces future refactor risk for task separation.
+- Impact: Provides a minimal, buildable concurrency baseline before queue-based command/snapshot contracts.
+- Impact: Requires follow-up milestone for bounded queue channels and timing/latency instrumentation across cores.
+- References: `src/main.cpp`, `requirements-v3-contract.md` (core ownership and determinism sections), `docs/milestones-v3.md`.
+

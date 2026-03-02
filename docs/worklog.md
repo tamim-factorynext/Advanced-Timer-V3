@@ -2242,3 +2242,234 @@ Switched from incremental legacy-constrained updates to a dedicated V3 fast-trac
   - RAM: `9.4%` (`30760 / 327680`)
   - Flash: `21.2%` (`278041 / 1310720`)
 
+## 2026-03-02 (M3: JSON Decode Path Into Typed Config Validation)
+
+### Session Summary
+
+Resumed fast-track path and added the bootstrap JSON decode stage so storage can ingest V3 config payloads into typed `SystemConfig` before validation and kernel startup.
+
+### Completed
+
+- Added decode module:
+  - `src/storage/v3_config_decoder.h`
+  - `src/storage/v3_config_decoder.cpp`
+- Added payload-shape error codes:
+  - `config_payload_invalid_json`
+  - `config_payload_invalid_shape`
+  - `config_payload_unknown_family`
+  - files:
+    - `src/storage/v3_config_validator.h`
+    - `src/storage/v3_config_validator.cpp`
+- Updated storage bootstrap flow (`src/storage/storage_service.cpp`):
+  - attempt load from `/config_v3.json` (LittleFS)
+  - deserialize JSON
+  - decode JSON into `SystemConfig`
+  - validate via `validateSystemConfig(...)`
+  - activate only validated config
+  - fail bootstrap if file exists but decode/validation fails
+  - fallback to default config when file is absent
+
+### Why This Slice
+
+- Makes config ingestion explicit and typed before validator/runtime boundary.
+- Removes implicit assumptions that bootstrap config is always internal-only/default.
+- Keeps startup gate deterministic with machine-readable failure reason codes.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:01:26.214`
+  - RAM: `9.4%` (`30792 / 327680`)
+  - Flash: `25.3%` (`331021 / 1310720`)
+
+## 2026-03-02 (M4: Kernel Runtime Binding Summary From Typed Config)
+
+### Session Summary
+
+Completed first runtime-binding slice by making kernel startup consume validated typed config into kernel-owned binding summary metrics (enabled cards and per-family counts).
+
+### Completed
+
+- Updated kernel startup binding:
+  - `src/kernel/kernel_service.cpp`
+  - computes and stores:
+    - `configuredCardCount`
+    - `enabledCardCount`
+    - `di/do/ai/sio/math/rtc` family counts
+- Updated kernel metrics contract:
+  - `src/kernel/kernel_service.h`
+- Exposed binding summary through runtime snapshot:
+  - `src/runtime/runtime_service.h`
+  - `src/runtime/runtime_service.cpp`
+
+### Why This Slice
+
+- Makes typed config binding visible and owned by kernel at startup.
+- Provides deterministic, inspectable summary for config-to-runtime consistency checks.
+- Moves boot path further away from opaque/legacy assumptions.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:12.591`
+  - RAM: `9.4%` (`30808 / 327680`)
+  - Flash: `25.3%` (`331209 / 1310720`)
+
+## 2026-03-02 (M5: Startup Invariant Checks For Binding Summary)
+
+### Session Summary
+
+Started next slice by adding explicit startup invariant checks for typed config binding summary and exposing those checks in runtime snapshot.
+
+### Completed
+
+- Updated kernel metrics:
+  - `familyCountSum`
+  - `bindingConsistent`
+  - file: `src/kernel/kernel_service.h`
+- Added startup invariant computation:
+  - `familyCountSum == configuredCardCount`
+  - `enabledCardCount <= configuredCardCount`
+  - file: `src/kernel/kernel_service.cpp`
+- Exposed invariant fields in runtime snapshot:
+  - `src/runtime/runtime_service.h`
+  - `src/runtime/runtime_service.cpp`
+
+### Why This Slice
+
+- Converts binding summary from informational-only to machine-checkable startup invariant state.
+- Improves quick detection of config/runtime binding drift during early rewrite milestones.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:13.476`
+  - RAM: `9.4%` (`30816 / 327680`)
+  - Flash: `25.3%` (`331277 / 1310720`)
+
+## 2026-03-02 (M6: Bootstrap Diagnostics In Runtime Snapshot - In Progress)
+
+### Session Summary
+
+Started diagnostics slice to expose storage bootstrap source and error state through runtime snapshot for easier field troubleshooting.
+
+### Completed
+
+- Added storage diagnostics model and API:
+  - `BootstrapSource` (`DefaultConfig|FileConfig`)
+  - `BootstrapDiagnostics` (`source`, `error`, `hasActiveConfig`)
+  - `StorageService::diagnostics()`
+  - files:
+    - `src/storage/storage_service.h`
+    - `src/storage/storage_service.cpp`
+
+- Wired diagnostics to runtime snapshot:
+  - new snapshot fields:
+    - `bootstrapUsedFileConfig`
+    - `storageHasActiveConfig`
+    - `storageBootstrapError`
+  - files:
+    - `src/runtime/runtime_service.h`
+    - `src/runtime/runtime_service.cpp`
+    - `src/main.cpp` (tick wiring)
+
+### Why This Slice
+
+- Makes startup source and bootstrap error state observable without needing serial-only logs.
+- Creates a cleaner troubleshooting path when boot behavior depends on file/default config selection.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:15.534`
+  - RAM: `9.4%` (`30824 / 327680`)
+  - Flash: `25.3%` (`331397 / 1310720`)
+
+## 2026-03-02 (M7: Portal Diagnostics Surface - In Progress)
+
+### Session Summary
+
+Started portal diagnostics slice by introducing a structured portal-facing diagnostics payload built from runtime snapshot binding and bootstrap fields.
+
+### Completed
+
+- Added portal diagnostics state contract:
+  - `PortalDiagnosticsState { ready, revision, json }`
+  - `PortalService::diagnosticsState()`
+  - file: `src/portal/portal_service.h`
+- Implemented diagnostics JSON serialization in portal service:
+  - file: `src/portal/portal_service.cpp`
+  - payload sections:
+    - `binding`:
+      - `configuredCardCount`
+      - `enabledCardCount`
+      - `familyCountSum`
+      - `consistent`
+      - per-family counts (`di/do/ai/sio/math/rtc`)
+    - `bootstrap`:
+      - `usedFileConfig`
+      - `hasActiveConfig`
+      - `errorCode` (string from `configErrorCodeToString(...)`)
+
+### Why This Slice
+
+- Converts runtime diagnostics into portal-consumable payload shape.
+- Creates a stable handoff point for upcoming HTTP/WebSocket/UI diagnostics rendering.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:17.234`
+  - RAM: `9.6%` (`31344 / 327680`)
+  - Flash: `25.6%` (`335361 / 1310720`)
+
+## 2026-03-02 (M8: Dual-Core Skeleton - In Progress)
+
+### Session Summary
+
+Started dual-core execution skeleton by replacing single-loop scheduling with pinned FreeRTOS task split aligned to V3 ownership model.
+
+### Completed
+
+- `src/main.cpp` dual-core scaffold:
+  - Core0 task:
+    - function: `core0KernelTask`
+    - responsibility: `gKernel.tick(...)` + publish kernel metrics
+  - Core1 task:
+    - function: `core1ServiceTask`
+    - responsibility: `gControl.tick(...)`, `gRuntime.tick(...)`, `gPortal.tick(...)`
+  - shared handoff:
+    - `gSharedKernelMetrics` protected with `portMUX_TYPE`
+    - helper functions `publishSharedKernelMetrics(...)` and `copySharedKernelMetrics()`
+  - task creation:
+    - `xTaskCreatePinnedToCore(..., core 0)` for kernel task
+    - `xTaskCreatePinnedToCore(..., core 1)` for services task
+  - failure policy:
+    - fail-fast serial message + halt if task creation fails
+  - `loop()`:
+    - now idle delay only (scheduler work is in tasks)
+
+### Why This Slice
+
+- Aligns runtime execution with V3 core-ownership contract early in skeleton phase.
+- Creates a stable concurrency seam before adding queue-based command/snapshot channels.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:12.793`
+  - RAM: `9.6%` (`31376 / 327680`)
+  - Flash: `25.6%` (`335717 / 1310720`)
+

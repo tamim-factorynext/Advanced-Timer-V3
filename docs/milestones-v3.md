@@ -66,22 +66,146 @@ Status vocabulary:
 - Checkpoint SHA: `d3b1840`
 
 ## M3: JSON Decode -> Typed SystemConfig
-- Status: `PLANNED`
+- Status: `DONE`
 - Date: 2026-03-02
-- Summary: parse staged payloads into `SystemConfig` and route through validator with explicit error mapping.
-- Planned outputs:
-  - decoder module in `src/storage/`
-  - validation/error response mapping contract
-  - tests for malformed payload and boundary values
+- Summary: parse persisted JSON payload into `SystemConfig` and route through validator at bootstrap.
+- Outputs:
+  - `src/storage/v3_config_decoder.*`
+  - `src/storage/storage_service.cpp` bootstrap path:
+    - LittleFS load (`/config_v3.json`) when present
+    - JSON deserialize
+    - decode to `SystemConfig`
+    - validate to `ValidatedConfig`
+  - explicit payload error mapping:
+    - `config_payload_invalid_json`
+    - `config_payload_invalid_shape`
+    - `config_payload_unknown_family`
 - References:
   - `docs/schema-v3.md`
   - `docs/api-contract-v3.md`
+  - `src/storage/v3_config_validator.*`
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - memory snapshot: RAM `30792 / 327680` (9.4%), Flash `331021 / 1310720` (25.3%)
+- Checkpoint SHA: `d3b1840`
 
 ## M4: Kernel Runtime Binding From Typed Config
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: bind typed config into kernel-owned runtime summary at startup and expose counts through runtime snapshot.
+- Outputs:
+  - `src/kernel/kernel_service.cpp`:
+    - bind per-family and enabled-card counts from validated `SystemConfig`
+  - `src/kernel/kernel_service.h`:
+    - extended kernel metrics for configured/enabled and family counts
+  - `src/runtime/runtime_service.*`:
+    - snapshot now mirrors kernel binding summary counts
+- References:
+  - `DEC-0021`
+  - `DEC-0022`
+  - `requirements-v3-contract.md` (state ownership and startup contract)
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:12.591`
+  - RAM: `30808 / 327680` (9.4%)
+  - Flash: `331209 / 1310720` (25.3%)
+- Checkpoint SHA: `d3b1840`
+
+## M5: Startup Invariant Checks For Config Binding Summary
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: add kernel-owned consistency checks for typed config binding and expose result in runtime snapshot.
+- Implemented outputs:
+  - `src/kernel/kernel_service.*`:
+    - `familyCountSum`
+    - `bindingConsistent`
+  - `src/runtime/runtime_service.*`:
+    - runtime snapshot fields for binding invariants
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:13.476`
+  - RAM: `30816 / 327680` (9.4%)
+  - Flash: `331277 / 1310720` (25.3%)
+- Checkpoint SHA: `d3b1840`
+
+## M6: Storage-Kernel Bootstrap Diagnostics Surface
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: expose bootstrap source/error diagnostics in runtime snapshot to speed field troubleshooting.
+- Implemented outputs:
+  - storage bootstrap diagnostics:
+    - `BootstrapSource` (`DefaultConfig` vs `FileConfig`)
+    - `BootstrapDiagnostics` (`source`, `error`, `hasActiveConfig`)
+    - files: `src/storage/storage_service.h`, `src/storage/storage_service.cpp`
+  - runtime snapshot wiring:
+    - `bootstrapUsedFileConfig`
+    - `storageHasActiveConfig`
+    - `storageBootstrapError`
+    - files: `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`
+  - loop wiring:
+    - `src/main.cpp` passes `gStorage.diagnostics()` into runtime tick
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:15.534`
+  - RAM: `30824 / 327680` (9.4%)
+  - Flash: `331397 / 1310720` (25.3%)
+- Checkpoint SHA: `d3b1840`
+
+## M7: Portal Diagnostics Surface (Bootstrap + Binding)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: expose new runtime diagnostics in portal-facing payload/view for quick commissioning checks.
+- Implemented outputs:
+  - portal diagnostics contract:
+    - `PortalDiagnosticsState` (`ready`, `revision`, `json`)
+    - `PortalService::diagnosticsState()`
+    - files: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`
+  - runtime -> portal diagnostics serialization payload:
+    - `binding` section:
+      - configured/enabled/family sum/consistency
+      - per-family counts
+    - `bootstrap` section:
+      - `usedFileConfig`
+      - `hasActiveConfig`
+      - `errorCode` (string from storage error mapping)
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:17.234`
+  - RAM: `31344 / 327680` (9.6%)
+  - Flash: `335361 / 1310720` (25.6%)
+- Checkpoint SHA: `d3b1840`
+
+## M8: Dual-Core Runtime Skeleton (Core0 Kernel / Core1 Services)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: move from single-loop execution to dual-core task scaffold with explicit core ownership split.
+- Implemented outputs:
+  - `src/main.cpp`:
+    - Core0 task (`v3-core0-kernel`): kernel tick + shared metrics publish
+    - Core1 task (`v3-core1-services`): control/runtime/portal ticks
+    - protected metrics handoff via critical section (`portMUX_TYPE`)
+    - setup initializes services, then starts both pinned tasks
+    - `loop()` changed to idle task delay
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:12.793`
+  - RAM: `31376 / 327680` (9.6%)
+  - Flash: `335717 / 1310720` (25.6%)
+- Checkpoint SHA: `d3b1840`
+
+## M9: Queue-Based Core Boundary (Commands/Snapshots Skeleton)
 - Status: `PLANNED`
 - Date: 2026-03-02
-- Summary: initialize runtime families from validated typed config and remove legacy-path dependencies from boot path.
+- Summary: replace shared-struct cross-core handoff with bounded queue channels for deterministic ownership boundaries.
 - Planned outputs:
-  - typed family runtime init binding
-  - deterministic startup invariants
-  - acceptance checks for config-to-runtime consistency
+  - bounded queue for kernel metrics/snapshot handoff Core0 -> Core1
+  - queue health counters (depth/high-water/drop)
+  - remove direct shared metrics copy path
