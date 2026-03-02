@@ -13,6 +13,7 @@ enum class ConfigErrorCode : uint8_t {
   InvalidAiRange,
   InvalidMathClamp,
   InvalidRtcTime,
+  InvalidWiFiPolicy,
   ConfigPayloadInvalidJson,
   ConfigPayloadInvalidShape,
   ConfigPayloadUnknownFamily

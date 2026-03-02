@@ -6,6 +6,53 @@ namespace v3::storage {
 
 namespace {
 
+bool parseStringField(JsonObjectConst obj, const char* key, char* out,
+                      size_t outSize) {
+  if (!obj[key].is<const char*>()) return false;
+  const char* value = obj[key].as<const char*>();
+  if (value == nullptr) return false;
+  const size_t len = strlen(value);
+  if (len == 0 || len >= outSize) return false;
+  memcpy(out, value, len);
+  out[len] = '\0';
+  return true;
+}
+
+bool parseWiFiCredential(JsonObjectConst obj, WiFiCredential& outCredential) {
+  if (obj.isNull()) return false;
+  if (!parseStringField(obj, "ssid", outCredential.ssid,
+                        sizeof(outCredential.ssid))) {
+    return false;
+  }
+  if (!parseStringField(obj, "password", outCredential.password,
+                        sizeof(outCredential.password))) {
+    return false;
+  }
+  if (!obj["timeoutSec"].is<uint32_t>()) return false;
+  if (!obj["editable"].is<bool>()) return false;
+  outCredential.timeoutSec = obj["timeoutSec"].as<uint32_t>();
+  outCredential.editable = obj["editable"].as<bool>();
+  return true;
+}
+
+bool parseWiFiConfig(JsonObjectConst systemObj, WiFiConfig& outWiFi) {
+  JsonObjectConst wifiObj = systemObj["wifi"].as<JsonObjectConst>();
+  if (wifiObj.isNull()) {
+    return true;
+  }
+
+  JsonObjectConst masterObj = wifiObj["master"].as<JsonObjectConst>();
+  JsonObjectConst userObj = wifiObj["user"].as<JsonObjectConst>();
+  if (!parseWiFiCredential(masterObj, outWiFi.master)) return false;
+  if (!parseWiFiCredential(userObj, outWiFi.user)) return false;
+  if (!wifiObj["retryBackoffSec"].is<uint32_t>() || !wifiObj["staOnly"].is<bool>()) {
+    return false;
+  }
+  outWiFi.retryBackoffSec = wifiObj["retryBackoffSec"].as<uint32_t>();
+  outWiFi.staOnly = wifiObj["staOnly"].as<bool>();
+  return true;
+}
+
 bool parseFamily(const char* family, CardFamily& outFamily) {
   if (family == nullptr) return false;
   if (strcmp(family, "DI") == 0) {
@@ -156,6 +203,10 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
 
   result.decoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
   result.decoded.scanIntervalMs = systemObj["scanIntervalMs"].as<uint32_t>();
+  if (!parseWiFiConfig(systemObj, result.decoded.wifi)) {
+    result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return result;
+  }
 
   JsonArrayConst cards = systemObj["cards"].as<JsonArrayConst>();
   if (cards.size() > kMaxCards) {

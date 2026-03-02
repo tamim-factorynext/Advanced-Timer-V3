@@ -7,6 +7,7 @@
 #include "control/control_service.h"
 #include "kernel/kernel_service.h"
 #include "platform/platform_service.h"
+#include "platform/wifi_runtime.h"
 #include "portal/portal_service.h"
 #include "portal/transport_runtime.h"
 #include "runtime/runtime_service.h"
@@ -15,6 +16,7 @@
 namespace {
 
 v3::platform::PlatformService gPlatform;
+v3::platform::WiFiRuntime gWiFi;
 v3::storage::StorageService gStorage;
 v3::kernel::KernelService gKernel;
 v3::runtime::RuntimeService gRuntime;
@@ -41,6 +43,8 @@ uint32_t gKernelCommandMaxLatencyMs = 0;
 uint8_t gKernelCommandLastAppliedType = 0;
 uint32_t gKernelLastAppliedRequestId = 0;
 uint32_t gControlDispatchQueueFullCount = 0;
+v3::platform::WiFiState gLastWiFiState = v3::platform::WiFiState::Offline;
+uint32_t gLastWiFiLogMs = 0;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
@@ -48,6 +52,7 @@ constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
 constexpr uint32_t kCommandHeartbeatIntervalMs = 250;
 constexpr uint32_t kTaskWatchdogTimeoutSeconds = 8;
+constexpr uint32_t kWiFiStatusLogIntervalMs = 10000;
 
 struct KernelSnapshotMessage {
   uint32_t producedAtMs;
@@ -209,6 +214,18 @@ void core1ServiceTask(void*) {
 
   while (true) {
     const uint32_t nowMs = gPlatform.nowMs();
+    gWiFi.tick(nowMs);
+    const v3::platform::WiFiStatus& wifi = gWiFi.status();
+    if (wifi.state != gLastWiFiState ||
+        (nowMs - gLastWiFiLogMs) >= kWiFiStatusLogIntervalMs) {
+      Serial.printf("V3 WiFi state=%u connected=%u retries=%lu ip=%s\n",
+                    static_cast<unsigned>(wifi.state),
+                    wifi.staConnected ? 1U : 0U,
+                    static_cast<unsigned long>(wifi.retryCount), wifi.staIp);
+      gLastWiFiState = wifi.state;
+      gLastWiFiLogMs = nowMs;
+    }
+
     const KernelSnapshotMessage snapshot = latestKernelSnapshotFromQueue();
     gControl.tick(nowMs);
 
@@ -305,6 +322,7 @@ void setup() {
   gRuntime.begin();
   gControl.begin();
   gPortal.begin();
+  gWiFi.begin(gStorage.activeConfig().system.wifi);
   v3::portal::initTransportRuntime(gPortal);
 
   gKernelSnapshotQueue = xQueueCreate(kKernelSnapshotQueueCapacity,

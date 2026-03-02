@@ -3027,3 +3027,53 @@ Wired watchdog primitives and task-level feed points into the dual-core skeleton
   - RAM: `11.7%` (`38280 / 327680`)
   - Flash: `38.0%` (`498249 / 1310720`)
 
+## 2026-03-02 (M23: Config-Driven WiFi Policy Wiring - In Progress)
+
+### Session Summary
+
+Rewired WiFi runtime to consume validated config policy instead of hardcoded credentials/timeouts, preserving STA-only `Master -> User -> Offline` behavior.
+
+### Completed
+
+- Extended `SystemConfig` with WiFi policy contract:
+  - `wifi.master`, `wifi.user`, `retryBackoffSec`, `staOnly`
+  - default values set in `makeDefaultSystemConfig()`.
+  - files:
+    - `src/storage/v3_config_contract.h`
+    - `src/storage/v3_config_contract.cpp`
+
+- Added decoder parsing for WiFi object (over defaults):
+  - parses + bounds-checks SSID/password fields
+  - parses timeout/backoff and STA-only flag
+  - file:
+    - `src/storage/v3_config_decoder.cpp`
+
+- Added validator WiFi policy guardrails:
+  - enforce `staOnly=true`
+  - enforce `master.editable=false`
+  - reject empty credentials and zero timeout/backoff
+  - file:
+    - `src/storage/v3_config_validator.cpp`
+
+- Wired runtime to active validated config:
+  - `WiFiRuntime::begin(const WiFiConfig&)`
+  - setup call: `gWiFi.begin(gStorage.activeConfig().system.wifi)`
+  - files:
+    - `src/platform/wifi_runtime.h`
+    - `src/platform/wifi_runtime.cpp`
+    - `src/main.cpp`
+
+### Why This Slice
+
+- Aligns runtime WiFi behavior with contract-driven configuration model.
+- Removes policy drift risk from hardcoded credentials/timeouts in platform runtime.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:29.027`
+  - RAM: `17.9%` (`58596 / 327680`)
+  - Flash: `66.2%` (`868349 / 1310720`)
+

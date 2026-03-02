@@ -4,6 +4,10 @@ namespace v3::storage {
 
 namespace {
 
+bool isNonEmpty(const char* text) {
+  return text != nullptr && text[0] != '\0';
+}
+
 bool isDuplicateCardId(const SystemConfig& cfg, uint8_t count) {
   for (uint8_t i = 0; i < count; ++i) {
     for (uint8_t j = static_cast<uint8_t>(i + 1); j < count; ++j) {
@@ -33,6 +37,17 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
 
   if (candidate.cardCount > kMaxCards) {
     result.error.code = ConfigErrorCode::CardCountOutOfRange;
+    return result;
+  }
+
+  if (!candidate.wifi.staOnly || candidate.wifi.master.editable ||
+      !isNonEmpty(candidate.wifi.master.ssid) ||
+      !isNonEmpty(candidate.wifi.master.password) ||
+      !isNonEmpty(candidate.wifi.user.ssid) ||
+      !isNonEmpty(candidate.wifi.user.password) ||
+      candidate.wifi.master.timeoutSec == 0 || candidate.wifi.user.timeoutSec == 0 ||
+      candidate.wifi.retryBackoffSec == 0) {
+    result.error.code = ConfigErrorCode::InvalidWiFiPolicy;
     return result;
   }
 
@@ -87,6 +102,8 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
       return "invalid_math_clamp";
     case ConfigErrorCode::InvalidRtcTime:
       return "invalid_rtc_time";
+    case ConfigErrorCode::InvalidWiFiPolicy:
+      return "invalid_wifi_policy";
     case ConfigErrorCode::ConfigPayloadInvalidJson:
       return "config_payload_invalid_json";
     case ConfigErrorCode::ConfigPayloadInvalidShape:

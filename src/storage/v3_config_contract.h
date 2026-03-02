@@ -8,6 +8,8 @@ constexpr uint32_t kConfigSchemaVersion = 300;
 constexpr uint32_t kMinScanIntervalMs = 10;
 constexpr uint32_t kMaxScanIntervalMs = 1000;
 constexpr uint8_t kMaxCards = 64;
+constexpr uint8_t kMaxWiFiSsidLen = 32;
+constexpr uint8_t kMaxWiFiPasswordLen = 64;
 
 enum class CardFamily : uint8_t { DI, DO, AI, SIO, MATH, RTC };
 
@@ -48,6 +50,20 @@ struct RtcParams {
   uint16_t durationSeconds;
 };
 
+struct WiFiCredential {
+  char ssid[kMaxWiFiSsidLen + 1];
+  char password[kMaxWiFiPasswordLen + 1];
+  uint32_t timeoutSec;
+  bool editable;
+};
+
+struct WiFiConfig {
+  WiFiCredential master;
+  WiFiCredential user;
+  uint32_t retryBackoffSec;
+  bool staOnly;
+};
+
 struct CardConfig {
   uint8_t id;
   CardFamily family;
@@ -63,6 +79,7 @@ struct CardConfig {
 struct SystemConfig {
   uint32_t schemaVersion;
   uint32_t scanIntervalMs;
+  WiFiConfig wifi;
   uint8_t cardCount;
   CardConfig cards[kMaxCards];
 };

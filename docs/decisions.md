@@ -441,3 +441,13 @@ Use one short entry per decision with this structure:
 - Impact: Creates foundation for future watchdog telemetry and degraded-mode policy integration.
 - References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `requirements-v3-contract.md`, `docs/milestones-v3.md`.
 
+## DEC-0042: Move WiFi Policy From Hardcoded Runtime Constants To Validated Config
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Initial WiFi runtime scaffold used hardcoded credentials/timeouts, which diverged from the contract-driven V3 configuration model and made policy changes require firmware edits.
+- Decision: Extend storage config contract/decoder/validator with WiFi policy fields (`master/user credentials`, `timeoutSec`, `retryBackoffSec`, `staOnly`) and pass validated policy to `WiFiRuntime::begin(...)` from composition root.
+- Impact: Aligns WiFi behavior with active validated config and removes hardcoded policy drift risk.
+- Impact: Enforces contract invariants at validation boundary (`staOnly=true`, `master.editable=false`, non-empty credentials, non-zero timing values).
+- Impact: Preserves runtime architecture boundaries (storage validates policy; platform executes policy; main wires dependencies).
+- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/platform/wifi_runtime.h`, `src/platform/wifi_runtime.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+

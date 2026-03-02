@@ -617,3 +617,41 @@ Do not mark skeleton phase complete until all of these are `DONE`:
   - RAM: `38280 / 327680` (11.7%)
   - Flash: `498249 / 1310720` (38.0%)
 - Checkpoint SHA: `d3b1840`
+
+## M23: Config-Driven WiFi Policy Wiring (Master -> User -> Offline)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: replace hardcoded WiFi credentials/timeouts with validated config policy and enforce STA-only dual-SSID strategy in runtime.
+- Implemented outputs:
+  - extended storage config contract with WiFi fields:
+    - `wifi.master { ssid, password, timeoutSec, editable }`
+    - `wifi.user { ssid, password, timeoutSec, editable }`
+    - `wifi.retryBackoffSec`
+    - `wifi.staOnly`
+    - files:
+      - `src/storage/v3_config_contract.h`
+      - `src/storage/v3_config_contract.cpp`
+  - decoder support for optional `wifi` object over default policy:
+    - parse + bounds-check credential strings
+    - parse timeouts/backoff/staOnly
+    - file: `src/storage/v3_config_decoder.cpp`
+  - validator rules for WiFi policy:
+    - reject `staOnly=false`
+    - reject `master.editable=true`
+    - reject empty SSIDs/passwords
+    - reject zero timeout/backoff values
+    - file: `src/storage/v3_config_validator.cpp`
+  - runtime wiring to consume validated config policy:
+    - `WiFiRuntime::begin(const WiFiConfig&)`
+    - `main.cpp` now calls `gWiFi.begin(gStorage.activeConfig().system.wifi)`
+    - files:
+      - `src/platform/wifi_runtime.h`
+      - `src/platform/wifi_runtime.cpp`
+      - `src/main.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:29.027`
+  - RAM: `58596 / 327680` (17.9%)
+  - Flash: `868349 / 1310720` (66.2%)
