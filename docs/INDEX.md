@@ -21,6 +21,7 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/poc-gap-log-v3.md` - PoC-to-V3 gap traceability.
 - `docs/decisions.md` - Decision log (accepted/superseded changes).
 - `docs/worklog.md` - Consolidated session worklog.
+- `docs/milestones-v3.md` - Milestone checkpoint ledger for V3 execution status.
 
 ## 2.1 Market/Strategy Research
 

@@ -2195,3 +2195,50 @@ Reduced `main.cpp` by extracting large legacy card profile/validation blocks int
    - `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
 5. Record resulting `main.cpp` line count delta in this worklog.
 
+## 2026-03-02 (V3 Fast-Track Restart: Branch Freeze + M1/M2 Baseline Scaffold)
+
+### Session Summary
+
+Switched from incremental legacy-constrained updates to a dedicated V3 fast-track branch flow, then implemented milestone baseline scaffolding with typed config validation at boot boundary.
+
+### Completed
+
+- Git safety baseline:
+  - created branch `legacy-stable`
+  - created working branch `v3-core`
+  - created tag `v2-legacy-baseline-2026-03-02`
+
+- Milestone 1 scaffold:
+  - replaced monolithic `src/main.cpp` with composition-root wiring
+  - added service scaffolding:
+    - `src/kernel/kernel_service.*`
+    - `src/runtime/runtime_service.*`
+    - `src/control/control_service.*`
+    - `src/storage/storage_service.*`
+    - `src/portal/portal_service.*`
+    - `src/platform/platform_service.*`
+
+- Milestone 2 baseline contract path:
+  - added typed config contract:
+    - `src/storage/v3_config_contract.*`
+  - added validator + explicit error codes:
+    - `src/storage/v3_config_validator.*`
+  - updated storage service to produce/hold validated active config
+  - updated kernel service to accept only validated config at `begin(...)`
+  - updated bootstrap to fail-fast on invalid config before kernel start
+
+### Why This Slice
+
+- Remove legacy monolith coupling from initial V3 execution path.
+- Establish explicit ownership/order at boot: `storage -> validate -> kernel`.
+- Keep architecture traceable and aligned with V3 contract boundaries while preserving a rollback-safe legacy baseline.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:01:22.944`
+  - RAM: `9.4%` (`30760 / 327680`)
+  - Flash: `21.2%` (`278041 / 1310720`)
+

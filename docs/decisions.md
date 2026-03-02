@@ -221,3 +221,23 @@ Use one short entry per decision with this structure:
 - Impact: Requires explicit parity checklist before retiring old portal routes/pages.
 - References: `src/portal/README.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/worklog.md`.
 
+## DEC-0020: Freeze Legacy Baseline And Execute V3 On Dedicated Branch
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Incremental migration on top of legacy patterns was slowing feature delivery and blocking contract-faithful V3 implementation choices.
+- Decision: Freeze the existing code line as legacy baseline (`legacy-stable` branch + dated tag) and continue V3 implementation only on dedicated branch `v3-core`.
+- Impact: Preserves a known rollback point while allowing larger V3 milestone changes without legacy coupling pressure.
+- Impact: Improves decision clarity because V3 architectural changes are no longer constrained by V2 notation debt.
+- Impact: Enables milestone-level testing cadence instead of per-micro-change churn.
+- References: `git` refs (`legacy-stable`, `v3-core`, `v2-legacy-baseline-2026-03-02`), `docs/INDEX.md`, `requirements-v3-contract.md`.
+
+## DEC-0021: M1/M2 Baseline Uses Composition Root + Validated Typed Config Entry
+- Date: 2026-03-02
+- Status: Accepted
+- Context: A monolithic `main.cpp` obscured ownership boundaries and allowed implicit boot/runtime behavior not anchored to the new V3 contract.
+- Decision: Use `main.cpp` as composition root only, scaffold service boundaries (`kernel/runtime/control/storage/portal/platform`), and require `kernel` boot to consume only `ValidatedConfig` from storage validation pipeline.
+- Impact: Enforces explicit startup contract (`config -> validate -> kernel begin`) and fails fast on invalid bootstrap config.
+- Impact: Establishes clear module seams for upcoming V3 work (JSON decode, schema mapping, runtime binding) without legacy monolith coupling.
+- Impact: Keeps architecture aligned with V3 layered boundary rules while maintaining buildability.
+- References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/v3_config_contract.*`, `src/storage/v3_config_validator.*`, `requirements-v3-contract.md` (architecture and validation sections).
+
