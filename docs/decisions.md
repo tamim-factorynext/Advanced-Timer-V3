@@ -301,3 +301,33 @@ Use one short entry per decision with this structure:
 - Impact: Requires follow-up milestone for bounded queue channels and timing/latency instrumentation across cores.
 - References: `src/main.cpp`, `requirements-v3-contract.md` (core ownership and determinism sections), `docs/milestones-v3.md`.
 
+## DEC-0028: Replace Shared Metrics Copy With Bounded Core0->Core1 Queue
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Dual-core skeleton initially used protected shared-memory copy for kernel metrics handoff, which is weaker than explicit channel boundaries.
+- Decision: Introduce a bounded FreeRTOS queue for kernel metrics transport from Core0 producer to Core1 consumer, with non-blocking send and queue health counters (depth/high-water/drop).
+- Impact: Improves architectural alignment with queue-driven inter-core boundary model.
+- Impact: Provides observable transport behavior under load via queue counters.
+- Impact: Creates foundation for extending queue-based contracts to command and snapshot channels.
+- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (core ownership/channel boundary sections).
+
+## DEC-0029: Introduce Bounded Core1->Core0 Command Queue Skeleton
+- Date: 2026-03-02
+- Status: Accepted
+- Context: After queue-based metrics handoff, command path still lacked an explicit bounded transport boundary from service core to kernel core.
+- Decision: Add a bounded FreeRTOS command queue from Core1 to Core0 with non-blocking enqueue, bounded dequeue/apply loop, and command telemetry counters. Use a no-op heartbeat command first to validate channel behavior without altering kernel logic.
+- Impact: Establishes command-channel ownership boundary consistent with dual-core architecture contract.
+- Impact: Adds observable queue and latency telemetry for future command load tuning.
+- Impact: Provides safe migration seam for real kernel command DTO integration in subsequent milestones.
+- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (core ownership and bounded-channel rules).
+
+## DEC-0030: Promote Core0->Core1 Transport To Snapshot Payload Queue
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Core0->Core1 boundary previously transported metrics only, which limited extensibility for future snapshot channel growth.
+- Decision: Replace metrics-only queue with bounded snapshot message queue carrying `producedAtMs` + kernel metrics payload, consumed as latest-wins on Core1.
+- Impact: Aligns transport boundary with snapshot-oriented architecture intent.
+- Impact: Keeps queue behavior bounded and observable via depth/high-water/drop counters.
+- Impact: Simplifies future expansion of snapshot payload fields without redesigning transport type.
+- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (bounded channels and snapshot semantics).
+

@@ -2473,3 +2473,111 @@ Started dual-core execution skeleton by replacing single-loop scheduling with pi
   - RAM: `9.6%` (`31376 / 327680`)
   - Flash: `25.6%` (`335717 / 1310720`)
 
+## 2026-03-02 (M9: Queue-Based Core Boundary - In Progress)
+
+### Session Summary
+
+Replaced direct shared-struct cross-core kernel metrics handoff with a bounded queue channel as the first explicit inter-core transport seam.
+
+### Completed
+
+- Updated `src/main.cpp`:
+  - added FreeRTOS queue dependency (`freertos/queue.h`)
+  - added bounded queue:
+    - `gKernelMetricsQueue` with capacity `8`
+  - producer path on Core0:
+    - `enqueueKernelMetrics(...)` uses non-blocking `xQueueSend(...)`
+  - consumer path on Core1:
+    - `latestKernelMetricsFromQueue()` drains queue and keeps latest metrics
+  - added queue health counters:
+    - depth
+    - high-water
+    - drop count
+  - removed previous direct shared metrics copy path with critical section
+
+### Why This Slice
+
+- Moves inter-core communication from shared memory pattern toward explicit bounded channel model.
+- Establishes deterministic, inspectable transport behavior before introducing command/snapshot queue contracts.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:15.408`
+  - RAM: `9.6%` (`31392 / 327680`)
+  - Flash: `25.6%` (`335945 / 1310720`)
+
+## 2026-03-02 (M10: Command Queue Skeleton - In Progress)
+
+### Session Summary
+
+Added first Core1->Core0 command channel skeleton using a bounded queue and no-op heartbeat command to validate command transport behavior without changing kernel logic semantics.
+
+### Completed
+
+- `src/main.cpp` command queue channel:
+  - added command DTO:
+    - `KernelCommandType`
+    - `KernelCommand { type, sequence, enqueuedAtMs }`
+  - added queue:
+    - `gKernelCommandQueue` with capacity `16`
+  - Core1 enqueue path:
+    - periodic `NoopHeartbeat` every `250 ms`
+  - Core0 apply path:
+    - `applyKernelCommands(nowMs)` drains queue and applies commands
+  - command queue telemetry:
+    - depth/high-water/drop counters
+    - applied/no-op counters
+    - last/max command latency (`ms`)
+
+### Why This Slice
+
+- Establishes explicit command transport boundary for dual-core architecture.
+- Keeps behavior low-risk by using no-op command while validating queue mechanics and telemetry.
+
+## 2026-03-02 (M11: Snapshot Queue Skeleton - In Progress)
+
+### Session Summary
+
+Added explicit Core0->Core1 snapshot payload queue to carry kernel-produced runtime state across cores instead of metrics-only handoff.
+
+### Completed
+
+- Updated `src/main.cpp` snapshot channel:
+  - added `KernelSnapshotMessage { producedAtMs, metrics }`
+  - added bounded queue `gKernelSnapshotQueue` (capacity `8`)
+  - Core0 producer:
+    - create snapshot after kernel tick
+    - non-blocking enqueue
+  - Core1 consumer:
+    - drain queue to latest snapshot
+    - pass snapshot payload into runtime tick
+  - telemetry:
+    - depth/high-water/drop counters for snapshot queue
+- Removed previous metrics-only queue path in favor of snapshot payload queue.
+
+### Why This Slice
+
+- Establishes a clearer snapshot transport boundary that is closer to eventual runtime snapshot channel design.
+- Keeps inter-core payload semantics explicit and extensible.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:12.293`
+  - RAM: `9.6%` (`31416 / 327680`)
+  - Flash: `25.7%` (`336325 / 1310720`)
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:12.471`
+  - RAM: `9.6%` (`31416 / 327680`)
+  - Flash: `25.7%` (`336253 / 1310720`)
+

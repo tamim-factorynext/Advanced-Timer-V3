@@ -202,10 +202,86 @@ Status vocabulary:
 - Checkpoint SHA: `d3b1840`
 
 ## M9: Queue-Based Core Boundary (Commands/Snapshots Skeleton)
-- Status: `PLANNED`
+- Status: `DONE`
 - Date: 2026-03-02
 - Summary: replace shared-struct cross-core handoff with bounded queue channels for deterministic ownership boundaries.
+- Implemented outputs:
+  - bounded queue handoff Core0 -> Core1:
+    - `gKernelMetricsQueue` (`capacity=8`)
+    - producer: `enqueueKernelMetrics(...)` on Core0
+    - consumer: `latestKernelMetricsFromQueue()` on Core1
+  - queue health counters:
+    - `gKernelMetricsQueueDepth`
+    - `gKernelMetricsQueueHighWater`
+    - `gKernelMetricsQueueDropCount`
+  - removed direct shared metrics critical-section copy path
+  - file: `src/main.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:15.408`
+  - RAM: `31392 / 327680` (9.6%)
+  - Flash: `335945 / 1310720` (25.6%)
+- Checkpoint SHA: `d3b1840`
+
+## M10: Command Queue Skeleton (Core1 -> Core0)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: add bounded command channel so Core1 service side can issue kernel commands via queue instead of direct ownership paths.
+- Implemented outputs:
+  - command channel in `src/main.cpp`:
+    - `KernelCommandType`
+    - `KernelCommand`
+    - `gKernelCommandQueue` (`capacity=16`)
+  - Core1 enqueue path:
+    - periodic no-op heartbeat command (`250ms`) with sequence + enqueue timestamp
+  - Core0 dequeue/apply path:
+    - `applyKernelCommands(...)` drains queue and applies commands
+  - command queue counters:
+    - depth/high-water/drop
+    - applied count/no-op count
+    - last/max enqueue-to-apply latency (ms)
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:12.471`
+  - RAM: `31416 / 327680` (9.6%)
+  - Flash: `336253 / 1310720` (25.7%)
+- Checkpoint SHA: `d3b1840`
+
+## M11: Snapshot Queue Skeleton (Core0 -> Core1 Payload Path)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: add explicit snapshot payload queue boundary for Core0-produced runtime state consumed by Core1 services.
+- Implemented outputs:
+  - bounded snapshot message queue in `src/main.cpp`:
+    - `KernelSnapshotMessage { producedAtMs, metrics }`
+    - `gKernelSnapshotQueue` (`capacity=8`)
+  - Core0 producer flow:
+    - produce snapshot each kernel loop after tick
+    - non-blocking enqueue with drop counter
+  - Core1 consumer flow:
+    - drain queue to latest snapshot
+    - use snapshot payload for runtime tick
+  - snapshot queue telemetry:
+    - depth/high-water/drop counters
+  - removed metrics-only queue path in favor of snapshot payload queue
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:12.293`
+  - RAM: `31416 / 327680` (9.6%)
+  - Flash: `336325 / 1310720` (25.7%)
+- Checkpoint SHA: `d3b1840`
+
+## M12: Runtime Queue Telemetry Surfacing
+- Status: `PLANNED`
+- Date: 2026-03-02
+- Summary: expose command/snapshot queue health counters in runtime/portal diagnostics for commissioning and load visibility.
 - Planned outputs:
-  - bounded queue for kernel metrics/snapshot handoff Core0 -> Core1
-  - queue health counters (depth/high-water/drop)
-  - remove direct shared metrics copy path
+  - queue metrics struct in runtime snapshot path
+  - include queue depth/high-water/drop/latency counters
+  - reflect queue telemetry in portal diagnostics payload
