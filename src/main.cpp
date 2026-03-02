@@ -10,6 +10,7 @@
 #include "platform/wifi_runtime.h"
 #include "portal/portal_service.h"
 #include "portal/transport_runtime.h"
+#include "runtime/runtime_snapshot_card.h"
 #include "runtime/runtime_service.h"
 #include "storage/storage_service.h"
 
@@ -57,6 +58,8 @@ constexpr uint32_t kWiFiStatusLogIntervalMs = 10000;
 struct KernelSnapshotMessage {
   uint32_t producedAtMs;
   v3::kernel::KernelMetrics metrics;
+  uint8_t cardCount;
+  RuntimeSnapshotCard cards[v3::storage::kMaxCards];
 };
 
 void updateKernelSnapshotQueueStats() {
@@ -216,6 +219,8 @@ void core0KernelTask(void*) {
     KernelSnapshotMessage snapshot = {};
     snapshot.producedAtMs = nowMs;
     snapshot.metrics = gKernel.metrics();
+    snapshot.cardCount =
+        gKernel.exportRuntimeSnapshotCards(snapshot.cards, v3::storage::kMaxCards);
     enqueueKernelSnapshot(snapshot);
     gPlatform.resetTaskWatchdog();
     vTaskDelay(pdMS_TO_TICKS(kCore0LoopDelayMs));
@@ -301,7 +306,7 @@ void core1ServiceTask(void*) {
 
     gRuntime.tick(snapshot.producedAtMs, snapshot.metrics, gBootstrapDiagnostics,
                   queueTelemetry);
-    gPortal.tick(nowMs, gRuntime.snapshot());
+    gPortal.tick(nowMs, gRuntime.snapshot(), snapshot.cards, snapshot.cardCount);
     v3::portal::serviceTransportRuntime();
 
     gPlatform.resetTaskWatchdog();
@@ -364,6 +369,8 @@ void setup() {
   KernelSnapshotMessage initialSnapshot = {};
   initialSnapshot.producedAtMs = gPlatform.nowMs();
   initialSnapshot.metrics = gLastKernelMetrics;
+  initialSnapshot.cardCount = gKernel.exportRuntimeSnapshotCards(
+      initialSnapshot.cards, v3::storage::kMaxCards);
   enqueueKernelSnapshot(initialSnapshot);
 
   BaseType_t core0Created = xTaskCreatePinnedToCore(

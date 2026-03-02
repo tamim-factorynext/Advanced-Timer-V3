@@ -4,6 +4,7 @@
 
 #include "control/control_service.h"
 #include "control/command_dto.h"
+#include "runtime/runtime_snapshot_card.h"
 #include "runtime/runtime_service.h"
 
 namespace v3::portal {
@@ -49,10 +50,17 @@ struct PortalDiagnosticsState {
   const char* json;
 };
 
+struct PortalSnapshotState {
+  bool ready;
+  uint32_t revision;
+  const char* json;
+};
+
 class PortalService {
  public:
   void begin();
-  void tick(uint32_t nowMs, const v3::runtime::RuntimeSnapshot& snapshot);
+  void tick(uint32_t nowMs, const v3::runtime::RuntimeSnapshot& snapshot,
+            const RuntimeSnapshotCard* cards, uint8_t cardCount);
   PortalCommandSubmitResult submitSetRunMode(runMode mode, uint32_t enqueuedUs);
   PortalCommandSubmitResult submitStepOnce(uint32_t enqueuedUs);
   PortalCommandSubmitResult submitSetInputForce(uint8_t cardId,
@@ -70,9 +78,12 @@ class PortalService {
                            v3::control::CommandRejectReason reason);
   const PortalCommandIngressDiagnostics& commandIngressDiagnostics() const;
   PortalDiagnosticsState diagnosticsState() const;
+  PortalSnapshotState snapshotState() const;
 
  private:
   void rebuildDiagnosticsJson(const v3::runtime::RuntimeSnapshot& snapshot);
+  void rebuildSnapshotJson(const v3::runtime::RuntimeSnapshot& snapshot,
+                           const RuntimeSnapshotCard* cards, uint8_t cardCount);
   bool enqueueRequest(const PortalCommandRequest& request);
 
   uint32_t lastTickMs_ = 0;
@@ -80,6 +91,9 @@ class PortalService {
   uint32_t diagnosticsRevision_ = 0;
   bool diagnosticsReady_ = false;
   char diagnosticsJson_[1024] = {};
+  uint32_t snapshotRevision_ = 0;
+  bool snapshotReady_ = false;
+  char snapshotJson_[12288] = {};
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};
   uint16_t head_ = 0;

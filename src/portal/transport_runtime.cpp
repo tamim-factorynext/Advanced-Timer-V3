@@ -27,6 +27,21 @@ void handleHttpCommandSubmit() {
   gHttpServer.send(response.statusCode, "application/json", response.body);
 }
 
+void handleHttpSnapshotGet() {
+  if (gPortal == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
+    return;
+  }
+  const PortalSnapshotState state = gPortal->snapshotState();
+  if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
+    gHttpServer.send(503, "application/json",
+                     "{\"ok\":false,\"reason\":\"snapshot_not_ready\"}");
+    return;
+  }
+  gHttpServer.send(200, "application/json", state.json);
+}
+
 void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
                       size_t length) {
   if (gPortal == nullptr) return;
@@ -66,6 +81,8 @@ void initTransportRuntime(PortalService& portal) {
         }
         gHttpServer.send(200, "application/json", state.json);
       });
+  gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
+  gHttpServer.on("/api/snapshot", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.begin();
 
   gWsServer.begin();

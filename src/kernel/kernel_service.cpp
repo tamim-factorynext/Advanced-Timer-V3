@@ -59,6 +59,57 @@ void bindTypedConfigSummary(const v3::storage::ValidatedConfig& config,
       (metrics.enabledCardCount <= metrics.configuredCardCount);
 }
 
+logicCardType logicTypeFromFamily(v3::storage::CardFamily family) {
+  switch (family) {
+    case v3::storage::CardFamily::DI:
+      return DigitalInput;
+    case v3::storage::CardFamily::DO:
+      return DigitalOutput;
+    case v3::storage::CardFamily::AI:
+      return AnalogInput;
+    case v3::storage::CardFamily::SIO:
+      return SoftIO;
+    case v3::storage::CardFamily::MATH:
+      return MathCard;
+    case v3::storage::CardFamily::RTC:
+      return RtcCard;
+    default:
+      return DigitalInput;
+  }
+}
+
+cardMode modeFromCardConfig(const v3::storage::CardConfig& card) {
+  switch (card.family) {
+    case v3::storage::CardFamily::DI:
+      if (card.di.edgeMode == 1) return Mode_DI_Falling;
+      if (card.di.edgeMode == 2) return Mode_DI_Change;
+      return Mode_DI_Rising;
+    case v3::storage::CardFamily::DO:
+      return static_cast<cardMode>(card.dout.mode);
+    case v3::storage::CardFamily::AI:
+      return Mode_AI_Continuous;
+    case v3::storage::CardFamily::SIO:
+      return static_cast<cardMode>(card.sio.mode);
+    case v3::storage::CardFamily::MATH:
+    case v3::storage::CardFamily::RTC:
+      return Mode_None;
+    default:
+      return Mode_None;
+  }
+}
+
+uint8_t familyLocalIndex(const v3::storage::SystemConfig& system,
+                         uint8_t cardPos, v3::storage::CardFamily family) {
+  uint8_t idx = 0;
+  for (uint8_t i = 0; i < cardPos; ++i) {
+    if (!system.cards[i].enabled) continue;
+    if (system.cards[i].family == family) {
+      idx += 1;
+    }
+  }
+  return idx;
+}
+
 }  // namespace
 
 void KernelService::begin(const v3::storage::ValidatedConfig& config,
@@ -138,6 +189,113 @@ bool KernelService::setAiForce(uint8_t cardId, bool forceActive,
 }
 
 const KernelMetrics& KernelService::metrics() const { return metrics_; }
+
+uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
+                                                  uint8_t capacity) const {
+  if (outCards == nullptr || capacity == 0) return 0;
+
+  uint8_t written = 0;
+  for (uint8_t i = 0; i < config_.system.cardCount && written < capacity; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (!card.enabled) continue;
+
+    RuntimeSnapshotCard out = {};
+    out.id = card.id;
+    out.type = logicTypeFromFamily(card.family);
+    out.mode = modeFromCardConfig(card);
+
+    switch (card.family) {
+      case v3::storage::CardFamily::DI: {
+        out.index = card.di.channel;
+        for (uint8_t s = 0; s < diSlotCount_; ++s) {
+          const DiSlot& slot = diSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.logicalState = slot.state.logicalState;
+          out.physicalState = slot.state.physicalState;
+          out.triggerFlag = slot.state.triggerFlag;
+          out.state = slot.state.state;
+          out.currentValue = slot.state.currentValue;
+          out.startOnMs = slot.state.startOnMs;
+          out.startOffMs = slot.state.startOffMs;
+          out.repeatCounter = slot.state.repeatCounter;
+          break;
+        }
+        break;
+      }
+      case v3::storage::CardFamily::DO: {
+        out.index = card.dout.channel;
+        for (uint8_t s = 0; s < doSlotCount_; ++s) {
+          const DoSlot& slot = doSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.logicalState = slot.state.logicalState;
+          out.physicalState = slot.state.physicalState;
+          out.triggerFlag = slot.state.triggerFlag;
+          out.state = slot.state.state;
+          out.currentValue = slot.state.currentValue;
+          out.startOnMs = slot.state.startOnMs;
+          out.startOffMs = slot.state.startOffMs;
+          out.repeatCounter = slot.state.repeatCounter;
+          break;
+        }
+        break;
+      }
+      case v3::storage::CardFamily::AI: {
+        out.index = card.ai.channel;
+        for (uint8_t s = 0; s < aiSlotCount_; ++s) {
+          const AiSlot& slot = aiSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.state = slot.state.state;
+          out.mode = slot.state.mode;
+          out.currentValue = slot.state.currentValue;
+          break;
+        }
+        break;
+      }
+      case v3::storage::CardFamily::SIO: {
+        out.index = familyLocalIndex(config_.system, i, card.family);
+        for (uint8_t s = 0; s < sioSlotCount_; ++s) {
+          const SioSlot& slot = sioSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.logicalState = slot.state.logicalState;
+          out.physicalState = slot.state.physicalState;
+          out.triggerFlag = slot.state.triggerFlag;
+          out.state = slot.state.state;
+          out.currentValue = slot.state.currentValue;
+          out.startOnMs = slot.state.startOnMs;
+          out.startOffMs = slot.state.startOffMs;
+          out.repeatCounter = slot.state.repeatCounter;
+          break;
+        }
+        break;
+      }
+      case v3::storage::CardFamily::MATH: {
+        out.index = familyLocalIndex(config_.system, i, card.family);
+        for (uint8_t s = 0; s < mathSlotCount_; ++s) {
+          const MathSlot& slot = mathSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.logicalState = slot.state.logicalState;
+          out.physicalState = slot.state.physicalState;
+          out.triggerFlag = slot.state.triggerFlag;
+          out.state = slot.state.state;
+          out.currentValue = slot.state.currentValue;
+          break;
+        }
+        break;
+      }
+      case v3::storage::CardFamily::RTC: {
+        out.index = familyLocalIndex(config_.system, i, card.family);
+        out.state = State_None;
+        break;
+      }
+      default:
+        break;
+    }
+
+    outCards[written++] = out;
+  }
+
+  return written;
+}
 
 void KernelService::bindAiSlotsFromConfig() {
   aiSlotCount_ = 0;

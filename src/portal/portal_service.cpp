@@ -2,6 +2,8 @@
 
 #include <ArduinoJson.h>
 
+#include "kernel/enum_codec.h"
+
 namespace v3::portal {
 
 void PortalService::begin() {
@@ -10,6 +12,9 @@ void PortalService::begin() {
   diagnosticsRevision_ = 0;
   diagnosticsReady_ = false;
   diagnosticsJson_[0] = '\0';
+  snapshotRevision_ = 0;
+  snapshotReady_ = false;
+  snapshotJson_[0] = '\0';
   head_ = 0;
   tail_ = 0;
   depth_ = 0;
@@ -18,10 +23,12 @@ void PortalService::begin() {
 }
 
 void PortalService::tick(uint32_t nowMs,
-                         const v3::runtime::RuntimeSnapshot& snapshot) {
+                         const v3::runtime::RuntimeSnapshot& snapshot,
+                         const RuntimeSnapshotCard* cards, uint8_t cardCount) {
   lastTickMs_ = nowMs;
   observedScanCount_ = snapshot.completedScans;
   rebuildDiagnosticsJson(snapshot);
+  rebuildSnapshotJson(snapshot, cards, cardCount);
 }
 
 bool PortalService::enqueueSetRunModeRequest(runMode mode, uint32_t requestId,
@@ -128,6 +135,14 @@ PortalDiagnosticsState PortalService::diagnosticsState() const {
   state.ready = diagnosticsReady_;
   state.revision = diagnosticsRevision_;
   state.json = diagnosticsJson_;
+  return state;
+}
+
+PortalSnapshotState PortalService::snapshotState() const {
+  PortalSnapshotState state = {};
+  state.ready = snapshotReady_;
+  state.revision = snapshotRevision_;
+  state.json = snapshotJson_;
   return state;
 }
 
@@ -241,6 +256,57 @@ void PortalService::rebuildDiagnosticsJson(
   serializeJson(doc, diagnosticsJson_, sizeof(diagnosticsJson_));
   diagnosticsRevision_ += 1;
   diagnosticsReady_ = true;
+}
+
+void PortalService::rebuildSnapshotJson(
+    const v3::runtime::RuntimeSnapshot& snapshot, const RuntimeSnapshotCard* cards,
+    uint8_t cardCount) {
+  JsonDocument doc;
+
+  doc["type"] = "runtime_snapshot";
+  doc["schemaVersion"] = 1;
+  doc["snapshotSeq"] = snapshot.completedScans;
+  doc["revision"] = snapshotRevision_ + 1;
+  doc["tsMs"] = snapshot.nowMs;
+  doc["scanIntervalMs"] = snapshot.scanIntervalMs;
+  doc["runMode"] = toString(snapshot.mode);
+
+  JsonObject metrics = doc["metrics"].to<JsonObject>();
+  metrics["scanLastMs"] = snapshot.lastScanMs;
+  metrics["scanCompleted"] = snapshot.completedScans;
+  metrics["configuredCardCount"] = snapshot.configuredCardCount;
+  metrics["enabledCardCount"] = snapshot.enabledCardCount;
+  metrics["familyCountSum"] = snapshot.familyCountSum;
+  metrics["bindingConsistent"] = snapshot.bindingConsistent;
+  metrics["snapshotQueueDepth"] = snapshot.queueTelemetry.snapshotQueueDepth;
+  metrics["snapshotQueueHighWater"] =
+      snapshot.queueTelemetry.snapshotQueueHighWater;
+  metrics["snapshotQueueDropCount"] =
+      snapshot.queueTelemetry.snapshotQueueDropCount;
+
+  JsonArray cardsJson = doc["cards"].to<JsonArray>();
+  if (cards != nullptr) {
+    for (uint8_t i = 0; i < cardCount; ++i) {
+      const RuntimeSnapshotCard& card = cards[i];
+      JsonObject item = cardsJson.add<JsonObject>();
+      item["id"] = card.id;
+      item["type"] = toString(card.type);
+      item["index"] = card.index;
+      item["logicalState"] = card.logicalState;
+      item["physicalState"] = card.physicalState;
+      item["triggerFlag"] = card.triggerFlag;
+      item["state"] = toString(card.state);
+      item["mode"] = toString(card.mode);
+      item["currentValue"] = card.currentValue;
+      item["startOnMs"] = card.startOnMs;
+      item["startOffMs"] = card.startOffMs;
+      item["repeatCounter"] = card.repeatCounter;
+    }
+  }
+
+  serializeJson(doc, snapshotJson_, sizeof(snapshotJson_));
+  snapshotRevision_ += 1;
+  snapshotReady_ = true;
 }
 
 bool PortalService::enqueueRequest(const PortalCommandRequest& request) {

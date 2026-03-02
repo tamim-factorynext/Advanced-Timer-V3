@@ -10,6 +10,7 @@
 #include "kernel/v3_runtime_signals.h"
 #include "kernel/v3_sio_runtime.h"
 #include "platform/platform_service.h"
+#include "runtime/runtime_snapshot_card.h"
 #include "storage/v3_config_contract.h"
 #include "storage/v3_config_validator.h"
 
@@ -49,6 +50,8 @@ class KernelService {
   bool setDiForce(uint8_t cardId, bool forceActive, bool forcedSample);
   bool setAiForce(uint8_t cardId, bool forceActive, uint32_t forcedValue);
   const KernelMetrics& metrics() const;
+  uint8_t exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
+                                     uint8_t capacity) const;
 
  private:
   struct DiSlot {

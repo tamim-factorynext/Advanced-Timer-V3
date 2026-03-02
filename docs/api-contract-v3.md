@@ -187,6 +187,9 @@ Message type: `command_result`
 
 `GET /api/snapshot`
 
+Compatibility alias (active implementation):
+- `GET /api/v3/snapshot`
+
 Success response:
 ```json
 {
