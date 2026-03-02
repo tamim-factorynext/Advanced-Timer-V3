@@ -3,10 +3,12 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
+#include "control/command_dto.h"
 #include "control/control_service.h"
 #include "kernel/kernel_service.h"
 #include "platform/platform_service.h"
 #include "portal/portal_service.h"
+#include "portal/transport_runtime.h"
 #include "runtime/runtime_service.h"
 #include "storage/storage_service.h"
 
@@ -32,25 +34,20 @@ uint16_t gKernelCommandQueueDepth = 0;
 uint16_t gKernelCommandQueueHighWater = 0;
 uint32_t gKernelCommandQueueDropCount = 0;
 uint32_t gKernelCommandAppliedCount = 0;
-uint32_t gKernelCommandNoopCount = 0;
+uint32_t gKernelCommandSetRunModeCount = 0;
+uint32_t gKernelCommandStepCount = 0;
 uint32_t gKernelCommandLastLatencyMs = 0;
 uint32_t gKernelCommandMaxLatencyMs = 0;
+uint8_t gKernelCommandLastAppliedType = 0;
+uint32_t gKernelLastAppliedRequestId = 0;
+uint32_t gControlDispatchQueueFullCount = 0;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
 constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
 constexpr uint32_t kCommandHeartbeatIntervalMs = 250;
-
-enum class KernelCommandType : uint8_t {
-  NoopHeartbeat = 0,
-};
-
-struct KernelCommand {
-  KernelCommandType type;
-  uint32_t sequence;
-  uint32_t enqueuedAtMs;
-};
+constexpr uint32_t kTaskWatchdogTimeoutSeconds = 8;
 
 struct KernelSnapshotMessage {
   uint32_t producedAtMs;
@@ -83,37 +80,86 @@ void updateKernelCommandQueueStats() {
   }
 }
 
-void enqueueKernelCommand(const KernelCommand& command) {
-  if (gKernelCommandQueue == nullptr) return;
+bool enqueueKernelCommand(const KernelCommand& command) {
+  if (gKernelCommandQueue == nullptr) return false;
   if (xQueueSend(gKernelCommandQueue, &command, 0) != pdTRUE) {
     gKernelCommandQueueDropCount += 1;
+    updateKernelCommandQueueStats();
+    return false;
   }
   updateKernelCommandQueueStats();
+  return true;
 }
 
-void applyKernelCommands(uint32_t nowMs) {
+void applyKernelCommands(uint32_t nowUs) {
   if (gKernelCommandQueue == nullptr) return;
 
-  KernelCommand command = {};
+  ::KernelCommand command = {};
   while (xQueueReceive(gKernelCommandQueue, &command, 0) == pdTRUE) {
     gKernelCommandAppliedCount += 1;
+    gKernelCommandLastAppliedType = static_cast<uint8_t>(command.type);
 
     uint32_t latencyMs = 0;
-    if (nowMs >= command.enqueuedAtMs) latencyMs = nowMs - command.enqueuedAtMs;
+    if (nowUs >= command.enqueuedUs) {
+      latencyMs = (nowUs - command.enqueuedUs) / 1000;
+    }
     gKernelCommandLastLatencyMs = latencyMs;
     if (latencyMs > gKernelCommandMaxLatencyMs) {
       gKernelCommandMaxLatencyMs = latencyMs;
     }
 
     switch (command.type) {
-      case KernelCommandType::NoopHeartbeat:
-        gKernelCommandNoopCount += 1;
+      case KernelCmd_SetRunMode:
+        gKernelCommandSetRunModeCount += 1;
+        gKernelLastAppliedRequestId = command.value;
+        gKernel.setRunMode(command.mode);
+        break;
+      case KernelCmd_StepOnce:
+        gKernelCommandStepCount += 1;
+        gKernelLastAppliedRequestId = command.value;
+        gKernel.requestStepOnce();
         break;
       default:
         break;
     }
   }
   updateKernelCommandQueueStats();
+}
+
+void dispatchControlCommandsToKernelQueue() {
+  ::KernelCommand command = {};
+  while (gControl.dequeueCommand(command)) {
+    if (!enqueueKernelCommand(command)) {
+      gControlDispatchQueueFullCount += 1;
+    }
+  }
+}
+
+void dispatchPortalRequestsToControl() {
+  v3::portal::PortalCommandRequest request = {};
+  while (gPortal.dequeueCommandRequest(request)) {
+    bool accepted = false;
+    v3::control::CommandRejectReason rejectReason =
+        v3::control::CommandRejectReason::None;
+
+    switch (request.type) {
+      case v3::portal::PortalCommandType::SetRunMode:
+        accepted = gControl.requestSetRunMode(request.mode, request.enqueuedUs,
+                                              request.requestId);
+        break;
+      case v3::portal::PortalCommandType::StepOnce:
+        accepted = gControl.requestStepOnce(request.enqueuedUs, request.requestId);
+        break;
+      default:
+        accepted = false;
+        break;
+    }
+
+    if (!accepted) {
+      rejectReason = gControl.diagnostics().lastRejectReason;
+    }
+    gPortal.recordCommandResult(request.requestId, accepted, rejectReason);
+  }
 }
 
 KernelSnapshotMessage latestKernelSnapshotFromQueue() {
@@ -132,39 +178,97 @@ KernelSnapshotMessage latestKernelSnapshotFromQueue() {
 }
 
 void core0KernelTask(void*) {
+  if (!gPlatform.addCurrentTaskToWatchdog()) {
+    Serial.println("V3 watchdog add failed: core0");
+    vTaskDelete(nullptr);
+    return;
+  }
+
   while (true) {
+    const uint32_t nowUs = micros();
     const uint32_t nowMs = gPlatform.nowMs();
-    applyKernelCommands(nowMs);
+    applyKernelCommands(nowUs);
     gKernel.tick(nowMs);
     KernelSnapshotMessage snapshot = {};
     snapshot.producedAtMs = nowMs;
     snapshot.metrics = gKernel.metrics();
     enqueueKernelSnapshot(snapshot);
+    gPlatform.resetTaskWatchdog();
     vTaskDelay(pdMS_TO_TICKS(kCore0LoopDelayMs));
   }
 }
 
 void core1ServiceTask(void*) {
-  uint32_t commandSequence = 0;
+  if (!gPlatform.addCurrentTaskToWatchdog()) {
+    Serial.println("V3 watchdog add failed: core1");
+    vTaskDelete(nullptr);
+    return;
+  }
+
   uint32_t lastHeartbeatMs = 0;
 
   while (true) {
     const uint32_t nowMs = gPlatform.nowMs();
     const KernelSnapshotMessage snapshot = latestKernelSnapshotFromQueue();
-
     gControl.tick(nowMs);
-    gRuntime.tick(snapshot.producedAtMs, snapshot.metrics, gBootstrapDiagnostics);
-    gPortal.tick(nowMs, gRuntime.snapshot());
 
     if ((nowMs - lastHeartbeatMs) >= kCommandHeartbeatIntervalMs) {
-      KernelCommand heartbeat = {};
-      heartbeat.type = KernelCommandType::NoopHeartbeat;
-      heartbeat.sequence = ++commandSequence;
-      heartbeat.enqueuedAtMs = nowMs;
-      enqueueKernelCommand(heartbeat);
+      gPortal.submitSetRunMode(RUN_NORMAL, micros());
       lastHeartbeatMs = nowMs;
     }
 
+    dispatchPortalRequestsToControl();
+    dispatchControlCommandsToKernelQueue();
+
+    v3::runtime::QueueTelemetry queueTelemetry = {};
+    queueTelemetry.snapshotQueueDepth = gKernelSnapshotQueueDepth;
+    queueTelemetry.snapshotQueueHighWater = gKernelSnapshotQueueHighWater;
+    queueTelemetry.snapshotQueueDropCount = gKernelSnapshotQueueDropCount;
+    queueTelemetry.commandQueueDepth = gKernelCommandQueueDepth;
+    queueTelemetry.commandQueueHighWater = gKernelCommandQueueHighWater;
+    queueTelemetry.commandQueueDropCount = gKernelCommandQueueDropCount;
+    queueTelemetry.commandAppliedCount = gKernelCommandAppliedCount;
+    queueTelemetry.commandSetRunModeCount = gKernelCommandSetRunModeCount;
+    queueTelemetry.commandStepCount = gKernelCommandStepCount;
+    queueTelemetry.commandLastAppliedType = gKernelCommandLastAppliedType;
+    queueTelemetry.commandLastLatencyMs = gKernelCommandLastLatencyMs;
+    queueTelemetry.commandMaxLatencyMs = gKernelCommandMaxLatencyMs;
+    const v3::control::ControlDiagnostics& controlDiag = gControl.diagnostics();
+    queueTelemetry.controlPendingDepth = controlDiag.pendingDepth;
+    queueTelemetry.controlPendingHighWater = controlDiag.pendingHighWater;
+    queueTelemetry.controlRequestedCount = controlDiag.requestedCount;
+    queueTelemetry.controlAcceptedCount = controlDiag.acceptedCount;
+    queueTelemetry.controlRejectedCount = controlDiag.rejectedCount;
+    queueTelemetry.controlLastRejectReason =
+        static_cast<uint8_t>(controlDiag.lastRejectReason);
+    queueTelemetry.controlDispatchQueueFullCount =
+        gControlDispatchQueueFullCount;
+    const v3::portal::PortalCommandIngressDiagnostics& portalDiag =
+        gPortal.commandIngressDiagnostics();
+    queueTelemetry.portalRequestedCount = portalDiag.requestedCount;
+    queueTelemetry.portalAcceptedCount = portalDiag.acceptedCount;
+    queueTelemetry.portalRejectedCount = portalDiag.rejectedCount;
+    queueTelemetry.portalLastRejectReason = portalDiag.lastRejectReason;
+    queueTelemetry.portalLastRequestId = portalDiag.lastRequestId;
+    queueTelemetry.portalLastRequestAccepted = portalDiag.lastRequestAccepted;
+    queueTelemetry.portalQueueAcceptedCount = portalDiag.queueAcceptedCount;
+    queueTelemetry.portalQueueRejectedCount = portalDiag.queueRejectedCount;
+    queueTelemetry.kernelLastAppliedRequestId = gKernelLastAppliedRequestId;
+    queueTelemetry.parityControlRequestedExceedsPortalAccepted =
+        (queueTelemetry.controlRequestedCount > queueTelemetry.portalAcceptedCount);
+    queueTelemetry.parityControlAcceptedExceedsControlRequested =
+        (queueTelemetry.controlAcceptedCount >
+         queueTelemetry.controlRequestedCount);
+    queueTelemetry.parityKernelAppliedExceedsControlAccepted =
+        (queueTelemetry.commandAppliedCount >
+         queueTelemetry.controlAcceptedCount);
+
+    gRuntime.tick(snapshot.producedAtMs, snapshot.metrics, gBootstrapDiagnostics,
+                  queueTelemetry);
+    gPortal.tick(nowMs, gRuntime.snapshot());
+    v3::portal::serviceTransportRuntime();
+
+    gPlatform.resetTaskWatchdog();
     vTaskDelay(pdMS_TO_TICKS(kCore1LoopDelayMs));
   }
 }
@@ -177,6 +281,12 @@ void setup() {
   Serial.println("Advanced Timer V3 Core bootstrap");
 
   gPlatform.begin();
+  if (!gPlatform.initTaskWatchdog(kTaskWatchdogTimeoutSeconds, true)) {
+    Serial.println("V3 watchdog init failed");
+    while (true) {
+      delay(1000);
+    }
+  }
   gStorage.begin();
 
   if (!gStorage.hasActiveConfig()) {
@@ -195,6 +305,7 @@ void setup() {
   gRuntime.begin();
   gControl.begin();
   gPortal.begin();
+  v3::portal::initTransportRuntime(gPortal);
 
   gKernelSnapshotQueue = xQueueCreate(kKernelSnapshotQueueCapacity,
                                       sizeof(KernelSnapshotMessage));
@@ -204,7 +315,8 @@ void setup() {
       delay(1000);
     }
   }
-  gKernelCommandQueue = xQueueCreate(kKernelCommandQueueCapacity, sizeof(KernelCommand));
+  gKernelCommandQueue =
+      xQueueCreate(kKernelCommandQueueCapacity, sizeof(::KernelCommand));
   if (gKernelCommandQueue == nullptr) {
     Serial.println("V3 command queue bootstrap failed");
     while (true) {

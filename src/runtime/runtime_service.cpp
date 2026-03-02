@@ -7,7 +7,8 @@ void RuntimeService::begin() { snapshot_ = {}; }
 void RuntimeService::tick(uint32_t nowMs,
                           const v3::kernel::KernelMetrics& kernelMetrics,
                           const v3::storage::BootstrapDiagnostics&
-                              storageDiagnostics) {
+                              storageDiagnostics,
+                          const QueueTelemetry& queueTelemetry) {
   snapshot_.nowMs = nowMs;
   snapshot_.completedScans = kernelMetrics.completedScans;
   snapshot_.lastScanMs = kernelMetrics.lastScanMs;
@@ -22,10 +23,13 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.rtcCardCount = kernelMetrics.rtcCardCount;
   snapshot_.familyCountSum = kernelMetrics.familyCountSum;
   snapshot_.bindingConsistent = kernelMetrics.bindingConsistent;
+  snapshot_.mode = kernelMetrics.mode;
+  snapshot_.stepAppliedCount = kernelMetrics.stepAppliedCount;
   snapshot_.bootstrapUsedFileConfig =
       (storageDiagnostics.source == v3::storage::BootstrapSource::FileConfig);
   snapshot_.storageHasActiveConfig = storageDiagnostics.hasActiveConfig;
   snapshot_.storageBootstrapError = storageDiagnostics.error.code;
+  snapshot_.queueTelemetry = queueTelemetry;
 }
 
 const RuntimeSnapshot& RuntimeService::snapshot() const { return snapshot_; }

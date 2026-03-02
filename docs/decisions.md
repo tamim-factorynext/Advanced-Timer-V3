@@ -331,3 +331,113 @@ Use one short entry per decision with this structure:
 - Impact: Simplifies future expansion of snapshot payload fields without redesigning transport type.
 - References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (bounded channels and snapshot semantics).
 
+## DEC-0031: Surface Queue Telemetry In Runtime And Portal Diagnostics
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Queue channels were implemented, but transport health was only available as local counters in composition root and not visible in runtime/portal diagnostics.
+- Decision: Add a runtime queue telemetry model and publish snapshot/command queue counters (depth, high-water, drops, command apply/latency) through runtime snapshot and portal diagnostics payload.
+- Impact: Enables commissioning and load diagnostics without code-level inspection.
+- Impact: Provides early-warning observability for queue saturation and command latency drift.
+- Impact: Creates stable telemetry contract for future API/UI diagnostics extensions.
+- References: `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0032: Promote Command Queue To Real Run/Step DTO Handling
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Command queue initially validated transport with no-op heartbeat only, which did not prove kernel-control behavior through bounded channel.
+- Decision: Use real command DTOs (`KernelCmd_SetRunMode`, `KernelCmd_StepOnce`) on Core1->Core0 queue and apply them via `KernelService` run/step handlers, with command-ack telemetry surfaced in runtime/portal diagnostics.
+- Impact: Advances command channel from skeleton transport to behavior-bearing control path.
+- Impact: Enables observable command application semantics (counts, last type, latency).
+- Impact: Creates direct seam for future API-driven command dispatch without changing core boundary model.
+- References: `src/main.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0033: Control Service Becomes Command Source With Validation/Reject Semantics
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Core1 command enqueue path was still generated directly in composition root and lacked a dedicated source boundary for validation and reject-reason tracking.
+- Decision: Promote `ControlService` to explicit command-source boundary with bounded pending queue, command request APIs (`setRunMode`, `stepOnce`), reject reasons, and diagnostics; Core1 dispatches control-emitted commands into kernel queue.
+- Impact: Separates command intent generation/validation from queue transport mechanics.
+- Impact: Adds explicit reject semantics and counters before portal/API command wiring.
+- Impact: Improves diagnostics by exposing control-layer pending/request/accept/reject state.
+- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0034: Portal Command Ingress Queue With Request/Result Mapping
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Command flow had control/kernal queue boundaries but lacked a portal-facing request ingress seam and request-level accept/reject observability.
+- Decision: Add a portal ingress queue API for command requests and explicit result recording, then route Core1 dispatch through `Portal -> Control -> Kernel queue`. Surface ingress/request-result counters in portal diagnostics payload.
+- Impact: Creates stable pre-transport command entry boundary for upcoming HTTP/WebSocket handler wiring.
+- Impact: Provides request-level diagnostics parity (requested/accepted/rejected/reason/last id) independent of transport details.
+- Impact: Reduces coupling between portal transport handlers and control validation internals.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `src/control/control_service.h`, `docs/milestones-v3.md`.
+
+## DEC-0035: Add Transport-Facing Command Submit Result Contract
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Portal command ingress queue existed, but transport handlers needed an immediate, structured response contract without peeking into internal queue state.
+- Decision: Introduce portal submit APIs returning `PortalCommandSubmitResult { accepted, reason, requestId }`, with queue-full rejection mapped immediately and ingress counters (`queueAcceptedCount`, `queueRejectedCount`) aligned to submit outcomes.
+- Impact: Enables HTTP/WebSocket handlers to return deterministic request-level results at submit time.
+- Impact: Clarifies separation between submit acceptance and downstream control/kernel application outcome.
+- Impact: Improves diagnostics parity between endpoint response semantics and portal ingress metrics.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0036: Add Thin Transport Command Stub Handlers Over Portal Submit API
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Submit contract existed but transport boundary lacked concrete handler shape for payload parsing and immediate response mapping.
+- Decision: Add transport command stub module that parses JSON payloads, supports `setRunMode` and `stepOnce`, routes through portal submit APIs only, and returns immediate structured responses with transport source labeling.
+- Impact: Establishes endpoint-ready handler contract without coupling transport code to control/kernel internals.
+- Impact: Standardizes immediate response semantics (`accepted/rejected/reason/requestId`) across HTTP/WebSocket entry paths.
+- Impact: Reduces integration risk for future real endpoint wiring by validating mapping rules upfront.
+- References: `src/portal/transport_command_stub.h`, `src/portal/transport_command_stub.cpp`, `src/portal/portal_service.h`, `docs/milestones-v3.md`.
+
+## DEC-0037: Register Concrete Transport Runtime Endpoints To Stub Handlers
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Transport command stubs existed but were not bound to actual HTTP/WebSocket runtime endpoints in the new skeleton runtime loop.
+- Decision: Add a portal transport runtime module that registers concrete endpoints (`POST /api/v3/command`, `GET /api/v3/diagnostics`, WebSocket text command handling on `:81`) and forwards payloads/responses through existing stub handlers and portal diagnostics state.
+- Impact: Completes endpoint wiring needed for practical command/diagnostics interaction during skeleton phase.
+- Impact: Preserves thin-handler architecture by keeping parsing/mapping centralized in stub layer.
+- Impact: Enables next-phase external client integration without changing command flow ownership model.
+- References: `src/portal/transport_runtime.h`, `src/portal/transport_runtime.cpp`, `src/main.cpp`, `src/portal/transport_command_stub.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0038: Canonical Transport Command Response Envelope + Status Mapping
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Initial transport responses were functional but lacked fully normalized envelope and error-code/message parity across all failure classes.
+- Decision: Enforce one canonical transport response envelope (`ok`, `accepted`, `requestId`, `reason`, `source`, `errorCode`, `message`) with explicit status-code mapping (`200`, `429`, `400`, `422`) and normalized error-code-to-message mapping.
+- Impact: Stabilizes external command contract for HTTP/WebSocket clients.
+- Impact: Simplifies client-side handling with consistent machine-readable and human-readable fields.
+- Impact: Reduces integration regressions caused by inconsistent failure shape/status mapping.
+- References: `src/portal/transport_command_stub.cpp`, `src/portal/transport_runtime.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0039: Add Cross-Stage Command Correlation And Parity Flags
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Command flow stages were instrumented individually, but tracing one request across portal ingress, control dispatch, and kernel apply lacked explicit correlation and parity mismatch flags.
+- Decision: Propagate request ID through command DTO path, expose portal/control/kernel stage counters together in runtime telemetry, and compute explicit mismatch flags for impossible counter relationships.
+- Impact: Enables fast detection of command pipeline drift during commissioning.
+- Impact: Improves debuggability by correlating transport request IDs with kernel apply observations.
+- Impact: Provides a concrete observability gate for skeleton completion review.
+- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+
+## DEC-0040: Skeleton Phase Freeze Gate Achieved
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Skeleton phase required completion of transport binding, command contract hardening, observability parity, and freeze review before moving to feature-complete implementation.
+- Decision: Mark skeleton phase complete after `M18`, `M19`, `M20`, and `M21` are all `DONE`, with docs parity and ownership reviews recorded.
+- Impact: Establishes a clean transition point from infrastructure scaffolding to behavior/feature implementation phase.
+- Impact: Prevents premature “feature phase” start before command/snapshot transport and observability contracts are stabilized.
+- Impact: Provides explicit historical checkpoint for future regression triage.
+- References: `docs/milestones-v3.md` (Skeleton Completion Gate + M18..M21), `docs/worklog.md` (M21 freeze review), `src/main.cpp`, `src/portal/transport_runtime.cpp`.
+
+## DEC-0041: Add Platform-Owned Per-Task Watchdog Scaffolding
+- Date: 2026-03-02
+- Status: Accepted
+- Context: Requirements include watchdog primitives/fault containment, and post-skeleton phase needed a minimal concrete watchdog integration baseline.
+- Decision: Add watchdog primitives in `platform` layer and register/feed Core0/Core1 tasks from composition-root loops with a baseline timeout policy.
+- Impact: Introduces practical hang-detection supervision without altering command/snapshot semantics.
+- Impact: Preserves architectural ownership (`platform` owns watchdog API; `main` owns task lifecycle/feed points).
+- Impact: Creates foundation for future watchdog telemetry and degraded-mode policy integration.
+- References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `requirements-v3-contract.md`, `docs/milestones-v3.md`.
+

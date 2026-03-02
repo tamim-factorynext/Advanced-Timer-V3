@@ -62,19 +62,35 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config) {
   metrics_.scanIntervalMs = config_.system.scanIntervalMs;
   metrics_.configuredCardCount = config_.system.cardCount;
   bindTypedConfigSummary(config_, metrics_);
+  metrics_.mode = RUN_NORMAL;
+  metrics_.stepAppliedCount = 0;
   metrics_.completedScans = 0;
   metrics_.lastScanMs = 0;
   nextScanDueMs_ = 0;
+  stepPending_ = false;
 }
 
 void KernelService::tick(uint32_t nowMs) {
   if (metrics_.scanIntervalMs == 0) return;
+
+  if (metrics_.mode == RUN_STEP && !stepPending_) return;
   if (nowMs < nextScanDueMs_) return;
 
   metrics_.completedScans += 1;
+  if (metrics_.mode == RUN_STEP) {
+    metrics_.stepAppliedCount += 1;
+    stepPending_ = false;
+  }
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
 }
+
+void KernelService::setRunMode(runMode mode) {
+  metrics_.mode = mode;
+  if (mode != RUN_STEP) stepPending_ = false;
+}
+
+void KernelService::requestStepOnce() { stepPending_ = true; }
 
 const KernelMetrics& KernelService::metrics() const { return metrics_; }
 

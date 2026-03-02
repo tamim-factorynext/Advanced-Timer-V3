@@ -2572,12 +2572,458 @@ Added explicit Core0->Core1 snapshot payload queue to carry kernel-produced runt
   - RAM: `9.6%` (`31416 / 327680`)
   - Flash: `25.7%` (`336325 / 1310720`)
 
+## 2026-03-02 (M12: Runtime Queue Telemetry Surfacing - In Progress)
+
+### Session Summary
+
+Wired queue health and command latency counters into runtime snapshot and portal diagnostics payload so inter-core transport behavior is observable during commissioning.
+
+### Completed
+
+- Added runtime queue telemetry model:
+  - `QueueTelemetry` in `src/runtime/runtime_service.h`
+- Updated runtime tick contract:
+  - `RuntimeService::tick(...)` now accepts queue telemetry and stores it in snapshot
+  - `src/runtime/runtime_service.cpp`
+- Updated Core1 service task wiring:
+  - build telemetry from live queue counters in `src/main.cpp`
+  - pass telemetry to runtime tick
+- Extended portal diagnostics JSON:
+  - added `queues.snapshot` with depth/high-water/drop
+  - added `queues.command` with depth/high-water/drop + applied/no-op/latency
+  - `src/portal/portal_service.cpp`
+
+### Why This Slice
+
+- Makes dual-core queue health visible instead of opaque.
+- Provides direct operational signals for load tuning and overflow detection.
+
+## 2026-03-02 (M13: Real Command DTO Integration - In Progress)
+
+### Session Summary
+
+Replaced command channel no-op-only behavior with real command DTO handling for run-mode and step requests, and added command-ack telemetry to runtime/portal diagnostics.
+
+### Completed
+
+- Kernel command handlers:
+  - added run/step control methods:
+    - `KernelService::setRunMode(...)`
+    - `KernelService::requestStepOnce()`
+  - `RUN_STEP` path now requires pending step to execute scan tick
+  - files:
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+
+- Command queue integration:
+  - Core1 enqueues real `KernelCmd_SetRunMode` DTO
+  - Core0 applies `KernelCmd_SetRunMode` and `KernelCmd_StepOnce`
+  - file: `src/main.cpp`
+
+- Command ack telemetry:
+  - `setRunModeCount`
+  - `stepCount`
+  - `lastAppliedType`
+  - existing command latency stats retained
+  - files:
+    - `src/main.cpp`
+    - `src/runtime/runtime_service.h`
+    - `src/portal/portal_service.cpp`
+
+### Why This Slice
+
+- Moves command channel from transport-only validation to behavior-bearing command path.
+- Creates observable command apply semantics for debugging and next-step API wiring.
+
 ### Evidence
 
 - Firmware build (user IDE run):
   - Environment: `esp32doit-devkit-v1`
   - Result: `SUCCESS`
-  - Duration: `00:00:12.471`
-  - RAM: `9.6%` (`31416 / 327680`)
-  - Flash: `25.7%` (`336253 / 1310720`)
+  - Duration: `00:00:19.293`
+  - RAM: `9.6%` (`31496 / 327680`)
+  - Flash: `25.8%` (`337789 / 1310720`)
+
+## 2026-03-02 (M14: Command Source Integration - In Progress)
+
+### Session Summary
+
+Integrated control service as the explicit command source for Core1->Core0 queue dispatch, including input validation/reject reasons and diagnostics projection.
+
+### Completed
+
+- Upgraded control service from stub to command source:
+  - `requestSetRunMode(...)`
+  - `requestStepOnce(...)`
+  - `dequeueCommand(...)`
+  - `diagnostics()`
+  - bounded local pending queue and reject-reason model
+  - files:
+    - `src/control/control_service.h`
+    - `src/control/control_service.cpp`
+
+- Updated Core1 dispatch flow in `src/main.cpp`:
+  - Core1 now generates run-mode heartbeat via control service request API
+  - Core1 drains control pending commands and enqueues to kernel queue
+  - tracks dispatch queue-full rejects
+
+- Extended telemetry and diagnostics payload:
+  - runtime telemetry includes control pending/request/accept/reject/reason metrics
+  - portal diagnostics includes new `queues.control` section
+  - files:
+    - `src/runtime/runtime_service.h`
+    - `src/portal/portal_service.cpp`
+
+### Why This Slice
+
+- Moves command origin to a dedicated control boundary instead of ad-hoc direct enqueue.
+- Establishes explicit validation/reject semantics before portal/API command wiring.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:16.651`
+  - RAM: `9.7%` (`31936 / 327680`)
+  - Flash: `25.8%` (`338601 / 1310720`)
+
+## 2026-03-02 (M15: Portal Command Entry Wiring - In Progress)
+
+### Session Summary
+
+Added portal-side command ingress queue and request/result mapping so Core1 now processes command intents through `Portal -> Control -> Kernel queue` with per-request acceptance telemetry.
+
+### Completed
+
+- Added portal command entry API:
+  - `enqueueSetRunModeRequest(...)`
+  - `enqueueStepOnceRequest(...)`
+  - `dequeueCommandRequest(...)`
+  - `recordCommandResult(...)`
+  - files:
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+
+- Added portal command ingress diagnostics:
+  - pending depth/high-water
+  - requested/accepted/rejected counters
+  - last reject reason
+  - last request acceptance + request id
+  - surfaced as `commandIngress` in diagnostics JSON payload
+
+- Updated Core1 flow in `src/main.cpp`:
+  - heartbeat now enters via portal request enqueue
+  - new dispatch path:
+    - dequeue portal request
+    - call control request API
+    - record accepted/rejected result back to portal diagnostics
+
+### Why This Slice
+
+- Establishes command entry boundary expected for future HTTP/WebSocket control endpoints.
+- Adds request-level outcome mapping and parity diagnostics before external transport wiring.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:13.381`
+  - RAM: `9.8%` (`32232 / 327680`)
+  - Flash: `25.9%` (`339453 / 1310720`)
+
+## 2026-03-02 (M16: External Command Endpoint Contract - In Progress)
+
+### Session Summary
+
+Added a transport-facing submit contract in portal boundary so external handlers can return immediate command request status (`accepted/rejected/reason/requestId`) while preserving queue-based command flow.
+
+### Completed
+
+- Added portal submit APIs:
+  - `submitSetRunMode(...)`
+  - `submitStepOnce(...)`
+  - return `PortalCommandSubmitResult`
+  - files:
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+
+- Added request-status mapping behavior:
+  - submit returns generated `requestId`
+  - queue-full returns immediate rejected status with `QueueFull` reason
+
+- Added diagnostics alignment counters:
+  - `queueAcceptedCount`
+  - `queueRejectedCount`
+  - exposed in `commandIngress` diagnostics JSON
+
+- Updated Core1 heartbeat path:
+  - now uses `gPortal.submitSetRunMode(...)`
+  - file: `src/main.cpp`
+
+### Why This Slice
+
+- Creates endpoint-ready command submit contract before HTTP/WebSocket binding.
+- Ensures immediate response semantics are explicit and consistent with ingress diagnostics.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:13.377`
+  - RAM: `9.8%` (`32240 / 327680`)
+  - Flash: `25.9%` (`339641 / 1310720`)
+
+## 2026-03-02 (M17: Transport Hook Stub Endpoints - In Progress)
+
+### Session Summary
+
+Added a transport-facing command stub module to parse command payloads and return immediate submit result responses while routing all submit logic through portal submit APIs.
+
+### Completed
+
+- Added transport command stub module:
+  - `src/portal/transport_command_stub.h`
+  - `src/portal/transport_command_stub.cpp`
+
+- Implemented payload parsing and command routing:
+  - supported command payloads:
+    - `{"command":"setRunMode","mode":"RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT"}`
+    - `{"command":"stepOnce"}`
+  - routes through:
+    - `PortalService::submitSetRunMode(...)`
+    - `PortalService::submitStepOnce(...)`
+
+- Implemented immediate response mapping:
+  - response payload fields:
+    - `ok`
+    - `accepted`
+    - `requestId`
+    - `reason`
+    - `source`
+  - status mapping:
+    - `200` accepted submit
+    - `429` rejected submit
+    - `400/422` payload/command validation failures
+
+### Why This Slice
+
+- Provides endpoint-ready thin command handlers without bypassing established portal submit boundary.
+- Keeps transport concerns separate from control/kernel command semantics.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:10.470`
+  - RAM: `9.8%` (`32240 / 327680`)
+  - Flash: `26.0%` (`340773 / 1310720`)
+
+## 2026-03-02 (M18: Real Transport Binding - In Progress)
+
+### Session Summary
+
+Bound concrete transport runtime endpoints to the command stub layer so HTTP/WebSocket requests now flow through portal submit contract in-process.
+
+### Completed
+
+- Added transport runtime module:
+  - `src/portal/transport_runtime.h`
+  - `src/portal/transport_runtime.cpp`
+
+- Added endpoint registration and runtime loop:
+  - HTTP:
+    - `POST /api/v3/command` -> command stub handler
+    - `GET /api/v3/diagnostics` -> latest portal diagnostics JSON
+  - WebSocket:
+    - command text message handling on `:81`
+  - file: `src/portal/transport_runtime.cpp`
+
+- Added composition integration:
+  - setup calls `initTransportRuntime(gPortal)`
+  - Core1 loop calls `serviceTransportRuntime()`
+  - file: `src/main.cpp`
+
+### Why This Slice
+
+- Converts endpoint contract from abstract stub to concrete registered transport hooks.
+- Keeps handlers thin by reusing transport command stub + portal submit APIs.
+
+## 2026-03-02 (M19: Endpoint Command Contract Hardening - In Progress)
+
+### Session Summary
+
+Hardened transport command response contract by enforcing one canonical envelope and normalized status/error-code mapping across all transport outcomes.
+
+### Completed
+
+- Updated transport stub response envelope:
+  - `ok`
+  - `accepted`
+  - `requestId`
+  - `reason`
+  - `source`
+  - `errorCode`
+  - `message`
+  - file: `src/portal/transport_command_stub.cpp`
+
+- Added normalized status mapping table in code comments:
+  - `200` accepted submit
+  - `429` rejected submit
+  - `400` malformed payload/json
+  - `422` semantic command validation errors
+
+- Added normalized error-code -> message mapping helper:
+  - parse and shape errors
+  - invalid/unsupported command content
+  - queue and step-mode related command rejections
+
+### Why This Slice
+
+- Ensures transport-level clients receive deterministic, schema-stable responses.
+- Reduces ambiguity by separating high-level reason from machine-readable error code.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:14.351`
+  - RAM: `11.5%` (`37728 / 327680`)
+  - Flash: `37.9%` (`497053 / 1310720`)
+
+## 2026-03-02 (M20: Command Path Observability Parity - In Progress)
+
+### Session Summary
+
+Added correlation-friendly command telemetry across portal ingress, control dispatch, and kernel apply stages, with parity mismatch flags for fast commissioning diagnostics.
+
+### Completed
+
+- Added request-id propagation across command path:
+  - control request APIs now attach portal request id to command DTO value
+  - kernel apply stage captures last applied request id
+  - files:
+    - `src/control/control_service.h`
+    - `src/control/control_service.cpp`
+    - `src/main.cpp`
+
+- Extended runtime queue telemetry with portal stage + parity fields:
+  - portal requested/accepted/rejected counters
+  - portal last request id + accept/reject state
+  - kernel last applied request id
+  - mismatch flags:
+    - `controlRequestedExceedsPortalAccepted`
+    - `controlAcceptedExceedsControlRequested`
+    - `kernelAppliedExceedsControlAccepted`
+  - file: `src/runtime/runtime_service.h`
+
+- Extended portal diagnostics payload:
+  - `queues.portalIngress`
+  - `queues.parity`
+  - increased diagnostics buffer size to reduce truncation risk
+  - files:
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+
+### Why This Slice
+
+- Makes end-to-end command path traceable from transport submit to kernel apply.
+- Provides immediate mismatch indicators to detect drift between pipeline stages.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:01:21.765`
+  - RAM: `11.5%` (`37728 / 327680`)
+  - Flash: `37.9%` (`496433 / 1310720`)
+
+## 2026-03-02 (M21: Skeleton Freeze Review - Completed)
+
+### Session Summary
+
+Completed skeleton freeze review and verified the skeleton completion gate is satisfied.
+
+### Review Results
+
+- Module boundary review:
+  - composition root remains in `src/main.cpp`
+  - transport concerns isolated in `src/portal/transport_runtime.*` and `src/portal/transport_command_stub.*`
+  - config boot ownership remains `storage -> validated config -> kernel`
+
+- Core/queue ownership review:
+  - Core0:
+    - kernel tick
+    - kernel command apply
+    - snapshot production
+  - Core1:
+    - portal/control/runtime loops
+    - transport service loop
+    - command ingress routing
+  - bounded queues:
+    - Core0 -> Core1 snapshot queue
+    - Core1 -> Core0 command queue
+
+- Documentation parity:
+  - decision/worklog/milestone documents are aligned through `M21`
+
+### Skeleton Completion Note
+
+- Skeleton completion gate (`M18..M21`) is now fully satisfied.
+- Next phase can proceed as feature-complete implementation over stabilized skeleton.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:17.770`
+  - RAM: `11.7%` (`38280 / 327680`)
+  - Flash: `38.0%` (`497885 / 1310720`)
+
+## 2026-03-02 (M22: Per-Task Watchdog Scaffolding - In Progress)
+
+### Session Summary
+
+Wired watchdog primitives and task-level feed points into the dual-core skeleton to establish baseline hang supervision.
+
+### Completed
+
+- Added platform watchdog primitives:
+  - `initTaskWatchdog(timeoutSeconds, panicOnTrigger)`
+  - `addCurrentTaskToWatchdog()`
+  - `resetTaskWatchdog()`
+  - files:
+    - `src/platform/platform_service.h`
+    - `src/platform/platform_service.cpp`
+
+- Added dual-core task integration:
+  - setup initializes watchdog policy (`8s`, panic enabled)
+  - Core0/Core1 tasks register with watchdog
+  - Core0/Core1 loops feed watchdog each cycle
+  - file:
+    - `src/main.cpp`
+
+### Why This Slice
+
+- Establishes baseline fault-containment supervision aligned with V3 watchdog requirements.
+- Keeps ownership clean by placing watchdog API in platform layer and usage in composition-root task loops.
+
+### HIL Note
+
+- Plan to manually trigger watchdog timeout during HIL (by intentionally withholding watchdog reset in one task path) to confirm timeout/reset behavior and recovery observability.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:15.634`
+  - RAM: `11.7%` (`38280 / 327680`)
+  - Flash: `38.0%` (`498249 / 1310720`)
 

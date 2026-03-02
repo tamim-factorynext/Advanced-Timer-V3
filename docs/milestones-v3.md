@@ -17,6 +17,15 @@ Status vocabulary:
 - `DONE`
 - `BLOCKED`
 
+## 1.1 Skeleton Completion Gate
+
+Do not mark skeleton phase complete until all of these are `DONE`:
+
+- `M18` Real Transport Binding (registered runtime HTTP/WebSocket hooks)
+- `M19` Endpoint Command Contract Hardening (final request/response envelope parity)
+- `M20` Command Path Observability Parity (transport -> ingress -> control -> kernel correlation fields)
+- `M21` Skeleton Freeze Review (code/docs consistency pass + explicit handoff note)
+
 ## 2. Milestone Ledger
 
 ## M0: Branch Safety Baseline
@@ -278,10 +287,333 @@ Status vocabulary:
 - Checkpoint SHA: `d3b1840`
 
 ## M12: Runtime Queue Telemetry Surfacing
-- Status: `PLANNED`
+- Status: `DONE`
 - Date: 2026-03-02
 - Summary: expose command/snapshot queue health counters in runtime/portal diagnostics for commissioning and load visibility.
-- Planned outputs:
-  - queue metrics struct in runtime snapshot path
-  - include queue depth/high-water/drop/latency counters
-  - reflect queue telemetry in portal diagnostics payload
+- Implemented outputs:
+  - runtime queue telemetry contract:
+    - `v3::runtime::QueueTelemetry`
+    - file: `src/runtime/runtime_service.h`
+  - runtime snapshot wiring:
+    - runtime tick now accepts queue telemetry and stores it in snapshot
+    - file: `src/runtime/runtime_service.cpp`
+  - main loop wiring:
+    - Core1 task builds queue telemetry from live queue counters
+    - passes telemetry into runtime tick
+    - file: `src/main.cpp`
+  - portal diagnostics payload:
+    - adds `queues.snapshot` and `queues.command` sections
+    - includes depth/high-water/drop and command apply/latency counters
+    - file: `src/portal/portal_service.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:16.524`
+  - RAM: `31448 / 327680` (9.6%)
+  - Flash: `337501 / 1310720` (25.7%)
+- Checkpoint SHA: `d3b1840`
+
+## M13: Real Command DTO Integration (Run/Step Control)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: replace no-op heartbeat-only command channel usage with real kernel control commands routed via Core1->Core0 queue.
+- Implemented outputs:
+  - kernel run/step control hooks:
+    - `KernelService::setRunMode(...)`
+    - `KernelService::requestStepOnce()`
+    - tick behavior honors `RUN_STEP` via pending-step gate
+    - files: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`
+  - real command DTO queue usage:
+    - Core1 enqueues `KernelCmd_SetRunMode` heartbeat command
+    - Core0 dequeues and applies `KernelCmd_SetRunMode` / `KernelCmd_StepOnce`
+    - file: `src/main.cpp`
+  - command ack telemetry:
+    - set-run-mode count
+    - step count
+    - last applied command type
+    - command latency stats
+    - files: `src/main.cpp`, `src/runtime/runtime_service.h`
+  - portal diagnostics exposure:
+    - `queues.command.setRunModeCount`
+    - `queues.command.stepCount`
+    - `queues.command.lastAppliedType`
+    - file: `src/portal/portal_service.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:19.293`
+  - RAM: `31496 / 327680` (9.6%)
+  - Flash: `337789 / 1310720` (25.8%)
+- Checkpoint SHA: `d3b1840`
+
+## M14: Command Source Integration (Portal/Control -> Queue)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: route real external control intents into Core1 command enqueue path and close the loop with result telemetry.
+- Implemented outputs:
+  - command dispatch API in control boundary:
+    - `ControlService::requestSetRunMode(...)`
+    - `ControlService::requestStepOnce(...)`
+    - `ControlService::dequeueCommand(...)`
+    - `ControlService::diagnostics()`
+    - files: `src/control/control_service.h`, `src/control/control_service.cpp`
+  - enqueue validation + reject reasons:
+    - control-local reject reasons (`QueueFull`, `InvalidRunMode`,
+      `StepRequiresRunStep`)
+    - control diagnostics counters (requested/accepted/rejected, pending depth/HWM)
+  - Core1->kernel dispatch integration:
+    - Core1 drains control pending commands and enqueues into kernel queue
+    - dispatch queue-full reject counter
+    - file: `src/main.cpp`
+  - result/ack projection in diagnostics payload:
+    - runtime queue telemetry extended with control dispatch metrics
+    - portal diagnostics adds `queues.control` section
+    - files: `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:16.651`
+  - RAM: `31936 / 327680` (9.7%)
+  - Flash: `338601 / 1310720` (25.8%)
+- Checkpoint SHA: `d3b1840`
+
+## M15: Portal/API Command Entry Wiring
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: wire external command entrypoints to control request API and report request-level accept/reject results.
+- Implemented outputs:
+  - portal command entry API:
+    - `enqueueSetRunModeRequest(...)`
+    - `enqueueStepOnceRequest(...)`
+    - `dequeueCommandRequest(...)`
+    - `recordCommandResult(...)`
+    - files: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`
+  - Core1 request routing:
+    - portal request dequeue -> control request API -> result record
+    - file: `src/main.cpp`
+  - response mapping semantics:
+    - per-request accepted/rejected tracking
+    - reject reason projection via control reject enum
+    - queue-full immediate rejection handling at portal ingress queue
+  - diagnostics parity:
+    - portal diagnostics adds `commandIngress` section
+      (`requested/accepted/rejected/reason/lastRequestId/pending`)
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:13.381`
+  - RAM: `32232 / 327680` (9.8%)
+  - Flash: `339453 / 1310720` (25.9%)
+- Checkpoint SHA: `d3b1840`
+
+## M16: External Command Endpoint Contract (HTTP/WebSocket Hook)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: add transport-facing command endpoint hooks to submit portal command requests and return immediate request status with reason mapping.
+- Implemented outputs:
+  - endpoint hook in portal boundary:
+    - `submitSetRunMode(...)`
+    - `submitStepOnce(...)`
+    - return type: `PortalCommandSubmitResult`
+    - files: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`
+  - response mapping:
+    - immediate submit result includes:
+      - `accepted`
+      - `reason`
+      - `requestId`
+    - queue-full path returns rejected with `QueueFull`
+  - diagnostics alignment:
+    - ingress diagnostics now include:
+      - `queueAcceptedCount`
+      - `queueRejectedCount`
+    - `commandIngress` JSON includes these counters
+  - Core1 integration:
+    - heartbeat command now enters via `submitSetRunMode(...)`
+    - file: `src/main.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:13.377`
+  - RAM: `32240 / 327680` (9.8%)
+  - Flash: `339641 / 1310720` (25.9%)
+- Checkpoint SHA: `d3b1840`
+
+## M17: Transport Hook Exposure (HTTP/WebSocket Stub Endpoints)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: expose lightweight command submit hooks on transport boundary and return immediate submit result payloads.
+- Implemented outputs:
+  - transport stub handler module:
+    - `src/portal/transport_command_stub.h`
+    - `src/portal/transport_command_stub.cpp`
+  - command handling:
+    - parse command payload JSON
+    - supported commands:
+      - `setRunMode` with `mode` (`RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT`)
+      - `stepOnce`
+    - route through portal submit API only:
+      - `PortalService::submitSetRunMode(...)`
+      - `PortalService::submitStepOnce(...)`
+  - transport response mapping:
+    - returns JSON body with:
+      - `ok`
+      - `accepted`
+      - `requestId`
+      - `reason`
+      - `source` (`http|websocket`)
+    - status mapping:
+      - `200` for accepted submit
+      - `429` for rejected submit
+      - `400/422` for payload/command validation failures
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:10.470`
+  - RAM: `32240 / 327680` (9.8%)
+  - Flash: `340773 / 1310720` (26.0%)
+- Checkpoint SHA: `d3b1840`
+
+## M18: Real Transport Binding (Endpoint Registration + Handler Wiring)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: register concrete HTTP/WebSocket command routes and connect them to transport stub handlers.
+- Implemented outputs:
+  - new transport runtime module:
+    - `src/portal/transport_runtime.h`
+    - `src/portal/transport_runtime.cpp`
+  - endpoint registration:
+    - HTTP `POST /api/v3/command`
+    - HTTP `GET /api/v3/diagnostics`
+    - WebSocket server on `:81` text command handling
+  - payload passthrough:
+    - all command payloads routed to `handleTransportCommandStub(...)`
+  - response passthrough:
+    - HTTP status/body returned from stub response
+    - WebSocket response body sent back to requesting client
+  - Core1 loop integration:
+    - `initTransportRuntime(gPortal)` in setup
+    - `serviceTransportRuntime()` in Core1 service loop
+    - file: `src/main.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:01:21.765`
+  - RAM: `37728 / 327680` (11.5%)
+  - Flash: `496433 / 1310720` (37.9%)
+- Checkpoint SHA: `d3b1840`
+
+## M19: Endpoint Command Contract Hardening
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: finalize transport command envelope rules and ensure HTTP/WebSocket responses use one canonical schema.
+- Implemented outputs:
+  - strict response envelope in transport stub:
+    - `ok`
+    - `accepted`
+    - `requestId`
+    - `reason`
+    - `source`
+    - `errorCode`
+    - `message`
+    - file: `src/portal/transport_command_stub.cpp`
+  - normalized status mapping (documented in code comments):
+    - `200` accepted submit
+    - `429` rejected submit
+    - `400` malformed payload/json
+    - `422` semantic command validation errors
+  - normalized error-code mapping and human-readable messages:
+    - parse/shape errors
+    - unsupported/invalid command content
+    - queue-full and run-mode step constraints
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:14.351`
+  - RAM: `37728 / 327680` (11.5%)
+  - Flash: `497053 / 1310720` (37.9%)
+- Checkpoint SHA: `d3b1840`
+
+## M20: Command Path Observability Parity
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: add correlation-friendly fields and counters to trace a request from transport submit through kernel apply.
+- Implemented outputs:
+  - request correlation fields:
+    - command DTO now carries portal request id through control -> kernel (`command.value`)
+    - kernel apply path stores `kernelLastAppliedRequestId`
+    - files: `src/control/control_service.*`, `src/main.cpp`
+  - per-stage counters projection in runtime telemetry:
+    - portal ingress counters (requested/accepted/rejected/last request/reason)
+    - control counters and kernel apply counters
+    - file: `src/runtime/runtime_service.h`
+  - explicit mismatch flags:
+    - `controlRequestedExceedsPortalAccepted`
+    - `controlAcceptedExceedsControlRequested`
+    - `kernelAppliedExceedsControlAccepted`
+    - computed in `src/main.cpp`
+  - portal diagnostics parity payload:
+    - `queues.portalIngress`
+    - `queues.parity`
+    - file: `src/portal/portal_service.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:17.770`
+  - RAM: `38280 / 327680` (11.7%)
+  - Flash: `497885 / 1310720` (38.0%)
+- Checkpoint SHA: `d3b1840`
+
+## M21: Skeleton Freeze Review
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: final skeleton closure pass before feature-complete implementation phase.
+- Completed outputs:
+  - module boundary sanity review (`kernel/runtime/control/storage/portal/platform`):
+    - ownership split remains composition-root orchestrated in `src/main.cpp`
+    - portal transport isolated in `src/portal/transport_runtime.cpp` and stub handler module
+    - config boot ownership remains storage -> kernel validated path
+  - queue/task-core ownership review:
+    - Core0 owns kernel tick + kernel command apply + snapshot produce
+    - Core1 owns portal/control/runtime transport loops and command ingress
+    - bounded queue channels in place for command and snapshot paths
+  - docs parity pass:
+    - `docs/decisions.md`, `docs/worklog.md`, `docs/milestones-v3.md` aligned through `M21`
+    - skeleton freeze note added
+- Skeleton Freeze Note:
+  - Skeleton phase completion gate is satisfied (`M18..M21` all `DONE`).
+  - Next phase can begin: feature-complete implementation over stabilized skeleton.
+
+## M22: Watchdog Scaffolding (Per-Task WDT Integration)
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: wire per-task watchdog primitives and feed points into dual-core task loops.
+- Implemented outputs:
+  - platform watchdog primitives:
+    - `initTaskWatchdog(...)`
+    - `addCurrentTaskToWatchdog()`
+    - `resetTaskWatchdog()`
+    - files: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`
+  - task integration:
+    - initialize watchdog in setup with timeout policy
+    - register Core0/Core1 tasks
+    - feed watchdog in both task loops
+    - file: `src/main.cpp`
+- Remaining:
+  - none
+- HIL Validation Note:
+  - During HIL, manually trigger watchdog timeout (for example, intentionally stop watchdog feed in one task) to verify reset/recovery path and diagnostics behavior.
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:15.634`
+  - RAM: `38280 / 327680` (11.7%)
+  - Flash: `498249 / 1310720` (38.0%)
+- Checkpoint SHA: `d3b1840`
