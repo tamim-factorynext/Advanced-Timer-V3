@@ -510,3 +510,34 @@ Use one short entry per decision with this structure:
 - Impact: Establishes reusable condition-eval pattern for subsequent card-family migrations.
 - References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_runtime_signals.h`, `docs/milestones-v3.md`.
 
+## DEC-0049: Freeze RTC Scheduler Contract (Has-Flags + Minute-Required + Restart Window)
+- Date: 2026-03-02
+- Status: Accepted
+- Context: RTC behavior had mixed legacy/typed assumptions (wildcard sentinel usage, unclear retrigger semantics, and oversized signal surface).
+- Decision: RTC schedule uses non-negative `hasX + value` optional matching fields, with `minute` as the only required match field. RTC runtime meaningful outputs are limited to `logicalState` and `triggerFlag`, and retrigger policy is `RESTART_WINDOW`. If wall-clock time is invalid/unavailable, scheduler does not fire.
+- Impact: Removes wildcard-sentinel ambiguity and aligns with non-negative config policy.
+- Impact: Enables hourly chime use-case by requiring only `minute`.
+- Impact: Standardizes repeated-match behavior during active duration (`RESTART_WINDOW`).
+- Impact: Simplifies RTC observability contract for portal/HIL.
+- References: `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`, `docs/acceptance-matrix-v3.md`, `src/kernel/v3_rtc_runtime.*`, `src/kernel/kernel_service.*`.
+
+## DEC-0050: Add Global Clock/NTP Configuration Model
+- Date: 2026-03-02
+- Status: Accepted
+- Context: RTC scheduler requires centralized time-source policy and settings exposed through system configuration and future portal settings page.
+- Decision: Add system-level `clock` config with `timezone` and `ntp` policy (`enabled`, three server slots, `syncIntervalSec`, `startupTimeoutSec`, `maxStaleSec`) to validated storage contract.
+- Impact: Creates a stable firmware config surface for future settings UI and NTP integration.
+- Impact: Keeps RTC/NTP concerns global instead of per-card.
+- Impact: Enables deterministic validation before runtime use.
+- References: `src/storage/v3_config_contract.*`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `docs/user-guide-v3-draft.md`.
+
+## DEC-0051: Move Portal Snapshot/Diagnostics JSON Buffers Off Static DRAM
+- Date: 2026-03-02
+- Status: Accepted
+- Context: ESP32 linker failed with DRAM overflow after RTC + observability expansion because large fixed JSON buffers in `PortalService` consumed `.bss` memory.
+- Decision: Replace fixed `char[]` portal JSON buffers with heap-backed `String` payload storage for diagnostics and runtime snapshot cache.
+- Impact: Resolves static DRAM overflow while preserving API behavior and endpoint payload shape.
+- Impact: Keeps large response buffers out of `.bss`, improving headroom for runtime state growth.
+- Impact: Requires continued attention to heap behavior under sustained high-frequency snapshot updates.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, build evidence from `esp32doit-devkit-v1` linker run on 2026-03-02.
+

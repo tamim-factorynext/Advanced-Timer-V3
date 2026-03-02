@@ -445,19 +445,53 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
 
   if (expectedType == RtcCard) {
     JsonObjectConst schedule = cfg["schedule"].as<JsonObjectConst>();
-    out.rtc.hasYear = schedule["year"].is<int>() || schedule["year"].is<uint32_t>();
-    out.rtc.hasMonth =
-        schedule["month"].is<int>() || schedule["month"].is<uint32_t>();
-    out.rtc.hasDay = schedule["day"].is<int>() || schedule["day"].is<uint32_t>();
-    out.rtc.hasWeekday =
-        schedule["weekday"].is<int>() || schedule["weekday"].is<uint32_t>();
+    if (schedule.isNull()) {
+      reason = "RTC missing schedule object";
+      return false;
+    }
+    if (!schedule["minute"].is<uint32_t>() && !schedule["minute"].is<int>()) {
+      reason = "RTC minute is required";
+      return false;
+    }
+    out.rtc.hasYear = schedule["hasYear"] | false;
+    out.rtc.hasMonth = schedule["hasMonth"] | false;
+    out.rtc.hasDay = schedule["hasDay"] | false;
+    out.rtc.hasWeekday = schedule["hasWeekday"] | false;
+    out.rtc.hasHour = schedule["hasHour"] | false;
+
+    if (out.rtc.hasYear &&
+        !(schedule["year"].is<uint32_t>() || schedule["year"].is<int>())) {
+      reason = "RTC year required when hasYear is true";
+      return false;
+    }
+    if (out.rtc.hasMonth &&
+        !(schedule["month"].is<uint32_t>() || schedule["month"].is<int>())) {
+      reason = "RTC month required when hasMonth is true";
+      return false;
+    }
+    if (out.rtc.hasDay &&
+        !(schedule["day"].is<uint32_t>() || schedule["day"].is<int>())) {
+      reason = "RTC day required when hasDay is true";
+      return false;
+    }
+    if (out.rtc.hasWeekday &&
+        !(schedule["weekday"].is<uint32_t>() || schedule["weekday"].is<int>())) {
+      reason = "RTC weekday required when hasWeekday is true";
+      return false;
+    }
+    if (out.rtc.hasHour &&
+        !(schedule["hour"].is<uint32_t>() || schedule["hour"].is<int>())) {
+      reason = "RTC hour required when hasHour is true";
+      return false;
+    }
+
     out.rtc.year = schedule["year"] | 0;
     out.rtc.month = schedule["month"] | 0;
     out.rtc.day = schedule["day"] | 0;
     out.rtc.weekday = schedule["weekday"] | 0;
     out.rtc.hour = schedule["hour"] | 0;
     out.rtc.minute = schedule["minute"] | 0;
-    out.rtc.triggerDurationMs = cfg["triggerDuration"] | 0U;
+    out.rtc.triggerDurationMs = cfg["triggerDurationMs"] | 0U;
     return true;
   }
 

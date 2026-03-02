@@ -29,7 +29,7 @@ inline V3SignalSupport signalSupportForFamily(V3CardFamily family) {
     case V3CardFamily::MATH:
       return {false, false, true, true, false};
     case V3CardFamily::RTC:
-      return {true, true, true, true, false};
+      return {true, false, false, true, false};
     default:
       return {false, false, false, false, false};
   }
@@ -109,6 +109,7 @@ struct V3RtcConfig {
   bool hasMonth;
   bool hasDay;
   bool hasWeekday;
+  bool hasHour;
   uint32_t triggerDurationMs;
 };
 

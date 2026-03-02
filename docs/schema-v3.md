@@ -279,32 +279,42 @@ Processing contract:
 ```json
 {
   "schedule": {
+    "hasYear": false,
     "year": 2026,
-    "month": 0,
-    "day": 0,
+    "hasMonth": false,
+    "month": 1,
+    "hasDay": false,
+    "day": 1,
+    "hasWeekday": false,
+    "weekday": 0,
+    "hasHour": false,
     "hour": 14,
-    "minute": 30,
-    "weekday": 0
+    "minute": 30
   },
-  "triggerDuration": 6000
+  "triggerDurationMs": 6000
 }
 ```
 
 - `schedule`: required object.
-- `triggerDuration`: required `uint32` (centiunit time).
+- `triggerDurationMs`: required `uint32`.
+- RTC trigger gating uses base `enabled` card field only.
 
 `schedule` fields:
-- `year`: optional `uint32` (if omitted, wildcard all years).
-- `month`: optional `uint32` (if omitted, wildcard all months).
-- `day`: optional `uint32` (if omitted, wildcard all days).
-- `hour`: required `uint32`.
 - `minute`: required `uint32`.
-- `weekday`: optional `uint32` (if omitted, wildcard all weekdays).
+- `hasYear` + `year`: optional match on year.
+- `hasMonth` + `month`: optional match on month.
+- `hasDay` + `day`: optional match on day.
+- `hasWeekday` + `weekday`: optional match on weekday (`0..6`).
+- `hasHour` + `hour`: optional match on hour.
 - `second` and millisecond-level schedule fields are not allowed.
+- no negative sentinel values are used for wildcard behavior.
 
-Wildcard encoding:
-- Optional fields may be omitted.
-- If present, they must be valid values (see validation rules).
+Scheduler runtime behavior:
+- if no valid wall-clock time is available, RTC scheduler must skip firing.
+- on schedule match, `logicalState=true` and `triggerFlag` pulses for one scan.
+- `triggerDurationMs` defines how long `logicalState` remains true.
+- retrigger policy is `RESTART_WINDOW` (new qualified match restarts active window).
+- RTC does not expose meaningful `physicalState` or `currentValue`.
 
 ## 8. Binding Schema
 
@@ -355,16 +365,12 @@ Top-level `bindings` allows typed parameter binding.
 
 ## 10. Open Decisions To Freeze
 
-- D-SCH-001: RTC value ranges are not yet frozen in contract text.
-  - Proposed: `month 1..12`, `day 1..31`, `hour 0..23`, `minute 0..59`, `weekday 1..7`.
-- D-SCH-002: RTC retrigger behavior during active `triggerDuration` is not frozen.
-  - Options: `IGNORE_WHILE_ACTIVE`, `RESTART_WINDOW`, `EXTEND_WINDOW`.
 - D-MATH-001: Saturation policy details for intermediate multiply/divide scaling should be frozen for all edge-overflow cases.
 
 ## 11. Migration Notes
 
 - Any prior RTC recurrence/holiday policy structures are removed in V3.
-- Migration to V3 must transform old RTC schedule representation to field-based schedule + `triggerDuration`.
+- Migration to V3 must transform old RTC schedule representation to field-based schedule + `triggerDurationMs`.
 - Any legacy MATH operators outside `ADD|SUB_SAT|MUL|DIV_SAFE` must fail validation or be migrated by explicit rule.
 - Legacy AI `emaAlpha` values stored as milliunits (`0..1000`) must be converted to centiunits (`0..100`) during migration.
 - Restore-source model is reduced to `LKG` (single rollback slot) and `FACTORY`.

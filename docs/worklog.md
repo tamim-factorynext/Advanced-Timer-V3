@@ -3436,3 +3436,101 @@ Completed the AI family runtime/command path wiring so AI cards now run through 
   - RAM: `22.3%` (`73140 / 327680`)
   - Flash: `67.4%` (`883529 / 1310720`)
 
+## 2026-03-02 (RTC Contract Freeze + Snapshot Exposure + DRAM Recovery)
+
+### Session Summary
+
+Finalized RTC scheduler contract direction, expanded live snapshot exposure for portal/debug flows, and resolved ESP32 DRAM overflow caused by static JSON cache buffers.
+
+### Completed
+
+- Runtime snapshot exposure:
+  - added live per-card snapshot endpoint payloads for:
+    - `GET /api/v3/snapshot`
+    - `GET /api/snapshot` (compat alias)
+  - includes per-card runtime fields required for monitoring/debug.
+  - files:
+    - `src/portal/transport_runtime.cpp`
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+    - `src/main.cpp`
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+
+- Snapshot diagnostics detail:
+  - added per-card `setResult` and `resetResult` in snapshot payload.
+  - removed `resetOverride` from exposed snapshot path (derivable, redundant under global reset precedence rule).
+  - files:
+    - `src/runtime/runtime_snapshot_card.h`
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+    - `src/portal/portal_service.cpp`
+    - `docs/api-contract-v3.md`
+
+- RTC contract freeze (implementation-aligned):
+  - required schedule field: `minute`.
+  - optional match fields gated by explicit flags (`hasYear/hasMonth/hasDay/hasWeekday/hasHour`).
+  - no negative sentinel wildcard values.
+  - meaningful RTC runtime outputs: `logicalState` + `triggerFlag`.
+  - retrigger policy: `RESTART_WINDOW`.
+  - invalid/unavailable wall-clock time: scheduler skip (no fire).
+  - files:
+    - `src/kernel/v3_rtc_runtime.h`
+    - `src/kernel/v3_rtc_runtime.cpp`
+    - `src/kernel/kernel_service.h`
+    - `src/kernel/kernel_service.cpp`
+    - `src/kernel/v3_condition_rules.cpp`
+    - `src/kernel/v3_runtime_signals.cpp`
+    - `src/runtime/snapshot_card_builder.cpp`
+
+- Global clock/NTP config model:
+  - added system-level `clock` policy fields:
+    - `timezone`
+    - `ntp.enabled`
+    - `ntp.primaryServer/secondaryServer/tertiaryServer`
+    - `ntp.syncIntervalSec`
+    - `ntp.startupTimeoutSec`
+    - `ntp.maxStaleSec`
+  - added defaults + decode + validation.
+  - files:
+    - `src/storage/v3_config_contract.h`
+    - `src/storage/v3_config_contract.cpp`
+    - `src/storage/v3_config_decoder.cpp`
+    - `src/storage/v3_config_validator.cpp`
+
+- Platform time-read hook:
+  - added local minute stamp read API for RTC scheduler:
+    - `PlatformService::readLocalMinuteStamp(...)`
+  - files:
+    - `src/platform/platform_service.h`
+    - `src/platform/platform_service.cpp`
+
+- Documentation alignment:
+  - RTC section updated to latest contract in:
+    - `docs/schema-v3.md`
+    - `docs/user-guide-v3-draft.md`
+    - `docs/acceptance-matrix-v3.md`
+    - `docs/hil-task-list-v3.md`
+  - decision log entries added:
+    - `DEC-0049` (RTC contract freeze)
+    - `DEC-0050` (global clock/NTP model)
+    - `DEC-0051` (portal JSON buffers moved off static DRAM)
+  - file:
+    - `docs/decisions.md`
+
+- DRAM overflow mitigation:
+  - replaced static `PortalService` JSON buffers (`char[]`) with heap-backed `String`.
+  - resolved linker DRAM overflow (`dram0_0_seg`) and restored successful build.
+  - files:
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:22.510`
+  - RAM: `35.3%` (`115732 / 327680`)
+  - Flash: `69.4%` (`909057 / 1310720`)
+

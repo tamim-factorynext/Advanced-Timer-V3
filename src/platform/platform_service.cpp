@@ -3,12 +3,25 @@
 #include <Arduino.h>
 #include <esp_idf_version.h>
 #include <esp_task_wdt.h>
+#include <time.h>
 
 namespace v3::platform {
 
 void PlatformService::begin() {}
 
 uint32_t PlatformService::nowMs() const { return millis(); }
+
+bool PlatformService::readLocalMinuteStamp(LocalMinuteStamp& out) const {
+  struct tm timeinfo = {};
+  if (!getLocalTime(&timeinfo, 0)) return false;
+  out.year = static_cast<uint16_t>(timeinfo.tm_year + 1900);
+  out.month = static_cast<uint8_t>(timeinfo.tm_mon + 1);
+  out.day = static_cast<uint8_t>(timeinfo.tm_mday);
+  out.weekday = static_cast<uint8_t>(timeinfo.tm_wday);
+  out.hour = static_cast<uint8_t>(timeinfo.tm_hour);
+  out.minute = static_cast<uint8_t>(timeinfo.tm_min);
+  return true;
+}
 
 void PlatformService::configureInputPin(uint8_t pin) const { pinMode(pin, INPUT); }
 

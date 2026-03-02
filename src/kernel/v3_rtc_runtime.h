@@ -6,22 +6,27 @@
 
 struct V3RtcScheduleView {
   bool enabled;
-  int16_t year;     // -1 wildcard
-  int8_t month;     // -1 wildcard
-  int8_t day;       // -1 wildcard
-  int8_t weekday;   // -1 wildcard
-  int8_t hour;      // -1 wildcard
-  int8_t minute;    // -1 wildcard
+  bool hasYear;
+  uint16_t year;
+  bool hasMonth;
+  uint8_t month;
+  bool hasDay;
+  uint8_t day;
+  bool hasWeekday;
+  uint8_t weekday;
+  bool hasHour;
+  uint8_t hour;
+  uint8_t minute;
   uint8_t rtcCardId;
 };
 
 struct V3RtcMinuteStamp {
-  int year;
-  int month;
-  int day;
-  int weekday;
-  int hour;
-  int minute;
+  uint16_t year;
+  uint8_t month;
+  uint8_t day;
+  uint8_t weekday;
+  uint8_t hour;
+  uint8_t minute;
 };
 
 struct V3RtcRuntimeConfig {
@@ -48,4 +53,4 @@ void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
 bool v3RtcFieldMatches(int fieldValue, int scheduleValue);
 bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
                                const V3RtcMinuteStamp& stamp);
-int32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp);
+uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp);

@@ -61,9 +61,9 @@ V3RuntimeSignal makeRuntimeSignal(const RuntimeCardMeta& meta,
       const V3RtcRuntimeState& runtime = store.rtc[meta.index];
       signal.state = runtime.state;
       signal.logicalState = runtime.logicalState;
-      signal.physicalState = runtime.physicalState;
+      signal.physicalState = false;
       signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = runtime.currentValue;
+      signal.currentValue = 0;
       return signal;
     }
     default:

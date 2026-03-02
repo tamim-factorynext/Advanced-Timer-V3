@@ -75,6 +75,17 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
     return result;
   }
 
+  if (!isNonEmpty(candidate.clock.timezone) ||
+      !isNonEmpty(candidate.clock.ntp.primaryServer) ||
+      !isNonEmpty(candidate.clock.ntp.secondaryServer) ||
+      !isNonEmpty(candidate.clock.ntp.tertiaryServer) ||
+      candidate.clock.ntp.syncIntervalSec == 0 ||
+      candidate.clock.ntp.startupTimeoutSec == 0 ||
+      candidate.clock.ntp.maxStaleSec == 0) {
+    result.error.code = ConfigErrorCode::ConfigPayloadInvalidShape;
+    return result;
+  }
+
   if (isDuplicateCardId(candidate, candidate.cardCount)) {
     result.error.code = ConfigErrorCode::DuplicateCardId;
     return result;
@@ -150,7 +161,27 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       return result;
     }
 
-    if (card.rtc.hour > 23 || card.rtc.minute > 59) {
+    if (card.rtc.hasMonth && (card.rtc.month < 1 || card.rtc.month > 12)) {
+      result.error.code = ConfigErrorCode::InvalidRtcTime;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.rtc.hasDay && (card.rtc.day < 1 || card.rtc.day > 31)) {
+      result.error.code = ConfigErrorCode::InvalidRtcTime;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.rtc.hasWeekday && card.rtc.weekday > 6) {
+      result.error.code = ConfigErrorCode::InvalidRtcTime;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.rtc.hasHour && card.rtc.hour > 23) {
+      result.error.code = ConfigErrorCode::InvalidRtcTime;
+      result.error.cardIndex = i;
+      return result;
+    }
+    if (card.rtc.minute > 59) {
       result.error.code = ConfigErrorCode::InvalidRtcTime;
       result.error.cardIndex = i;
       return result;

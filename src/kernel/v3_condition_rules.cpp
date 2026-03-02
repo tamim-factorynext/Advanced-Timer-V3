@@ -15,7 +15,7 @@ bool parseV3CardTypeToken(const char* cardType, logicCardType& outType) {
 
 bool isV3FieldAllowedForSourceType(logicCardType sourceType, const char* field) {
   if (field == nullptr) return false;
-  if (std::strcmp(field, "currentValue") == 0) return true;
+  if (std::strcmp(field, "currentValue") == 0) return sourceType != RtcCard;
   if (sourceType == DigitalInput) {
     return std::strcmp(field, "logicalState") == 0 ||
            std::strcmp(field, "physicalState") == 0 ||
@@ -29,7 +29,6 @@ bool isV3FieldAllowedForSourceType(logicCardType sourceType, const char* field) 
   }
   if (sourceType == RtcCard) {
     return std::strcmp(field, "logicalState") == 0 ||
-           std::strcmp(field, "physicalState") == 0 ||
            std::strcmp(field, "triggerFlag") == 0;
   }
   if (sourceType == MathCard) {

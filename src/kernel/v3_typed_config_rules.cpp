@@ -210,7 +210,7 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "RTC weekday out of range";
         return false;
       }
-      if (card.rtc.hour > 23) {
+      if (card.rtc.hasHour && card.rtc.hour > 23) {
         reason = "RTC hour out of range";
         return false;
       }

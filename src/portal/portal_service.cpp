@@ -11,10 +11,10 @@ void PortalService::begin() {
   observedScanCount_ = 0;
   diagnosticsRevision_ = 0;
   diagnosticsReady_ = false;
-  diagnosticsJson_[0] = '\0';
+  diagnosticsJson_.remove(0);
   snapshotRevision_ = 0;
   snapshotReady_ = false;
-  snapshotJson_[0] = '\0';
+  snapshotJson_.remove(0);
   head_ = 0;
   tail_ = 0;
   depth_ = 0;
@@ -134,7 +134,7 @@ PortalDiagnosticsState PortalService::diagnosticsState() const {
   PortalDiagnosticsState state = {};
   state.ready = diagnosticsReady_;
   state.revision = diagnosticsRevision_;
-  state.json = diagnosticsJson_;
+  state.json = diagnosticsJson_.c_str();
   return state;
 }
 
@@ -142,7 +142,7 @@ PortalSnapshotState PortalService::snapshotState() const {
   PortalSnapshotState state = {};
   state.ready = snapshotReady_;
   state.revision = snapshotRevision_;
-  state.json = snapshotJson_;
+  state.json = snapshotJson_.c_str();
   return state;
 }
 
@@ -253,7 +253,8 @@ void PortalService::rebuildDiagnosticsJson(
   commandIngress["queueAcceptedCount"] = ingress_.queueAcceptedCount;
   commandIngress["queueRejectedCount"] = ingress_.queueRejectedCount;
 
-  serializeJson(doc, diagnosticsJson_, sizeof(diagnosticsJson_));
+  diagnosticsJson_.remove(0);
+  serializeJson(doc, diagnosticsJson_);
   diagnosticsRevision_ += 1;
   diagnosticsReady_ = true;
 }
@@ -306,7 +307,8 @@ void PortalService::rebuildSnapshotJson(
     }
   }
 
-  serializeJson(doc, snapshotJson_, sizeof(snapshotJson_));
+  snapshotJson_.remove(0);
+  serializeJson(doc, snapshotJson_);
   snapshotRevision_ += 1;
   snapshotReady_ = true;
 }

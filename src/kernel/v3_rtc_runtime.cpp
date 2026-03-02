@@ -4,42 +4,42 @@ void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
                   const V3RtcStepInput& in) {
   runtime.mode = Mode_None;
   runtime.state = State_None;
-  runtime.physicalState = runtime.logicalState;
+  runtime.physicalState = false;
+  runtime.currentValue = 0;
+  runtime.triggerFlag = false;
 
   if (!runtime.logicalState) {
-    runtime.triggerFlag = false;
-    runtime.currentValue = 0;
     return;
   }
 
   if (cfg.triggerDurationMs > 0 &&
       (in.nowMs - runtime.triggerStartMs) >= cfg.triggerDurationMs) {
     runtime.logicalState = false;
-    runtime.physicalState = false;
-    runtime.triggerFlag = false;
-    runtime.currentValue = 0;
     return;
   }
 }
 
 bool v3RtcFieldMatches(int fieldValue, int scheduleValue) {
-  return scheduleValue < 0 || fieldValue == scheduleValue;
+  return fieldValue == scheduleValue;
 }
 
 bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
                                const V3RtcMinuteStamp& stamp) {
   if (!channel.enabled) return false;
-  return v3RtcFieldMatches(stamp.year, channel.year) &&
-         v3RtcFieldMatches(stamp.month, channel.month) &&
-         v3RtcFieldMatches(stamp.day, channel.day) &&
-         v3RtcFieldMatches(stamp.weekday, channel.weekday) &&
-         v3RtcFieldMatches(stamp.hour, channel.hour) &&
-         v3RtcFieldMatches(stamp.minute, channel.minute);
+  if (stamp.minute != channel.minute) return false;
+  if (channel.hasHour && stamp.hour != channel.hour) return false;
+  if (channel.hasWeekday && stamp.weekday != channel.weekday) return false;
+  if (channel.hasDay && stamp.day != channel.day) return false;
+  if (channel.hasMonth && stamp.month != channel.month) return false;
+  if (channel.hasYear && stamp.year != channel.year) return false;
+  return true;
 }
 
-int32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp) {
-  return (((stamp.year * 100 + stamp.month) * 100 + stamp.day) * 100 +
+uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp) {
+  return ((((static_cast<uint32_t>(stamp.year) * 13U) + stamp.month) * 32U +
+           stamp.day) *
+              24U +
           stamp.hour) *
-             100 +
+             60U +
          stamp.minute;
 }

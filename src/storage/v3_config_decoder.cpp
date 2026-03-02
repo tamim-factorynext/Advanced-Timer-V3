@@ -195,6 +195,55 @@ bool parseWiFiConfig(JsonObjectConst systemObj, WiFiConfig& outWiFi) {
   return true;
 }
 
+bool parseOptionalStringField(JsonObjectConst obj, const char* key, char* out,
+                              size_t outSize) {
+  if (!obj[key].is<const char*>()) return false;
+  const char* value = obj[key].as<const char*>();
+  if (value == nullptr) return false;
+  const size_t len = strlen(value);
+  if (len >= outSize) return false;
+  memcpy(out, value, len);
+  out[len] = '\0';
+  return true;
+}
+
+bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
+  JsonObjectConst clockObj = systemObj["clock"].as<JsonObjectConst>();
+  if (clockObj.isNull()) {
+    return true;
+  }
+
+  if (!parseOptionalStringField(clockObj, "timezone", outClock.timezone,
+                                sizeof(outClock.timezone))) {
+    return false;
+  }
+
+  JsonObjectConst ntpObj = clockObj["ntp"].as<JsonObjectConst>();
+  if (ntpObj.isNull()) return false;
+  if (!ntpObj["enabled"].is<bool>() || !ntpObj["syncIntervalSec"].is<uint32_t>() ||
+      !ntpObj["startupTimeoutSec"].is<uint32_t>() ||
+      !ntpObj["maxStaleSec"].is<uint32_t>()) {
+    return false;
+  }
+
+  if (!parseOptionalStringField(ntpObj, "primaryServer", outClock.ntp.primaryServer,
+                                sizeof(outClock.ntp.primaryServer)) ||
+      !parseOptionalStringField(ntpObj, "secondaryServer",
+                                outClock.ntp.secondaryServer,
+                                sizeof(outClock.ntp.secondaryServer)) ||
+      !parseOptionalStringField(ntpObj, "tertiaryServer",
+                                outClock.ntp.tertiaryServer,
+                                sizeof(outClock.ntp.tertiaryServer))) {
+    return false;
+  }
+
+  outClock.ntp.enabled = ntpObj["enabled"].as<bool>();
+  outClock.ntp.syncIntervalSec = ntpObj["syncIntervalSec"].as<uint32_t>();
+  outClock.ntp.startupTimeoutSec = ntpObj["startupTimeoutSec"].as<uint32_t>();
+  outClock.ntp.maxStaleSec = ntpObj["maxStaleSec"].as<uint32_t>();
+  return true;
+}
+
 bool parseFamily(const char* family, CardFamily& outFamily) {
   if (family == nullptr) return false;
   if (strcmp(family, "DI") == 0) {
@@ -415,14 +464,44 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       }
       return true;
     case CardFamily::RTC:
-      if (!params["hour"].is<uint8_t>() || !params["minute"].is<uint8_t>() ||
-          !params["durationSeconds"].is<uint16_t>()) {
+      if (!params["minute"].is<uint8_t>()) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
-      outCard.rtc.hour = params["hour"].as<uint8_t>();
+      outCard.rtc.hasYear = params["hasYear"] | false;
+      outCard.rtc.hasMonth = params["hasMonth"] | false;
+      outCard.rtc.hasDay = params["hasDay"] | false;
+      outCard.rtc.hasWeekday = params["hasWeekday"] | false;
+      outCard.rtc.hasHour = params["hasHour"] | false;
+
+      if (outCard.rtc.hasYear && !params["year"].is<uint16_t>()) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+      if (outCard.rtc.hasMonth && !params["month"].is<uint8_t>()) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+      if (outCard.rtc.hasDay && !params["day"].is<uint8_t>()) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+      if (outCard.rtc.hasWeekday && !params["weekday"].is<uint8_t>()) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+      if (outCard.rtc.hasHour && !params["hour"].is<uint8_t>()) {
+        outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+        return false;
+      }
+
+      outCard.rtc.year = params["year"] | 0U;
+      outCard.rtc.month = params["month"] | 0U;
+      outCard.rtc.day = params["day"] | 0U;
+      outCard.rtc.weekday = params["weekday"] | 0U;
+      outCard.rtc.hour = params["hour"] | 0U;
       outCard.rtc.minute = params["minute"].as<uint8_t>();
-      outCard.rtc.durationSeconds = params["durationSeconds"].as<uint16_t>();
+      outCard.rtc.triggerDurationMs = params["triggerDurationMs"] | 0U;
       return true;
     default:
       outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
@@ -451,6 +530,10 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
   result.decoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
   result.decoded.scanIntervalMs = systemObj["scanIntervalMs"].as<uint32_t>();
   if (!parseWiFiConfig(systemObj, result.decoded.wifi)) {
+    result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return result;
+  }
+  if (!parseClockConfig(systemObj, result.decoded.clock)) {
     result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return result;
   }

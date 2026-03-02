@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <WString.h>
 
 #include "control/control_service.h"
 #include "control/command_dto.h"
@@ -90,10 +91,10 @@ class PortalService {
   uint32_t observedScanCount_ = 0;
   uint32_t diagnosticsRevision_ = 0;
   bool diagnosticsReady_ = false;
-  char diagnosticsJson_[1024] = {};
+  String diagnosticsJson_;
   uint32_t snapshotRevision_ = 0;
   bool snapshotReady_ = false;
-  char snapshotJson_[12288] = {};
+  String snapshotJson_;
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};
   uint16_t head_ = 0;

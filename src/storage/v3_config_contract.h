@@ -10,6 +10,8 @@ constexpr uint32_t kMaxScanIntervalMs = 1000;
 constexpr uint8_t kMaxCards = 64;
 constexpr uint8_t kMaxWiFiSsidLen = 32;
 constexpr uint8_t kMaxWiFiPasswordLen = 64;
+constexpr uint8_t kMaxNtpServerLen = 63;
+constexpr uint8_t kMaxTimezoneLen = 47;
 
 enum class CardFamily : uint8_t { DI, DO, AI, SIO, MATH, RTC };
 
@@ -103,9 +105,33 @@ struct MathParams {
 };
 
 struct RtcParams {
+  bool hasYear;
+  uint16_t year;
+  bool hasMonth;
+  uint8_t month;
+  bool hasDay;
+  uint8_t day;
+  bool hasWeekday;
+  uint8_t weekday;
+  bool hasHour;
   uint8_t hour;
   uint8_t minute;
-  uint16_t durationSeconds;
+  uint32_t triggerDurationMs;
+};
+
+struct NtpConfig {
+  bool enabled;
+  char primaryServer[kMaxNtpServerLen + 1];
+  char secondaryServer[kMaxNtpServerLen + 1];
+  char tertiaryServer[kMaxNtpServerLen + 1];
+  uint32_t syncIntervalSec;
+  uint32_t startupTimeoutSec;
+  uint32_t maxStaleSec;
+};
+
+struct ClockConfig {
+  char timezone[kMaxTimezoneLen + 1];
+  NtpConfig ntp;
 };
 
 struct WiFiCredential {
@@ -138,6 +164,7 @@ struct SystemConfig {
   uint32_t schemaVersion;
   uint32_t scanIntervalMs;
   WiFiConfig wifi;
+  ClockConfig clock;
   uint8_t cardCount;
   CardConfig cards[kMaxCards];
 };

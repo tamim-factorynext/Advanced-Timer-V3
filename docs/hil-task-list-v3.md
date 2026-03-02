@@ -90,12 +90,14 @@ Status: Active checklist for hardware-in-the-loop execution tasks.
 - Status: `TODO`
 - Goal: verify RTC schedule/alarm/channel behavior on device clock.
 - Steps:
-  - set RTC to controlled reference time.
-  - run schedule scenarios across minute/hour/day boundaries.
-  - verify activation duration and channel association behavior.
+  - run schedule scenarios with `minute` required and optional `hasX` flags (`hasHour/hasWeekday/hasDay/hasMonth/hasYear`).
+  - verify card does not fire while wall-clock validity is false.
+  - verify `triggerFlag` pulses for one scan at schedule match.
+  - verify `logicalState` holds for `triggerDurationMs` then deasserts.
+  - verify retrigger policy `RESTART_WINDOW` when a new qualified minute match occurs during active window.
 - Evidence required:
   - RTC timeline log with trigger timestamps.
-  - pass/fail note for boundary-time scenarios.
+  - pass/fail note for minute match, invalid-time skip, and restart-window behavior.
 
 ## HIL-008: Portal Live Monitoring Verification
 - Status: `TODO`

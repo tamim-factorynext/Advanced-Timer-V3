@@ -111,6 +111,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.rtc.hasMonth = rtcMonth >= 0;
       out.rtc.hasDay = rtcDay >= 0;
       out.rtc.hasWeekday = rtcWeekday >= 0;
+      out.rtc.hasHour = rtcHour >= 0;
       out.rtc.year = (rtcYear >= 0) ? static_cast<uint16_t>(rtcYear) : 0U;
       out.rtc.month = (rtcMonth >= 0) ? static_cast<uint8_t>(rtcMonth) : 0U;
       out.rtc.day = (rtcDay >= 0) ? static_cast<uint8_t>(rtcDay) : 0U;

@@ -134,6 +134,7 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
   bindDoSlotsFromConfig();
   bindSioSlotsFromConfig();
   bindMathSlotsFromConfig();
+  bindRtcSlotsFromConfig();
   nextScanDueMs_ = 0;
   stepPending_ = false;
 }
@@ -154,6 +155,7 @@ void KernelService::tick(uint32_t nowMs) {
   runDoScan(nowMs);
   runSioScan(nowMs);
   runMathScan();
+  runRtcScan(nowMs);
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
 }
@@ -292,7 +294,16 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
       }
       case v3::storage::CardFamily::RTC: {
         out.index = familyLocalIndex(config_.system, i, card.family);
-        out.state = State_None;
+        for (uint8_t s = 0; s < rtcSlotCount_; ++s) {
+          const RtcSlot& slot = rtcSlots_[s];
+          if (!slot.active || slot.cardId != card.id) continue;
+          out.logicalState = slot.state.logicalState;
+          out.triggerFlag = slot.state.triggerFlag;
+          out.state = slot.state.state;
+          out.mode = slot.state.mode;
+          out.startOnMs = slot.state.triggerStartMs;
+          break;
+        }
         break;
       }
       default:
@@ -503,6 +514,42 @@ void KernelService::bindMathSlotsFromConfig() {
   }
 }
 
+void KernelService::bindRtcSlotsFromConfig() {
+  rtcSlotCount_ = 0;
+  for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
+    rtcSlots_[i] = {};
+  }
+
+  for (uint8_t i = 0; i < config_.system.cardCount; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (card.family != v3::storage::CardFamily::RTC || !card.enabled) continue;
+    if (rtcSlotCount_ >= v3::storage::kMaxCards) break;
+
+    RtcSlot& slot = rtcSlots_[rtcSlotCount_++];
+    slot.active = true;
+    slot.cardId = card.id;
+    slot.schedule.enabled = true;
+    slot.schedule.hasYear = card.rtc.hasYear;
+    slot.schedule.year = card.rtc.year;
+    slot.schedule.hasMonth = card.rtc.hasMonth;
+    slot.schedule.month = card.rtc.month;
+    slot.schedule.hasDay = card.rtc.hasDay;
+    slot.schedule.day = card.rtc.day;
+    slot.schedule.hasWeekday = card.rtc.hasWeekday;
+    slot.schedule.weekday = card.rtc.weekday;
+    slot.schedule.hasHour = card.rtc.hasHour;
+    slot.schedule.hour = card.rtc.hour;
+    slot.schedule.minute = card.rtc.minute;
+    slot.schedule.rtcCardId = card.id;
+    slot.cfg.triggerDurationMs = card.rtc.triggerDurationMs;
+    slot.state = {};
+    slot.state.mode = Mode_None;
+    slot.state.state = State_None;
+    slot.lastMinuteKeyValid = false;
+    slot.lastMinuteKey = 0;
+  }
+}
+
 void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
                                         uint8_t signalCount) const {
   if (signals == nullptr) return;
@@ -560,6 +607,17 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     signal.physicalState = false;
     signal.triggerFlag = slot.state.triggerFlag;
     signal.currentValue = slot.state.currentValue;
+  }
+  for (uint8_t i = 0; i < rtcSlotCount_; ++i) {
+    const RtcSlot& slot = rtcSlots_[i];
+    if (!slot.active || slot.cardId >= signalCount) continue;
+    V3RuntimeSignal& signal = signals[slot.cardId];
+    signal.type = RtcCard;
+    signal.state = slot.state.state;
+    signal.logicalState = slot.state.logicalState;
+    signal.physicalState = false;
+    signal.triggerFlag = slot.state.triggerFlag;
+    signal.currentValue = 0;
   }
 }
 
@@ -705,6 +763,42 @@ void KernelService::runMathScan() {
     runV3MathStep(slot.cfg, slot.state, in, out);
     slot.lastSetResult = out.setResult;
     slot.lastResetResult = out.resetResult;
+  }
+}
+
+void KernelService::runRtcScan(uint32_t nowMs) {
+  v3::platform::LocalMinuteStamp stamp = {};
+  const bool hasValidTime =
+      (platform_ != nullptr) && platform_->readLocalMinuteStamp(stamp);
+
+  for (uint8_t i = 0; i < rtcSlotCount_; ++i) {
+    RtcSlot& slot = rtcSlots_[i];
+    if (!slot.active) continue;
+
+    V3RtcStepInput in = {};
+    in.nowMs = nowMs;
+    runV3RtcStep(slot.cfg, slot.state, in);
+
+    if (!hasValidTime) continue;
+
+    V3RtcMinuteStamp rtcStamp = {};
+    rtcStamp.year = stamp.year;
+    rtcStamp.month = stamp.month;
+    rtcStamp.day = stamp.day;
+    rtcStamp.weekday = stamp.weekday;
+    rtcStamp.hour = stamp.hour;
+    rtcStamp.minute = stamp.minute;
+
+    if (!v3RtcChannelMatchesMinute(slot.schedule, rtcStamp)) continue;
+
+    const uint32_t minuteKey = v3RtcMinuteKey(rtcStamp);
+    if (slot.lastMinuteKeyValid && minuteKey == slot.lastMinuteKey) continue;
+
+    slot.state.logicalState = true;
+    slot.state.triggerFlag = true;
+    slot.state.triggerStartMs = nowMs;
+    slot.lastMinuteKey = minuteKey;
+    slot.lastMinuteKeyValid = true;
   }
 }
 

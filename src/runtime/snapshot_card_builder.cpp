@@ -75,11 +75,9 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
       const V3RtcRuntimeState* runtime = runtimeRtcStateAt(meta.index, store);
       if (runtime != nullptr) {
         out.logicalState = runtime->logicalState;
-        out.physicalState = runtime->physicalState;
         out.triggerFlag = runtime->triggerFlag;
         out.state = runtime->state;
         out.mode = runtime->mode;
-        out.currentValue = runtime->currentValue;
         out.startOnMs = runtime->triggerStartMs;
       }
       break;

@@ -9,8 +9,8 @@ Audience: Operators, technicians, and engineers using the completed V3 product.
 This guide is written around real runtime behavior:
 
 - shared runtime concepts first,
-- then card-by-card behavior (`DI`, `AI`, `DO`, `SIO`),
-- then device networking behavior (`WiFi`).
+- then card-by-card behavior (`DI`, `AI`, `DO`, `SIO`, `MATH`, `RTC`),
+- then device networking/time behavior (`WiFi`, `Clock/NTP`).
 
 ## 2. Shared Runtime Concepts
 
@@ -318,3 +318,78 @@ Not finalized yet:
 - final on-device IP display flow.
 
 Planned direction is to use onboard display + buttons for live status and network info pages.
+
+## 9. RTC Card (Scheduler)
+
+## 9.1 RTC Purpose
+
+RTC is a time scheduler card.  
+It does not represent hardware I/O and does not use set/reset condition blocks.
+
+## 9.2 RTC Outputs
+
+RTC exposes:
+
+- `logicalState`
+- `triggerFlag`
+
+RTC does not expose meaningful:
+
+- `physicalState`
+- `currentValue`
+
+## 9.3 RTC Schedule Fields
+
+Required:
+
+- `minute` (`0..59`)
+
+Optional match groups (enabled by explicit flags):
+
+- `hasHour` + `hour` (`0..23`)
+- `hasWeekday` + `weekday` (`0..6`)
+- `hasDay` + `day` (`1..31`)
+- `hasMonth` + `month` (`1..12`)
+- `hasYear` + `year`
+
+Wildcard behavior:
+
+- if `hasX=false`, that field is ignored for matching.
+- no negative sentinel values are used.
+
+## 9.4 RTC Trigger Behavior
+
+- When schedule match occurs, `triggerFlag` pulses high for one scan.
+- At the same moment, `logicalState` becomes true.
+- `triggerDurationMs` controls how long `logicalState` stays true.
+- After duration expires, `logicalState` returns false.
+
+Retrigger policy:
+
+- `RESTART_WINDOW`: if a new qualified match occurs while already active, active window restarts from the new match time.
+
+## 9.5 Invalid Time Behavior
+
+- If device time is not valid, RTC scheduler does not fire.
+- Existing active duration handling remains runtime-local once started.
+
+## 9.6 Disable RTC Card
+
+RTC firing is gated by base card enable:
+
+- `enabled=false` means scheduler never fires.
+
+## 10. Clock/NTP Settings (Draft)
+
+Clock settings are system/global, not per-card.
+
+Planned settings model:
+
+- `timezone` (for local schedule interpretation)
+- `ntp.enabled`
+- `ntp.primaryServer`, `ntp.secondaryServer`, `ntp.tertiaryServer`
+- `ntp.syncIntervalSec`
+- `ntp.startupTimeoutSec`
+- `ntp.maxStaleSec`
+
+These settings are intended to be editable from portal Settings page.
