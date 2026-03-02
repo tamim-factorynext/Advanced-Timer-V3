@@ -90,11 +90,19 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       return true;
     }
     case MathCard: {
+      out.math.operation = 0U;
       out.math.fallbackValue = legacyMathFallbackValue(legacy);
       out.math.inputA = legacyMathInputA(legacy);
       out.math.inputB = legacyMathInputB(legacy);
-      out.math.clampMin = legacyMathClampMin(legacy);
-      out.math.clampMax = legacyMathClampMax(legacy);
+      out.math.inputMin = legacyMathClampMin(legacy);
+      out.math.inputMax = legacyMathClampMax(legacy);
+      if (out.math.inputMin >= out.math.inputMax) {
+        out.math.inputMin = 0U;
+        out.math.inputMax = 10000U;
+      }
+      out.math.outputMin = out.math.inputMin;
+      out.math.outputMax = out.math.inputMax;
+      out.math.emaAlphaX100 = 100U;
       copyCondition(legacy, out.math.set, out.math.reset);
       return true;
     }
@@ -202,8 +210,8 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       setLegacyMathFallbackValue(out, v3.math.fallbackValue);
       setLegacyMathInputA(out, v3.math.inputA);
       setLegacyMathInputB(out, v3.math.inputB);
-      setLegacyMathClampMin(out, v3.math.clampMin);
-      setLegacyMathClampMax(out, v3.math.clampMax);
+      setLegacyMathClampMin(out, v3.math.inputMin);
+      setLegacyMathClampMax(out, v3.math.inputMax);
       out.mode = Mode_None;
       out.setA_ID = v3.math.set.clauseAId;
       out.setA_Operator = v3.math.set.clauseAOperator;

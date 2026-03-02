@@ -32,6 +32,9 @@ bool isV3FieldAllowedForSourceType(logicCardType sourceType, const char* field) 
            std::strcmp(field, "physicalState") == 0 ||
            std::strcmp(field, "triggerFlag") == 0;
   }
+  if (sourceType == MathCard) {
+    return std::strcmp(field, "triggerFlag") == 0;
+  }
   return false;
 }
 
@@ -52,4 +55,3 @@ bool isV3OperatorAllowedForField(const char* field, const char* op) {
   }
   return false;
 }
-

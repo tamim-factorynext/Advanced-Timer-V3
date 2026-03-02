@@ -127,12 +127,19 @@ void applySioRuntimeState(LogicCard& card, const V3SioRuntimeState& runtime) {
 
 V3MathRuntimeConfig makeMathRuntimeConfig(const LogicCard& card) {
   V3MathRuntimeConfig cfg = {};
+  cfg.operation = 0U;
   cfg.inputA = legacyMathInputA(card);
   cfg.inputB = legacyMathInputB(card);
+  cfg.inputMin = legacyMathClampMin(card);
+  cfg.inputMax = legacyMathClampMax(card);
+  if (cfg.inputMin >= cfg.inputMax) {
+    cfg.inputMin = 0U;
+    cfg.inputMax = 10000U;
+  }
+  cfg.outputMin = cfg.inputMin;
+  cfg.outputMax = cfg.inputMax;
+  cfg.emaAlphaX100 = 100U;
   cfg.fallbackValue = legacyMathFallbackValue(card);
-  cfg.clampMin = legacyMathClampMin(card);
-  cfg.clampMax = legacyMathClampMax(card);
-  cfg.clampEnabled = (cfg.clampMax >= cfg.clampMin);
   return cfg;
 }
 

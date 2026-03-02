@@ -35,6 +35,15 @@ bool mapV3ModeToLegacy(logicCardType type, const char* mode, cardMode& outMode) 
   return (outMode = Mode_None), true;
 }
 
+bool parseMathOperator(const char* op, uint8_t& outOp) {
+  if (op == nullptr) return false;
+  if (std::strcmp(op, "ADD") == 0) return (outOp = 0U), true;
+  if (std::strcmp(op, "SUB_SAT") == 0) return (outOp = 1U), true;
+  if (std::strcmp(op, "MUL") == 0) return (outOp = 2U), true;
+  if (std::strcmp(op, "DIV_SAFE") == 0) return (outOp = 3U), true;
+  return false;
+}
+
 bool parseThresholdAsUInt(JsonVariantConst threshold, uint32_t& out) {
   if (threshold.is<uint64_t>()) {
     uint64_t v = threshold.as<uint64_t>();
@@ -371,14 +380,46 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   }
 
   if (expectedType == MathCard) {
+    out.math.set.clauseAId = cardId;
+    out.math.set.clauseAOperator = Op_AlwaysFalse;
+    out.math.set.clauseAThreshold = 0U;
+    out.math.set.clauseBId = cardId;
+    out.math.set.clauseBOperator = Op_AlwaysFalse;
+    out.math.set.clauseBThreshold = 0U;
+    out.math.set.combiner = Combine_None;
+    out.math.reset.clauseAId = cardId;
+    out.math.reset.clauseAOperator = Op_AlwaysFalse;
+    out.math.reset.clauseAThreshold = 0U;
+    out.math.reset.clauseBId = cardId;
+    out.math.reset.clauseBOperator = Op_AlwaysFalse;
+    out.math.reset.clauseBThreshold = 0U;
+    out.math.reset.combiner = Combine_None;
+
+    out.math.operation = 0U;
     out.math.fallbackValue = cfg["fallbackValue"] | 0U;
     JsonObjectConst standard = cfg["standard"].as<JsonObjectConst>();
     JsonObjectConst inputA = standard["inputA"].as<JsonObjectConst>();
     JsonObjectConst inputB = standard["inputB"].as<JsonObjectConst>();
+    const char* op = standard["operator"] | "ADD";
+    if (!parseMathOperator(op, out.math.operation)) {
+      reason = "invalid MATH operator";
+      return false;
+    }
     out.math.inputA = inputA["value"] | 0U;
     out.math.inputB = inputB["value"] | 0U;
-    out.math.clampMin = standard["clampMin"] | 0U;
-    out.math.clampMax = standard["clampMax"] | 0U;
+    out.math.inputMin = standard["inputMin"] | 0U;
+    out.math.inputMax = standard["inputMax"] | 10000U;
+    out.math.outputMin = standard["outputMin"] | 0U;
+    out.math.outputMax = standard["outputMax"] | 10000U;
+    out.math.emaAlphaX100 = standard["emaAlphaX100"] | 100U;
+    if (out.math.emaAlphaX100 > 100U) {
+      reason = "MATH emaAlpha out of range";
+      return false;
+    }
+    if (out.math.inputMin >= out.math.inputMax) {
+      reason = "MATH input range invalid";
+      return false;
+    }
     if (cfg["set"].is<JsonObjectConst>()) {
       if (!mapV3ConditionBlock(
               cfg["set"].as<JsonObjectConst>(), totalCards, out.math.set.clauseAId,

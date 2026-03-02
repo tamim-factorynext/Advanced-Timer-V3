@@ -77,7 +77,7 @@ Implement typed config/runtime handling for all families:
 - `AI`: pipeline `raw -> clamp -> map/scale -> EMA`, quality flags, forced value validation.
 - `DO`: mission-based behavior, set/reset precedence, mask semantics, repeat logic, retrigger rules.
 - `SIO`: DO-like mission semantics without physical GPIO drive; mask unsupported.
-- `MATH`: standard operators + PID mode, fallback/fault behavior, stage ordering.
+- `MATH`: standard arithmetic pipeline (`ADD|SUB_SAT|MUL|DIV_SAFE`), input clamp -> scaling (inverse allowed) -> EMA, fallback/hold behavior.
 - `RTC`: minute-level schedule matching, duration windows, no second/millisecond schedule precision.
 
 ### Set/reset shared contract

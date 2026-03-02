@@ -82,6 +82,7 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
   bindDiSlotsFromConfig();
   bindDoSlotsFromConfig();
   bindSioSlotsFromConfig();
+  bindMathSlotsFromConfig();
   nextScanDueMs_ = 0;
   stepPending_ = false;
 }
@@ -101,6 +102,7 @@ void KernelService::tick(uint32_t nowMs) {
   runDiScan(nowMs);
   runDoScan(nowMs);
   runSioScan(nowMs);
+  runMathScan();
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
 }
@@ -291,6 +293,42 @@ void KernelService::bindSioSlotsFromConfig() {
   }
 }
 
+void KernelService::bindMathSlotsFromConfig() {
+  mathSlotCount_ = 0;
+  for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
+    mathSlots_[i] = {};
+  }
+
+  for (uint8_t i = 0; i < config_.system.cardCount; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (card.family != v3::storage::CardFamily::MATH || !card.enabled) continue;
+    if (mathSlotCount_ >= v3::storage::kMaxCards) break;
+
+    MathSlot& slot = mathSlots_[mathSlotCount_++];
+    slot.active = true;
+    slot.cardId = card.id;
+    slot.setCondition = card.math.setCondition;
+    slot.resetCondition = card.math.resetCondition;
+
+    slot.cfg.operation = card.math.operation;
+    slot.cfg.inputA = card.math.inputA;
+    slot.cfg.inputB = card.math.inputB;
+    slot.cfg.inputMin = card.math.inputMin;
+    slot.cfg.inputMax = card.math.inputMax;
+    slot.cfg.outputMin = card.math.outputMin;
+    slot.cfg.outputMax = card.math.outputMax;
+    slot.cfg.emaAlphaX100 = card.math.emaAlphaX100;
+    slot.cfg.fallbackValue = card.math.fallbackValue;
+
+    slot.state = {};
+    slot.state.currentValue = slot.cfg.fallbackValue;
+    slot.state.state = State_None;
+    slot.state.logicalState = false;
+    slot.state.physicalState = false;
+    slot.state.triggerFlag = false;
+  }
+}
+
 void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
                                         uint8_t signalCount) const {
   if (signals == nullptr) return;
@@ -335,6 +373,17 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     signal.state = slot.state.state;
     signal.logicalState = slot.state.logicalState;
     signal.physicalState = slot.state.physicalState;
+    signal.triggerFlag = slot.state.triggerFlag;
+    signal.currentValue = slot.state.currentValue;
+  }
+  for (uint8_t i = 0; i < mathSlotCount_; ++i) {
+    const MathSlot& slot = mathSlots_[i];
+    if (!slot.active || slot.cardId >= signalCount) continue;
+    V3RuntimeSignal& signal = signals[slot.cardId];
+    signal.type = MathCard;
+    signal.state = slot.state.state;
+    signal.logicalState = false;
+    signal.physicalState = false;
     signal.triggerFlag = slot.state.triggerFlag;
     signal.currentValue = slot.state.currentValue;
   }
@@ -454,6 +503,27 @@ void KernelService::runSioScan(uint32_t nowMs) {
   }
 
   metrics_.sioActiveCount = activeCount;
+}
+
+void KernelService::runMathScan() {
+  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
+
+  for (uint8_t i = 0; i < mathSlotCount_; ++i) {
+    MathSlot& slot = mathSlots_[i];
+    if (!slot.active) continue;
+
+    memset(signals, 0, sizeof(signals));
+    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+
+    V3MathStepInput in = {};
+    in.setCondition =
+        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
+    in.resetCondition =
+        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+
+    V3MathStepOutput out = {};
+    runV3MathStep(slot.cfg, slot.state, in, out);
+  }
 }
 
 bool KernelService::evalConditionBlock(const v3::storage::ConditionBlock& block,

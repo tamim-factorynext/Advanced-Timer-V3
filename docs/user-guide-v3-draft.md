@@ -222,27 +222,95 @@ Difference from DO:
 
 - SIO does not issue physical GPIO/relay writes.
 
-## 7. WiFi Behavior (Draft)
+## 7. MATH Card (Draft Behavior)
 
-## 7.1 WiFi Roles
+## 7.1 MATH Purpose
+
+MATH computes a numeric value from configured inputs and publishes that value for use by other cards.
+
+MATH is treated as a value-processing card, not an I/O mission card.
+
+## 7.2 What MATH Exposes
+
+MATH exposes:
+
+- `currentValue` only (in centiunits).
+- optional `triggerFlag` pulse when output value changes in a scan.
+
+MATH does not expose or use:
+
+- `physicalState`
+- `logicalState`
+- mission timer phases
+- integrated timing counters like DO/SIO
+
+## 7.3 Units and Display
+
+- Internal storage and runtime use integer centiunits.
+- Portal should display values as two decimal places (`centi / 100.00`).
+- Config/API payloads should carry raw integer centiunits, not float text.
+
+## 7.4 Proposed Control Behavior
+
+- `reset=true`:
+  - force output to `fallbackValue`.
+- `set=false` and `reset=false`:
+  - hold last output (`currentValue` unchanged).
+- `set=true` and `reset=false`:
+  - run compute pipeline and update output.
+
+## 7.5 Proposed Compute Pipeline
+
+1. Compute base result from selected operation.
+2. Clamp base result to input range:
+   - if below `inputMin`, use `inputMin`
+   - if above `inputMax`, use `inputMax`
+3. Apply range scaling from input range to output range.
+4. Apply EMA using `emaAlphaX100` (`0..100`).
+5. Publish final `currentValue` in centiunits.
+
+Operator enum mapping used by backend/config:
+
+- `0 = ADD`
+- `1 = SUB_SAT`
+- `2 = MUL`
+- `3 = DIV_SAFE`
+
+## 7.6 Scaling Direction
+
+- Inverse scaling is allowed.
+- Example: `inputMin < inputMax` and `outputMin > outputMax` maps higher input to lower output.
+- This is valid and intentional.
+
+## 7.7 Proposed Safety Rules
+
+- No negative values anywhere.
+- All MATH fields are unsigned.
+- Division-by-zero path should return `fallbackValue`.
+- Arithmetic should saturate safely before clamp if intermediate overflow risk appears.
+- `triggerFlag` should pulse for one scan when output value changes.
+
+## 8. WiFi Behavior (Draft)
+
+## 8.1 WiFi Roles
 
 - `Master SSID`: setup/recovery path.
 - `User SSID`: normal operation path.
 
-## 7.2 Connection Strategy
+## 8.2 Connection Strategy
 
 1. Device tries user-configured SSID first.
 2. If unavailable/misconfigured, user can invoke recovery flow.
 3. Recovery uses master SSID path to access portal and fix settings.
 
-## 7.3 Intended Recovery Flow
+## 8.3 Intended Recovery Flow
 
 - user starts hotspot/access path with master credentials,
 - user restarts device or triggers recovery action,
 - device connects through master path,
 - user opens portal and updates user SSID settings.
 
-## 7.4 Pending Finalization
+## 8.4 Pending Finalization
 
 Not finalized yet:
 

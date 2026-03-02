@@ -6,6 +6,7 @@
 #include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_do_runtime.h"
+#include "kernel/v3_math_runtime.h"
 #include "kernel/v3_runtime_signals.h"
 #include "kernel/v3_sio_runtime.h"
 #include "platform/platform_service.h"
@@ -93,14 +94,25 @@ class KernelService {
     V3SioRuntimeState state;
   };
 
+  struct MathSlot {
+    bool active;
+    uint8_t cardId;
+    v3::storage::ConditionBlock setCondition;
+    v3::storage::ConditionBlock resetCondition;
+    V3MathRuntimeConfig cfg;
+    V3MathRuntimeState state;
+  };
+
   void bindDiSlotsFromConfig();
   void bindAiSlotsFromConfig();
   void bindDoSlotsFromConfig();
   void bindSioSlotsFromConfig();
+  void bindMathSlotsFromConfig();
   void runAiScan();
   void runDiScan(uint32_t nowMs);
   void runDoScan(uint32_t nowMs);
   void runSioScan(uint32_t nowMs);
+  void runMathScan();
   void buildSignalSnapshot(V3RuntimeSignal* signals, uint8_t signalCount) const;
   bool evalConditionBlock(const v3::storage::ConditionBlock& block,
                           const V3RuntimeSignal* signals,
@@ -119,6 +131,8 @@ class KernelService {
   uint8_t doSlotCount_ = 0;
   SioSlot sioSlots_[v3::storage::kMaxCards] = {};
   uint8_t sioSlotCount_ = 0;
+  MathSlot mathSlots_[v3::storage::kMaxCards] = {};
+  uint8_t mathSlotCount_ = 0;
   uint32_t nextScanDueMs_ = 0;
   bool stepPending_ = false;
   v3::platform::PlatformService* platform_ = nullptr;

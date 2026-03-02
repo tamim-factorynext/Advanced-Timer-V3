@@ -72,14 +72,19 @@ Status: Active checklist for hardware-in-the-loop execution tasks.
 
 ## HIL-006: MATH Card Contract Verification
 - Status: `TODO`
-- Goal: verify threshold/clamp and condition-combiner logic for MATH cards.
+- Goal: verify MATH standard pipeline behavior (`compute -> input clamp -> scale -> ema`) and set/reset control semantics.
 - Steps:
-  - inject deterministic source values around threshold boundaries.
-  - verify clause A/B evaluation and combiner (`NONE/AND/OR`) outcomes.
-  - verify clamp enforcement and output stability at edges.
+  - load MATH configs for each supported operator (`ADD`, `SUB_SAT`, `MUL`, `DIV_SAFE`).
+  - verify `reset=true` forces `fallbackValue`.
+  - verify `set=false` with `reset=false` holds last output.
+  - inject values below/above input range and verify input-side clamp (`inputMin/inputMax`).
+  - verify normal and inverse scaling (`outputMin<outputMax`, `outputMin>outputMax`).
+  - verify EMA behavior at `emaAlphaX100=100` and a smoothing value (for example `20`).
+  - verify divide-by-zero path returns `fallbackValue` deterministically.
+  - verify `triggerFlag` pulses for exactly one scan when output changes and stays low when output is unchanged.
 - Evidence required:
-  - input vector and expected/observed outputs.
-  - pass/fail matrix for operator/combiner combinations.
+  - input vector and expected/observed output table (centiunits).
+  - pass/fail matrix for operator, clamp, scaling direction, EMA, and trigger-pulse scenarios.
 
 ## HIL-007: RTC Card Contract Verification
 - Status: `TODO`

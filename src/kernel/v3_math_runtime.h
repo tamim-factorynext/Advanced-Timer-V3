@@ -5,12 +5,15 @@
 #include "kernel/card_model.h"
 
 struct V3MathRuntimeConfig {
+  uint8_t operation;
   uint32_t inputA;
   uint32_t inputB;
+  uint32_t inputMin;
+  uint32_t inputMax;
+  uint32_t outputMin;
+  uint32_t outputMax;
+  uint32_t emaAlphaX100;
   uint32_t fallbackValue;
-  uint32_t clampMin;
-  uint32_t clampMax;
-  bool clampEnabled;
 };
 
 struct V3MathRuntimeState {
@@ -34,4 +37,3 @@ struct V3MathStepOutput {
 
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out);
-

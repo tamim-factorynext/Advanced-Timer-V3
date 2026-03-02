@@ -38,8 +38,11 @@ bool isAlwaysOp(logicOperator op) {
 
 bool isOperatorAllowedForFamily(V3CardFamily sourceFamily, logicOperator op) {
   if (isAlwaysOp(op)) return true;
-  if (sourceFamily == V3CardFamily::AI || sourceFamily == V3CardFamily::MATH) {
+  if (sourceFamily == V3CardFamily::AI) {
     return isNumericOp(op);
+  }
+  if (sourceFamily == V3CardFamily::MATH) {
+    return isNumericOp(op) || isTriggerOp(op);
   }
   if (sourceFamily == V3CardFamily::DI || sourceFamily == V3CardFamily::RTC) {
     return isStateOp(op) || isTriggerOp(op) || isNumericOp(op);
@@ -173,6 +176,18 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
     }
 
     if (card.family == V3CardFamily::MATH) {
+      if (card.math.operation > 3U) {
+        reason = "MATH operator invalid";
+        return false;
+      }
+      if (card.math.inputMin >= card.math.inputMax) {
+        reason = "MATH input range invalid";
+        return false;
+      }
+      if (card.math.emaAlphaX100 > 100U) {
+        reason = "MATH emaAlpha out of range";
+        return false;
+      }
       if (!validateConditionBlock(card.math.set, card.cardId, "math.set")) {
         return false;
       }

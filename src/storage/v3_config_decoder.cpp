@@ -372,16 +372,47 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       }
       return true;
     case CardFamily::MATH:
-      if (!params["thresholdCentiunits"].is<uint32_t>() ||
-          !params["clampMin"].is<uint32_t>() ||
-          !params["clampMax"].is<uint32_t>()) {
+      if ((!params["operation"].isNull() && !params["operation"].is<uint8_t>()) ||
+          (!params["inputA"].isNull() && !params["inputA"].is<uint32_t>()) ||
+          (!params["inputB"].isNull() && !params["inputB"].is<uint32_t>()) ||
+          (!params["inputMin"].isNull() && !params["inputMin"].is<uint32_t>()) ||
+          (!params["inputMax"].isNull() && !params["inputMax"].is<uint32_t>()) ||
+          (!params["outputMin"].isNull() &&
+           !params["outputMin"].is<uint32_t>()) ||
+          (!params["outputMax"].isNull() &&
+           !params["outputMax"].is<uint32_t>()) ||
+          (!params["emaAlphaX100"].isNull() &&
+           !params["emaAlphaX100"].is<uint32_t>()) ||
+          (!params["fallbackValue"].isNull() &&
+           !params["fallbackValue"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
-      outCard.math.thresholdCentiunits =
-          params["thresholdCentiunits"].as<uint32_t>();
-      outCard.math.clampMin = params["clampMin"].as<uint32_t>();
-      outCard.math.clampMax = params["clampMax"].as<uint32_t>();
+      outCard.math.operation = params["operation"] | 0U;
+      outCard.math.inputA = params["inputA"] | 0U;
+      outCard.math.inputB = params["inputB"] | 0U;
+      outCard.math.inputMin = params["inputMin"] | 0U;
+      outCard.math.inputMax = params["inputMax"] | 10000U;
+      outCard.math.outputMin = params["outputMin"] | 0U;
+      outCard.math.outputMax = params["outputMax"] | 10000U;
+      outCard.math.emaAlphaX100 = params["emaAlphaX100"] | 100U;
+      outCard.math.fallbackValue = params["fallbackValue"] | 0U;
+      initDefaultConditionBlock(outCard.math.setCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.math.resetCondition, outCard.id, false);
+      {
+        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        if (!setObj.isNull() &&
+            !parseConditionBlockOptional(setObj, outCard.math.setCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+        if (!resetObj.isNull() &&
+            !parseConditionBlockOptional(resetObj, outCard.math.resetCondition)) {
+          outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+          return false;
+        }
+      }
       return true;
     case CardFamily::RTC:
       if (!params["hour"].is<uint8_t>() || !params["minute"].is<uint8_t>() ||

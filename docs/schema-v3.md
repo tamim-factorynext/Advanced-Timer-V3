@@ -226,7 +226,7 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 
 ```json
 {
-  "mode": "Mode_Standard_Pipeline",
+  "mode": "Mode_Math_Standard",
   "set": {},
   "reset": {},
   "fallbackValue": 0,
@@ -234,36 +234,45 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
     "inputA": { "sourceMode": "CONSTANT", "value": 100 },
     "inputB": { "sourceMode": "VARIABLE_REF", "ref": { "cardId": 2, "field": "currentValue", "type": "NUMBER" } },
     "operator": "ADD",
-    "rateLimit": 0,
-    "clampMin": 0,
-    "clampMax": 10000,
-    "scaleMin": 0,
-    "scaleMax": 10000,
-    "emaAlpha": 100
-  },
-  "pid": null
+    "inputMin": 0,
+    "inputMax": 10000,
+    "outputMin": 0,
+    "outputMax": 10000,
+    "emaAlphaX100": 100
+  }
 }
 ```
 
-- `mode`: required enum `Mode_Standard_Pipeline|Mode_PID_Controller`.
+- `mode`: required enum `Mode_Math_Standard`.
 - `set`, `reset`: required condition blocks.
 - `fallbackValue`: required `uint32`.
-- no condition-visible `STATE` output is defined for MATH.
+- MATH has no condition-visible `STATE` output.
+- MATH has no `physicalState` / `logicalState` mission semantics.
 
 `standard` mode fields:
 - `inputA`, `inputB`: required source descriptors.
-- `operator`: required enum `ADD|SUB|MUL|DIV|MOD|POW|MIN|MAX`.
-- `rateLimit`: required `uint32`; `0` disables stage.
-- `clampMin`, `clampMax`: required `uint32`.
-- `scaleMin`, `scaleMax`: required `uint32`.
-- `emaAlpha`: required `uint32`, range `0..100`; `100` disables EMA stage.
+- `operator`: required enum `ADD|SUB_SAT|MUL|DIV_SAFE`.
+- `operation`: numeric enum is also supported for backend/storage alignment:
+  - `0 = ADD`
+  - `1 = SUB_SAT`
+  - `2 = MUL`
+  - `3 = DIV_SAFE`
+- `inputMin`, `inputMax`: required `uint32` input clamp range.
+- `outputMin`, `outputMax`: required `uint32` scaling output range.
+- inverse scaling is allowed (`outputMin > outputMax`).
+- `emaAlphaX100`: required `uint32`, range `0..100`; `100` means no smoothing.
 
-`pid` mode fields:
-- `processVariable`: required `VARIABLE_REF`.
-- `setpoint`: required `CONSTANT` or `VARIABLE_REF`.
-- `gainP`, `gainI`, `gainD`: required `uint32` (centiunits).
-- `outputMin`, `outputMax`: required `uint32`.
-- `integralResetPolicy`: required enum `ON_RESET|ON_SIGN_CHANGE|NEVER`.
+Processing contract:
+- all numeric values are integer centiunits.
+- `reset=true` forces `currentValue=fallbackValue`.
+- `set=false` and `reset=false` holds last output value.
+- standard pipeline order:
+  - arithmetic compute
+  - input clamp to `[inputMin,inputMax]`
+  - range scaling (`input` range to `output` range)
+  - EMA
+- `triggerFlag` pulses for one scan when `currentValue` changes versus previous scan.
+- divide-by-zero in `DIV_SAFE` emits `fallbackValue`.
 
 ## 7.6 RTC
 
@@ -329,8 +338,8 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-007: reject missing `clauseB` for `AND|OR`.
 - V-CFG-008: reject AI set/reset fields (unsupported).
 - V-CFG-009: reject RTC set/reset fields (unsupported).
-- V-CFG-010: reject MATH operators outside arithmetic enum.
-- V-CFG-011: reject `clampMin > clampMax` unless explicit bypass policy is allowed.
+- V-CFG-010: reject MATH operators outside `ADD|SUB_SAT|MUL|DIV_SAFE`.
+- V-CFG-011: reject `inputMin > inputMax` for MATH standard mode.
 - V-CFG-012: reject type/range/unit-incompatible bindings.
 - V-CFG-013: reject dependency cycles.
 - V-CFG-014: reject non-owner write-binding attempts.
@@ -342,6 +351,7 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-020: reject card channel/index bindings outside active hardware profile channel arrays.
 - V-CFG-021: reject `RTC` card payload when active build profile does not support RTC.
 - V-CFG-022: reject RTC schedule fields below minute granularity (`second`, `millisecond`, `ms`).
+- V-CFG-023: reject MATH `emaAlphaX100` outside `0..100`.
 
 ## 10. Open Decisions To Freeze
 
@@ -349,13 +359,13 @@ Top-level `bindings` allows typed parameter binding.
   - Proposed: `month 1..12`, `day 1..31`, `hour 0..23`, `minute 0..59`, `weekday 1..7`.
 - D-SCH-002: RTC retrigger behavior during active `triggerDuration` is not frozen.
   - Options: `IGNORE_WHILE_ACTIVE`, `RESTART_WINDOW`, `EXTEND_WINDOW`.
-- D-MATH-001: Exact overflow/domain behavior for `POW`, `DIV`, and `MOD` should be fixed as deterministic policy.
+- D-MATH-001: Saturation policy details for intermediate multiply/divide scaling should be frozen for all edge-overflow cases.
 
 ## 11. Migration Notes
 
 - Any prior RTC recurrence/holiday policy structures are removed in V3.
 - Migration to V3 must transform old RTC schedule representation to field-based schedule + `triggerDuration`.
-- Any MATH comparison operators in legacy configs must fail validation or be migrated by explicit rule.
+- Any legacy MATH operators outside `ADD|SUB_SAT|MUL|DIV_SAFE` must fail validation or be migrated by explicit rule.
 - Legacy AI `emaAlpha` values stored as milliunits (`0..1000`) must be converted to centiunits (`0..100`) during migration.
 - Restore-source model is reduced to `LKG` (single rollback slot) and `FACTORY`.
 

@@ -89,9 +89,17 @@ struct SioParams {
 };
 
 struct MathParams {
-  uint32_t thresholdCentiunits;
-  uint32_t clampMin;
-  uint32_t clampMax;
+  uint8_t operation;
+  uint32_t inputA;
+  uint32_t inputB;
+  uint32_t inputMin;
+  uint32_t inputMax;
+  uint32_t outputMin;
+  uint32_t outputMax;
+  uint32_t emaAlphaX100;
+  uint32_t fallbackValue;
+  ConditionBlock setCondition;
+  ConditionBlock resetCondition;
 };
 
 struct RtcParams {

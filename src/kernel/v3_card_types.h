@@ -27,7 +27,7 @@ inline V3SignalSupport signalSupportForFamily(V3CardFamily family) {
     case V3CardFamily::SIO:
       return {true, true, true, true, true};
     case V3CardFamily::MATH:
-      return {false, false, true, false, false};
+      return {false, false, true, true, false};
     case V3CardFamily::RTC:
       return {true, true, true, true, false};
     default:
@@ -85,11 +85,15 @@ struct V3SioConfig {
 };
 
 struct V3MathConfig {
+  uint8_t operation;
   uint32_t fallbackValue;
   uint32_t inputA;
   uint32_t inputB;
-  uint32_t clampMin;
-  uint32_t clampMax;
+  uint32_t inputMin;
+  uint32_t inputMax;
+  uint32_t outputMin;
+  uint32_t outputMax;
+  uint32_t emaAlphaX100;
   V3ConditionBlock set;
   V3ConditionBlock reset;
 };

@@ -127,6 +127,13 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       result.error.cardIndex = i;
       return result;
     }
+    if (card.family == CardFamily::MATH &&
+        (!validateConditionBlock(card.math.setCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.math.resetCondition, candidate.cardCount))) {
+      result.error.code = ConfigErrorCode::InvalidConditionBlock;
+      result.error.cardIndex = i;
+      return result;
+    }
 
     if (card.ai.inputMin > card.ai.inputMax ||
         card.ai.outputMin > card.ai.outputMax ||
@@ -136,7 +143,8 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       return result;
     }
 
-    if (card.math.clampMin > card.math.clampMax) {
+    if (card.math.operation > 3U || card.math.inputMin >= card.math.inputMax ||
+        card.math.emaAlphaX100 > 100U) {
       result.error.code = ConfigErrorCode::InvalidMathClamp;
       result.error.cardIndex = i;
       return result;

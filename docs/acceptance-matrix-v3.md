@@ -51,13 +51,14 @@ Status: Draft for implementation kickoff
 | AT-SIO-004 | Sec 8.3 SIO | Unauthorized write attempt | Write denied and audit record emitted | Yes | No | Yes |
 | AT-MATH-001 | Sec 8.5.3 | reset=true regardless of set | currentValue forced to fallbackValue; no further processing | Yes | No | Yes |
 | AT-MATH-002 | Sec 8.5.3 | set=false, reset=false | currentValue holds last value until re-enabled/reset | Yes | No | Yes |
-| AT-MATH-003 | Sec 8.5.1.1 | Standard operator correctness: ADD,SUB,MUL,DIV,MOD,POW,MIN,MAX | Arithmetic stage result correct for each operator | Yes | No | Yes |
-| AT-MATH-004 | Sec 8.5.1.1 | Non-arithmetic operator configured | Validation rejects unsupported comparison/logical operators | Yes | No | Yes |
-| AT-MATH-005 | Sec 8.5.3 | Standard pipeline execution order | RateLimit->Clamp->Scale->EMA order preserved | Yes | No | Yes |
-| AT-MATH-006 | Sec 8.5.3 | Inert parameters disable stage behavior | Disabled stage leaves value unchanged as specified | Yes | No | Yes |
-| AT-MATH-007 | Sec 8.5.3 | Divide-by-zero fault | fallbackValue emitted and fault flag set in scan | Yes | No | Yes |
-| AT-MATH-008 | Sec 8.5.1.2, 8.5.3 | PID mode with output limits | Output obeys limits and anti-windup behavior | Yes | No | Yes |
-| AT-MATH-009 | Sec 8.5.1.2 | PID reset behavior | Integral term cleared per reset/integralResetPolicy | Yes | No | Yes |
+| AT-MATH-003 | Sec 8.5.1 | Standard operator correctness: ADD,SUB_SAT,MUL,DIV_SAFE | Arithmetic stage result correct for each supported operator | Yes | No | Yes |
+| AT-MATH-004 | Sec 8.5.1 | Unsupported operator configured | Validation rejects operator outside supported arithmetic enum | Yes | No | Yes |
+| AT-MATH-005 | Sec 8.5.3 | Standard pipeline execution order | Compute->InputClamp->Scale->EMA order preserved | Yes | No | Yes |
+| AT-MATH-006 | Sec 8.5.3 | Inverse scaling configuration | `outputMin > outputMax` is accepted and maps values in reverse direction | Yes | No | Yes |
+| AT-MATH-007 | Sec 8.5.3 | Divide-by-zero in DIV_SAFE | `fallbackValue` emitted deterministically | Yes | No | Yes |
+| AT-MATH-008 | Sec 8.5.3 | MATH state model exposure | MATH has no mission state semantics (`STATE` source not exposed for MATH) | Yes | No | Yes |
+| AT-MATH-009 | Sec 4.2, 8.5 | Negative numeric in MATH config payload | Validation rejects payload | Yes | No | Yes |
+| AT-MATH-011 | Sec 8.5.3 | Output change pulse behavior | `triggerFlag` is true for one scan only when `currentValue` changes | Yes | Yes | Yes |
 | AT-RTC-001 | Sec 8.6.3 | RTC evaluates against system clock service | logicalState follows authoritative wall-clock only | Yes | Yes | Yes |
 | AT-RTC-002 | Sec 8.6.1, 8.6.2 | Exact timestamp schedule match | Match starts active window and logicalState transitions as expected | Yes | Yes | Yes |
 | AT-RTC-003 | Sec 8.6.1, 8.6.3 | Field-based match with optional month/weekday omitted | Omitted fields act as wildcards; schedule triggers correctly | Yes | Yes | Yes |
@@ -114,7 +115,7 @@ Status: Draft for implementation kickoff
 
 These tests are defined as acceptance placeholders and should be finalized when syntax-level specs are frozen:
 
-- `AT-MATH-010` (TBD): Full arithmetic operator edge-case tables (overflow, precision, domain rules for `POW`/`MOD`).
+- `AT-MATH-010` (TBD): Freeze intermediate overflow/saturation expectations for multiply/divide scaling boundaries.
 - `AT-RTC-007` (TBD): Exact RTC trigger semantics for repeated matches within an active `triggerDuration` window.
 
 ## 4. Coverage Check
