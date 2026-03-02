@@ -1,7 +1,5 @@
 #include "kernel/kernel_service.h"
 
-#include <Arduino.h>
-
 #include "kernel/v3_status_runtime.h"
 
 namespace v3::kernel {
@@ -61,8 +59,10 @@ void bindTypedConfigSummary(const v3::storage::ValidatedConfig& config,
 
 }  // namespace
 
-void KernelService::begin(const v3::storage::ValidatedConfig& config) {
+void KernelService::begin(const v3::storage::ValidatedConfig& config,
+                          v3::platform::PlatformService& platform) {
   config_ = config;
+  platform_ = &platform;
   metrics_.scanIntervalMs = config_.system.scanIntervalMs;
   metrics_.configuredCardCount = config_.system.cardCount;
   bindTypedConfigSummary(config_, metrics_);
@@ -73,6 +73,8 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config) {
   metrics_.diTotalQualifiedEdges = 0;
   metrics_.diInhibitedCount = 0;
   metrics_.diForcedCount = 0;
+  metrics_.aiForcedCount = 0;
+  bindAiSlotsFromConfig();
   bindDiSlotsFromConfig();
   nextScanDueMs_ = 0;
   stepPending_ = false;
@@ -89,6 +91,7 @@ void KernelService::tick(uint32_t nowMs) {
     metrics_.stepAppliedCount += 1;
     stepPending_ = false;
   }
+  runAiScan();
   runDiScan(nowMs);
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
@@ -112,7 +115,68 @@ bool KernelService::setDiForce(uint8_t cardId, bool forceActive, bool forcedSamp
   return false;
 }
 
+bool KernelService::setAiForce(uint8_t cardId, bool forceActive,
+                               uint32_t forcedValue) {
+  for (uint8_t i = 0; i < aiSlotCount_; ++i) {
+    AiSlot& slot = aiSlots_[i];
+    if (!slot.active || slot.cardId != cardId) continue;
+    slot.forceActive = forceActive;
+    slot.forcedValue = forcedValue;
+    return true;
+  }
+  return false;
+}
+
 const KernelMetrics& KernelService::metrics() const { return metrics_; }
+
+void KernelService::bindAiSlotsFromConfig() {
+  aiSlotCount_ = 0;
+  for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
+    aiSlots_[i] = {};
+  }
+
+  for (uint8_t i = 0; i < config_.system.cardCount; ++i) {
+    const v3::storage::CardConfig& card = config_.system.cards[i];
+    if (card.family != v3::storage::CardFamily::AI || !card.enabled) continue;
+    if (aiSlotCount_ >= v3::storage::kMaxCards) break;
+
+    AiSlot& slot = aiSlots_[aiSlotCount_++];
+    slot.active = true;
+    slot.cardId = card.id;
+    slot.channel = card.ai.channel;
+    slot.forceActive = false;
+    slot.forcedValue = 0;
+
+    slot.cfg.inputMin = card.ai.inputMin;
+    slot.cfg.inputMax = card.ai.inputMax;
+    slot.cfg.outputMin = card.ai.outputMin;
+    slot.cfg.outputMax = card.ai.outputMax;
+    slot.cfg.emaAlphaX100 = card.ai.emaAlphaX100;
+
+    slot.state = {};
+    slot.state.mode = Mode_AI_Continuous;
+    slot.state.state = State_AI_Streaming;
+    if (platform_ != nullptr) {
+      platform_->configureInputPin(slot.channel);
+    }
+  }
+}
+
+void KernelService::runAiScan() {
+  uint8_t forced = 0;
+  for (uint8_t i = 0; i < aiSlotCount_; ++i) {
+    AiSlot& slot = aiSlots_[i];
+    if (!slot.active) continue;
+
+    const uint32_t sampled =
+        (platform_ != nullptr) ? platform_->readAnalogInput(slot.channel) : 0U;
+    V3AiStepInput in = {};
+    in.rawSample = slot.forceActive ? slot.forcedValue : sampled;
+    runV3AiStep(slot.cfg, slot.state, in);
+    if (slot.forceActive) forced += 1;
+  }
+  metrics_.aiForcedCount = forced;
+}
 
 void KernelService::bindDiSlotsFromConfig() {
   diSlotCount_ = 0;
@@ -152,7 +216,9 @@ void KernelService::bindDiSlotsFromConfig() {
 
     slot.state = {};
     slot.state.state = State_DI_Idle;
-    pinMode(slot.channel, INPUT);
+    if (platform_ != nullptr) {
+      platform_->configureInputPin(slot.channel);
+    }
   }
 }
 
@@ -174,11 +240,24 @@ void KernelService::runDiScan(uint32_t nowMs) {
     signal.currentValue = slot.state.currentValue;
   }
 
+  for (uint8_t i = 0; i < aiSlotCount_; ++i) {
+    const AiSlot& slot = aiSlots_[i];
+    if (!slot.active || slot.cardId >= v3::storage::kMaxCards) continue;
+    V3RuntimeSignal& signal = signals[slot.cardId];
+    signal.type = AnalogInput;
+    signal.state = slot.state.state;
+    signal.logicalState = false;
+    signal.physicalState = false;
+    signal.triggerFlag = false;
+    signal.currentValue = slot.state.currentValue;
+  }
+
   for (uint8_t i = 0; i < diSlotCount_; ++i) {
     DiSlot& slot = diSlots_[i];
     if (!slot.active) continue;
 
-    const bool sampled = (digitalRead(slot.channel) != 0);
+    const bool sampled =
+        (platform_ != nullptr) ? platform_->readDigitalInput(slot.channel) : false;
 
     V3DiStepInput in = {};
     in.nowMs = nowMs;

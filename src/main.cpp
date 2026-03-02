@@ -116,22 +116,25 @@ void applyKernelCommands(uint32_t nowUs) {
     switch (command.type) {
       case KernelCmd_SetRunMode:
         gKernelCommandSetRunModeCount += 1;
-        gKernelLastAppliedRequestId = command.value;
+        gKernelLastAppliedRequestId = command.requestId;
         gKernel.setRunMode(command.mode);
         break;
       case KernelCmd_StepOnce:
         gKernelCommandStepCount += 1;
-        gKernelLastAppliedRequestId = command.value;
+        gKernelLastAppliedRequestId = command.requestId;
         gKernel.requestStepOnce();
         break;
       case KernelCmd_SetInputForce:
-        gKernelLastAppliedRequestId = command.value;
+        gKernelLastAppliedRequestId = command.requestId;
         if (command.inputMode == InputSource_Real) {
           gKernel.setDiForce(command.cardId, false, false);
+          gKernel.setAiForce(command.cardId, false, 0);
         } else if (command.inputMode == InputSource_ForcedHigh) {
           gKernel.setDiForce(command.cardId, true, true);
         } else if (command.inputMode == InputSource_ForcedLow) {
           gKernel.setDiForce(command.cardId, true, false);
+        } else if (command.inputMode == InputSource_ForcedValue) {
+          gKernel.setAiForce(command.cardId, true, command.value);
         }
         break;
       default:
@@ -168,7 +171,8 @@ void dispatchPortalRequestsToControl() {
       case v3::portal::PortalCommandType::SetInputForce:
         accepted = gControl.requestSetInputForce(request.cardId, request.inputMode,
                                                  request.enqueuedUs,
-                                                 request.requestId);
+                                                 request.requestId,
+                                                 request.inputValue);
         break;
       default:
         accepted = false;
@@ -330,7 +334,7 @@ void setup() {
     }
   }
 
-  gKernel.begin(gStorage.activeConfig());
+  gKernel.begin(gStorage.activeConfig(), gPlatform);
   gBootstrapDiagnostics = gStorage.diagnostics();
   gLastKernelMetrics = gKernel.metrics();
 

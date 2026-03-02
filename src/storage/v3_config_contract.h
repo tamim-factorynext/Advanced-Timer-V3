@@ -65,6 +65,7 @@ struct DoParams {
 };
 
 struct AiParams {
+  uint8_t channel;
   uint32_t inputMin;
   uint32_t inputMax;
   uint32_t outputMin;

@@ -30,7 +30,8 @@ class ControlService {
   bool requestSetRunMode(runMode mode, uint32_t nowUs, uint32_t requestId = 0);
   bool requestStepOnce(uint32_t nowUs, uint32_t requestId = 0);
   bool requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
-                            uint32_t nowUs, uint32_t requestId = 0);
+                            uint32_t nowUs, uint32_t requestId = 0,
+                            uint32_t forcedValue = 0);
   bool dequeueCommand(KernelCommand& out);
   const ControlDiagnostics& diagnostics() const;
 

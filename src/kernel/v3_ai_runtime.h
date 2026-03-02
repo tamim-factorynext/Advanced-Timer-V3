@@ -9,7 +9,7 @@ struct V3AiRuntimeConfig {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX1000;
+  uint32_t emaAlphaX100;
 };
 
 struct V3AiRuntimeState {
@@ -24,4 +24,3 @@ struct V3AiStepInput {
 
 void runV3AiStep(const V3AiRuntimeConfig& cfg, V3AiRuntimeState& runtime,
                  const V3AiStepInput& in);
-

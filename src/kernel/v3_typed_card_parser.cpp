@@ -294,8 +294,8 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     JsonObjectConst inputRange = cfg["inputRange"].as<JsonObjectConst>();
     JsonObjectConst outputRange = cfg["outputRange"].as<JsonObjectConst>();
     out.ai.channel = cfg["channel"] | cardId;
-    out.ai.inputMin = inputRange["min"] | 0U;
-    out.ai.inputMax = inputRange["max"] | 4095U;
+    out.ai.inputMin = inputRange["min"] | 4U;
+    out.ai.inputMax = inputRange["max"] | 20U;
     const uint32_t emaAlphaX100 = cfg["emaAlpha"] | 100U;
     if (emaAlphaX100 > 100U) {
       reason = "AI emaAlpha out of range";
@@ -303,7 +303,7 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     }
     out.ai.emaAlphaX100 = emaAlphaX100;
     out.ai.outputMin = outputRange["min"] | 0U;
-    out.ai.outputMax = outputRange["max"] | 10000U;
+    out.ai.outputMax = outputRange["max"] | 100U;
     return true;
   }
 
@@ -421,4 +421,3 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   reason = "unsupported card type";
   return false;
 }
-

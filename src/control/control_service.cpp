@@ -28,7 +28,7 @@ bool ControlService::requestSetRunMode(runMode mode, uint32_t nowUs,
   command.type = KernelCmd_SetRunMode;
   command.mode = mode;
   command.enqueuedUs = nowUs;
-  command.value = requestId;
+  command.requestId = requestId;
 
   if (!enqueueCommand(command)) {
     diagnostics_.rejectedCount += 1;
@@ -54,7 +54,7 @@ bool ControlService::requestStepOnce(uint32_t nowUs, uint32_t requestId) {
   KernelCommand command = {};
   command.type = KernelCmd_StepOnce;
   command.enqueuedUs = nowUs;
-  command.value = requestId;
+  command.requestId = requestId;
 
   if (!enqueueCommand(command)) {
     diagnostics_.rejectedCount += 1;
@@ -68,11 +68,13 @@ bool ControlService::requestStepOnce(uint32_t nowUs, uint32_t requestId) {
 }
 
 bool ControlService::requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
-                                          uint32_t nowUs, uint32_t requestId) {
+                                          uint32_t nowUs, uint32_t requestId,
+                                          uint32_t forcedValue) {
   diagnostics_.requestedCount += 1;
 
   if (inputMode != InputSource_Real && inputMode != InputSource_ForcedHigh &&
-      inputMode != InputSource_ForcedLow) {
+      inputMode != InputSource_ForcedLow &&
+      inputMode != InputSource_ForcedValue) {
     diagnostics_.rejectedCount += 1;
     diagnostics_.lastRejectReason = CommandRejectReason::InvalidInputMode;
     return false;
@@ -83,7 +85,8 @@ bool ControlService::requestSetInputForce(uint8_t cardId, inputSourceMode inputM
   command.cardId = cardId;
   command.inputMode = inputMode;
   command.enqueuedUs = nowUs;
-  command.value = requestId;
+  command.requestId = requestId;
+  command.value = forcedValue;
 
   if (!enqueueCommand(command)) {
     diagnostics_.rejectedCount += 1;

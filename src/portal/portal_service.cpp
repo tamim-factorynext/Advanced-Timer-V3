@@ -46,6 +46,7 @@ bool PortalService::enqueueStepOnceRequest(uint32_t requestId,
 
 bool PortalService::enqueueSetInputForceRequest(uint8_t cardId,
                                                 inputSourceMode inputMode,
+                                                uint32_t inputValue,
                                                 uint32_t requestId,
                                                 uint32_t enqueuedUs) {
   PortalCommandRequest request = {};
@@ -53,6 +54,7 @@ bool PortalService::enqueueSetInputForceRequest(uint8_t cardId,
   request.mode = RUN_NORMAL;
   request.cardId = cardId;
   request.inputMode = inputMode;
+  request.inputValue = inputValue;
   request.requestId = requestId;
   request.enqueuedUs = enqueuedUs;
   return enqueueRequest(request);
@@ -82,12 +84,13 @@ PortalCommandSubmitResult PortalService::submitStepOnce(uint32_t enqueuedUs) {
 }
 
 PortalCommandSubmitResult PortalService::submitSetInputForce(
-    uint8_t cardId, inputSourceMode inputMode, uint32_t enqueuedUs) {
+    uint8_t cardId, inputSourceMode inputMode, uint32_t inputValue,
+    uint32_t enqueuedUs) {
   PortalCommandSubmitResult result = {};
   result.requestId = ++nextRequestId_;
   result.reason = v3::control::CommandRejectReason::None;
-  result.accepted = enqueueSetInputForceRequest(cardId, inputMode, result.requestId,
-                                                enqueuedUs);
+  result.accepted = enqueueSetInputForceRequest(cardId, inputMode, inputValue,
+                                                result.requestId, enqueuedUs);
   if (!result.accepted) {
     result.reason = v3::control::CommandRejectReason::QueueFull;
   }
@@ -153,6 +156,9 @@ void PortalService::rebuildDiagnosticsJson(
   diRuntime["totalQualifiedEdges"] = snapshot.diTotalQualifiedEdges;
   diRuntime["inhibitedCount"] = snapshot.diInhibitedCount;
   diRuntime["forcedCount"] = snapshot.diForcedCount;
+
+  JsonObject aiRuntime = binding["aiRuntime"].to<JsonObject>();
+  aiRuntime["forcedCount"] = snapshot.aiForcedCount;
 
   JsonObject bootstrap = doc["bootstrap"].to<JsonObject>();
   bootstrap["usedFileConfig"] = snapshot.bootstrapUsedFileConfig;

@@ -103,7 +103,8 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
     }
 
     if (card.ai.inputMin > card.ai.inputMax ||
-        card.ai.outputMin > card.ai.outputMax) {
+        card.ai.outputMin > card.ai.outputMax ||
+        card.ai.emaAlphaX100 > 100U) {
       result.error.code = ConfigErrorCode::InvalidAiRange;
       result.error.cardIndex = i;
       return result;

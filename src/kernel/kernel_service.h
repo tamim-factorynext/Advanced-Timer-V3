@@ -3,8 +3,10 @@
 #include <stdint.h>
 
 #include "control/command_dto.h"
+#include "kernel/v3_ai_runtime.h"
 #include "kernel/v3_di_runtime.h"
 #include "kernel/v3_runtime_signals.h"
+#include "platform/platform_service.h"
 #include "storage/v3_config_contract.h"
 #include "storage/v3_config_validator.h"
 
@@ -29,15 +31,18 @@ struct KernelMetrics {
   uint32_t diTotalQualifiedEdges;
   uint8_t diInhibitedCount;
   uint8_t diForcedCount;
+  uint8_t aiForcedCount;
 };
 
 class KernelService {
  public:
-  void begin(const v3::storage::ValidatedConfig& config);
+  void begin(const v3::storage::ValidatedConfig& config,
+             v3::platform::PlatformService& platform);
   void tick(uint32_t nowMs);
   void setRunMode(runMode mode);
   void requestStepOnce();
   bool setDiForce(uint8_t cardId, bool forceActive, bool forcedSample);
+  bool setAiForce(uint8_t cardId, bool forceActive, uint32_t forcedValue);
   const KernelMetrics& metrics() const;
 
  private:
@@ -55,7 +60,19 @@ class KernelService {
     V3DiRuntimeState state;
   };
 
+  struct AiSlot {
+    bool active;
+    uint8_t cardId;
+    uint8_t channel;
+    bool forceActive;
+    uint32_t forcedValue;
+    V3AiRuntimeConfig cfg;
+    V3AiRuntimeState state;
+  };
+
   void bindDiSlotsFromConfig();
+  void bindAiSlotsFromConfig();
+  void runAiScan();
   void runDiScan(uint32_t nowMs);
   bool evalConditionBlock(const v3::storage::ConditionBlock& block,
                           const V3RuntimeSignal* signals,
@@ -68,8 +85,11 @@ class KernelService {
   KernelMetrics metrics_ = {};
   DiSlot diSlots_[v3::storage::kMaxCards] = {};
   uint8_t diSlotCount_ = 0;
+  AiSlot aiSlots_[v3::storage::kMaxCards] = {};
+  uint8_t aiSlotCount_ = 0;
   uint32_t nextScanDueMs_ = 0;
   bool stepPending_ = false;
+  v3::platform::PlatformService* platform_ = nullptr;
 };
 
 }  // namespace v3::kernel

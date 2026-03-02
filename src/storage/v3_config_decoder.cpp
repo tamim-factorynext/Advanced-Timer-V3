@@ -6,16 +6,12 @@ namespace v3::storage {
 
 namespace {
 
-v3::storage::ConditionOperator defaultOperatorForEnabled(bool enabled) {
-  return enabled ? v3::storage::ConditionOperator::AlwaysTrue
-                 : v3::storage::ConditionOperator::AlwaysFalse;
-}
-
 void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfCardId,
                                bool enabled) {
+  (void)enabled;
   block.combiner = v3::storage::ConditionCombiner::None;
   block.clauseA.sourceCardId = selfCardId;
-  block.clauseA.op = defaultOperatorForEnabled(enabled);
+  block.clauseA.op = v3::storage::ConditionOperator::AlwaysFalse;
   block.clauseA.threshold = 0;
   block.clauseB.sourceCardId = selfCardId;
   block.clauseB.op = v3::storage::ConditionOperator::AlwaysFalse;
@@ -257,7 +253,7 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
   }
 
   switch (outCard.family) {
-    case CardFamily::DI:
+    case CardFamily::DI: {
       if (!params["invert"].is<bool>() || !params["debounceMs"].is<uint32_t>()) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
@@ -266,7 +262,7 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.di.invert = params["invert"].as<bool>();
       outCard.di.debounceMs = params["debounceMs"].as<uint32_t>();
       outCard.di.edgeMode = params["edgeMode"] | 0U;  // 0:RISING,1:FALLING,2:CHANGE
-      outCard.di.setEnabled = params["setEnabled"] | true;
+      outCard.di.setEnabled = params["setEnabled"] | false;
       outCard.di.resetEnabled = params["resetEnabled"] | false;
       initDefaultConditionBlock(outCard.di.setCondition, outCard.id,
                                 outCard.di.setEnabled);
@@ -285,6 +281,7 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
         return false;
       }
       return true;
+    }
     case CardFamily::DO:
       if (!params["onDelayMs"].is<uint32_t>() ||
           !params["onDurationMs"].is<uint32_t>() ||
@@ -297,18 +294,23 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.dout.repeatCount = params["repeatCount"].as<uint32_t>();
       return true;
     case CardFamily::AI:
-      if (!params["inputMin"].is<uint32_t>() || !params["inputMax"].is<uint32_t>() ||
-          !params["outputMin"].is<uint32_t>() ||
-          !params["outputMax"].is<uint32_t>() ||
-          !params["emaAlphaX100"].is<uint32_t>()) {
+      if ((!params["inputMin"].isNull() && !params["inputMin"].is<uint32_t>()) ||
+          (!params["inputMax"].isNull() && !params["inputMax"].is<uint32_t>()) ||
+          (!params["outputMin"].isNull() &&
+           !params["outputMin"].is<uint32_t>()) ||
+          (!params["outputMax"].isNull() &&
+           !params["outputMax"].is<uint32_t>()) ||
+          (!params["emaAlphaX100"].isNull() &&
+           !params["emaAlphaX100"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
-      outCard.ai.inputMin = params["inputMin"].as<uint32_t>();
-      outCard.ai.inputMax = params["inputMax"].as<uint32_t>();
-      outCard.ai.outputMin = params["outputMin"].as<uint32_t>();
-      outCard.ai.outputMax = params["outputMax"].as<uint32_t>();
-      outCard.ai.emaAlphaX100 = params["emaAlphaX100"].as<uint32_t>();
+      outCard.ai.channel = params["channel"] | outCard.id;
+      outCard.ai.inputMin = params["inputMin"] | 4U;
+      outCard.ai.inputMax = params["inputMax"] | 20U;
+      outCard.ai.outputMin = params["outputMin"] | 0U;
+      outCard.ai.outputMax = params["outputMax"] | 100U;
+      outCard.ai.emaAlphaX100 = params["emaAlphaX100"] | 100U;
       return true;
     case CardFamily::SIO:
       if (!params["onDelayMs"].is<uint32_t>() ||

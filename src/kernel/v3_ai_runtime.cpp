@@ -26,13 +26,12 @@ void runV3AiStep(const V3AiRuntimeConfig& cfg, V3AiRuntimeState& runtime,
     scaled = static_cast<uint32_t>(mapped);
   }
 
-  const uint32_t alpha = (cfg.emaAlphaX1000 > 1000) ? 1000 : cfg.emaAlphaX1000;
+  const uint32_t alpha = (cfg.emaAlphaX100 > 100U) ? 100U : cfg.emaAlphaX100;
   const uint64_t filtered =
       ((static_cast<uint64_t>(alpha) * scaled) +
-       (static_cast<uint64_t>(1000 - alpha) * runtime.currentValue)) /
-      1000ULL;
+       (static_cast<uint64_t>(100U - alpha) * runtime.currentValue)) /
+      100ULL;
   runtime.currentValue = static_cast<uint32_t>(filtered);
   runtime.mode = Mode_AI_Continuous;
   runtime.state = State_AI_Streaming;
 }
-

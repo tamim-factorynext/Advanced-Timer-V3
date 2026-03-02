@@ -27,6 +27,7 @@ struct KernelCommand {
   uint8_t cardId;
   bool flag;
   uint32_t value;
+  uint32_t requestId;
   uint32_t enqueuedUs;
   runMode mode;
   inputSourceMode inputMode;

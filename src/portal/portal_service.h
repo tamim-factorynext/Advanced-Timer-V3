@@ -25,6 +25,7 @@ struct PortalCommandRequest {
   runMode mode;
   uint8_t cardId;
   inputSourceMode inputMode;
+  uint32_t inputValue;
   uint32_t requestId;
   uint32_t enqueuedUs;
 };
@@ -56,12 +57,14 @@ class PortalService {
   PortalCommandSubmitResult submitStepOnce(uint32_t enqueuedUs);
   PortalCommandSubmitResult submitSetInputForce(uint8_t cardId,
                                                 inputSourceMode inputMode,
+                                                uint32_t inputValue,
                                                 uint32_t enqueuedUs);
   bool enqueueSetRunModeRequest(runMode mode, uint32_t requestId,
                                 uint32_t enqueuedUs);
   bool enqueueStepOnceRequest(uint32_t requestId, uint32_t enqueuedUs);
   bool enqueueSetInputForceRequest(uint8_t cardId, inputSourceMode inputMode,
-                                   uint32_t requestId, uint32_t enqueuedUs);
+                                   uint32_t inputValue, uint32_t requestId,
+                                   uint32_t enqueuedUs);
   bool dequeueCommandRequest(PortalCommandRequest& out);
   void recordCommandResult(uint32_t requestId, bool accepted,
                            v3::control::CommandRejectReason reason);

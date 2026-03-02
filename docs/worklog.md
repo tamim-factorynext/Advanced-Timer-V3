@@ -3309,3 +3309,130 @@ Replaced DI temporary boolean gate usage with condition-block evaluation against
 - Aligns DI gating with global variable-tree and cross-card logic model.
 - Removes temporary gate dependency from active runtime behavior.
 
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:17.174`
+  - RAM: `21.3%` (`69756 / 327680`)
+  - Flash: `66.8%` (`875605 / 1310720`)
+
+## 2026-03-02 (User Guide DI Defaults + Counter Overflow Clarification)
+
+### Session Summary
+
+Updated end-user DI guide to explicitly document inert default set/reset blocks for both clauses and current counter overflow behavior.
+
+### Completed
+
+- Added DI default inert policy:
+  - `set` and `reset` both default to self-referenced `ALWAYS_FALSE` for clause A and clause B.
+- Added DI counter-overflow note:
+  - unsigned 32-bit counter wraps to `0` after `4,294,967,295`.
+- File:
+  - `docs/user-guide-v3-draft.md`
+
+## 2026-03-02 (DI Inert Default Clause Baseline In Decoder)
+
+### Session Summary
+
+Updated DI decoder defaults so new-device/factory-reset style payloads start with inert `set/reset` condition blocks by default.
+
+### Completed
+
+- DI decoder default condition initialization now enforces:
+  - `clauseA.sourceCardId = self`
+  - `clauseA.operator = ALWAYS_FALSE`
+  - `clauseB.sourceCardId = self`
+  - `clauseB.operator = ALWAYS_FALSE`
+  - `combiner = NONE`
+- DI legacy `setEnabled` default changed to `false` for safer inert baseline.
+- File:
+  - `src/storage/v3_config_decoder.cpp`
+
+## 2026-03-02 (AI Centiunit Alpha + Default Scale Alignment)
+
+### Session Summary
+
+Aligned AI runtime/config defaults with centiunit policy and requested default scaling range.
+
+### Completed
+
+- AI runtime alpha precision changed to centiunit:
+  - `emaAlphaX100` (`0..100`) now used directly in filter equation.
+  - files:
+    - `src/kernel/v3_ai_runtime.h`
+    - `src/kernel/v3_ai_runtime.cpp`
+
+- Adapter mapping aligned:
+  - legacy milliunit alpha (`0..1000`) converted to centiunit (`/10`) when building AI runtime config.
+  - file:
+    - `src/kernel/v3_runtime_adapters.cpp`
+
+- Typed parser default output scale adjusted:
+  - default `outputRange.max` changed from `10000` to `100`.
+  - file:
+    - `src/kernel/v3_typed_card_parser.cpp`
+
+## 2026-03-02 (AI End-to-End Wiring Slice)
+
+### Session Summary
+
+Completed the AI family runtime/command path wiring so AI cards now run through kernel scan and can be force-driven from transport path.
+
+### Completed
+
+- Kernel AI scan integration:
+  - AI slots bind from validated config.
+  - per-scan analog sample is processed by `runV3AiStep(...)`.
+  - AI values are seeded into global signal-tree during DI condition evaluation.
+  - file:
+    - `src/kernel/kernel_service.cpp`
+
+- AI force path integration:
+  - added transport commands:
+    - `setAiForce` (numeric forced value)
+    - `clearAiForce`
+  - portal/control/main command flow carries forced numeric value.
+  - command DTO now keeps `requestId` separate from `value`.
+  - files:
+    - `src/portal/transport_command_stub.cpp`
+    - `src/portal/portal_service.h`
+    - `src/portal/portal_service.cpp`
+    - `src/control/control_service.h`
+    - `src/control/control_service.cpp`
+    - `src/control/command_dto.h`
+    - `src/main.cpp`
+
+- Runtime diagnostics:
+  - added `aiForcedCount` from kernel to runtime snapshot and portal diagnostics JSON.
+  - files:
+    - `src/runtime/runtime_service.h`
+    - `src/runtime/runtime_service.cpp`
+    - `src/portal/portal_service.cpp`
+
+- AI default/value policy alignment:
+  - decoder defaults for AI:
+    - `inputMin=4`, `inputMax=20`, `outputMin=0`, `outputMax=100`, `emaAlphaX100=100`
+  - parser defaults aligned to same 4-20mA assumption.
+  - validator enforces `emaAlphaX100 <= 100`.
+  - files:
+    - `src/storage/v3_config_decoder.cpp`
+    - `src/storage/v3_config_validator.cpp`
+    - `src/kernel/v3_typed_card_parser.cpp`
+
+### Note
+
+- Build/test evidence pending user IDE run for this slice.
+- DI/AI hardware IO calls are now routed through `PlatformService` (`configureInputPin`, `readDigitalInput`, `readAnalogInput`) instead of direct kernel `pinMode/digitalRead/analogRead`.
+
+### Evidence
+
+- Firmware build (user IDE run):
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:30.786`
+  - RAM: `22.3%` (`73140 / 327680`)
+  - Flash: `67.4%` (`883529 / 1310720`)
+

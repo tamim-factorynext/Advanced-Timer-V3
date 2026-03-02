@@ -721,7 +721,7 @@ Deferred items remain out of current execution scope until core functional parit
   - Flash: `873225 / 1310720` (66.6%)
 
 ## M25: DI Condition-Block Evaluation Over Global Signal Tree
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Date: 2026-03-02
 - Summary: replace temporary DI boolean gates with condition-block evaluation against runtime signal tree.
 - Implemented outputs:
@@ -746,4 +746,69 @@ Deferred items remain out of current execution scope until core functional parit
       - `src/kernel/kernel_service.h`
       - `src/kernel/kernel_service.cpp`
 - Remaining:
-  - user IDE build evidence for this slice.
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:17.174`
+  - RAM: `69756 / 327680` (21.3%)
+  - Flash: `875605 / 1310720` (66.8%)
+
+## M26: AI Family Active Runtime + Force Path
+- Status: `DONE`
+- Date: 2026-03-02
+- Summary: complete AI family active runtime flow through storage/config, kernel scan, command force path, and diagnostics projection.
+- Implemented outputs:
+  - DI/AI hardware IO abstraction route:
+    - kernel now consumes platform methods for input pin config and reads.
+    - removed direct `pinMode/digitalRead/analogRead` from kernel scan path.
+    - files:
+      - `src/platform/platform_service.h`
+      - `src/platform/platform_service.cpp`
+      - `src/kernel/kernel_service.h`
+      - `src/kernel/kernel_service.cpp`
+      - `src/main.cpp`
+  - active AI scan path in kernel:
+    - bind enabled AI cards from validated config at boot
+    - per-scan analog read and runtime step execution
+    - file: `src/kernel/kernel_service.cpp`
+  - AI force command end-to-end path:
+    - transport commands: `setAiForce`, `clearAiForce`
+    - portal request carries numeric forced value
+    - control command accepts `InputSource_ForcedValue`
+    - kernel apply maps force value to AI slot
+    - files:
+      - `src/portal/transport_command_stub.cpp`
+      - `src/portal/portal_service.h`
+      - `src/portal/portal_service.cpp`
+      - `src/control/control_service.h`
+      - `src/control/control_service.cpp`
+      - `src/control/command_dto.h`
+      - `src/main.cpp`
+      - `src/kernel/kernel_service.h`
+      - `src/kernel/kernel_service.cpp`
+  - AI diagnostics projection:
+    - kernel metric: `aiForcedCount`
+    - runtime snapshot + portal diagnostics include AI forced count
+    - files:
+      - `src/runtime/runtime_service.h`
+      - `src/runtime/runtime_service.cpp`
+      - `src/portal/portal_service.cpp`
+  - AI defaults/policy alignment:
+    - centiunit alpha (`emaAlphaX100` in `0..100`)
+    - default parser/storage values aligned to 4-20mA assumption:
+      - input: `4..20`
+      - output: `0..100`
+      - alpha: `100` (1.00)
+    - files:
+      - `src/kernel/v3_ai_runtime.h`
+      - `src/kernel/v3_ai_runtime.cpp`
+      - `src/kernel/v3_typed_card_parser.cpp`
+      - `src/storage/v3_config_decoder.cpp`
+      - `src/storage/v3_config_validator.cpp`
+- Remaining:
+  - none
+- Evidence:
+  - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
+  - Duration: `00:00:30.786`
+  - RAM: `73140 / 327680` (22.3%)
+  - Flash: `883529 / 1310720` (67.4%)

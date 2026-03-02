@@ -53,6 +53,8 @@ const char* errorCodeToMessage(const char* errorCode) {
     return "Card ID is missing or out of range.";
   if (strcmp(errorCode, "invalid_input_mode") == 0)
     return "Input force mode must be REAL, FORCED_HIGH, or FORCED_LOW.";
+  if (strcmp(errorCode, "invalid_input_value") == 0)
+    return "Input force value is missing or invalid.";
   if (strcmp(errorCode, "unsupported_command") == 0)
     return "Command is not supported.";
   if (strcmp(errorCode, "queue_full") == 0)
@@ -167,8 +169,24 @@ TransportCommandResponse handleTransportCommandStub(
     if (!parseInputMode(doc["mode"].as<const char*>(), inputMode)) {
       return buildError(422, sourceLabel, "invalid_input_mode");
     }
-    submit = portal.submitSetInputForce(doc["cardId"].as<uint8_t>(), inputMode,
+    submit = portal.submitSetInputForce(doc["cardId"].as<uint8_t>(), inputMode, 0U,
                                         nowUs);
+  } else if (strcmp(command, "setAiForce") == 0) {
+    if (!doc["cardId"].is<uint8_t>()) {
+      return buildError(422, sourceLabel, "invalid_card_id");
+    }
+    if (!doc["value"].is<uint32_t>()) {
+      return buildError(422, sourceLabel, "invalid_input_value");
+    }
+    submit = portal.submitSetInputForce(doc["cardId"].as<uint8_t>(),
+                                        InputSource_ForcedValue,
+                                        doc["value"].as<uint32_t>(), nowUs);
+  } else if (strcmp(command, "clearAiForce") == 0) {
+    if (!doc["cardId"].is<uint8_t>()) {
+      return buildError(422, sourceLabel, "invalid_card_id");
+    }
+    submit = portal.submitSetInputForce(doc["cardId"].as<uint8_t>(),
+                                        InputSource_Real, 0U, nowUs);
   } else {
     return buildError(422, sourceLabel, "unsupported_command");
   }

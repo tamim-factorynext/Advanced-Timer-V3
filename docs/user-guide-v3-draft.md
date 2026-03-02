@@ -36,6 +36,17 @@ Primary DI settings:
 - `set` condition block: gate that allows DI processing when true.
 - `reset` condition block: dominant reset gate.
 
+Default safe/inert condition setup (recommended baseline):
+
+- `set.clauseA`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
+- `set.clauseB`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
+- `set.combiner`: `NONE`
+- `reset.clauseA`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
+- `reset.clauseB`: `sourceCardId=self`, `operator=ALWAYS_FALSE`
+- `reset.combiner`: `NONE`
+
+This keeps the card inactive by default until the user intentionally enables logic.
+
 ## 1.3 Per-Scan Evaluation Order
 
 Each scan follows this order:
@@ -98,6 +109,13 @@ This makes it suitable as a one-scan trigger source for other cards.
   - set gate is false,
   - debounce is not yet satisfied.
 - Counter resets only when reset gate is true.
+
+Counter range and overflow:
+
+- Counter type is unsigned 32-bit (`0 ... 4,294,967,295`).
+- Current behavior at max value is wrap-around:
+  - if counter is `4,294,967,295`, next qualified increment wraps to `0`.
+- This behavior should be considered during long-duration deployments that can accumulate very high edge counts.
 
 ## 1.9 Force Input Behavior
 
@@ -198,3 +216,59 @@ Planned direction:
 - Wi-Fi/IP status page on that display is expected to provide portal access info.
 
 Until then, this guide does not lock a final "how to discover IP" procedure.
+
+## 3. AI (Analog Input) Card Guide
+
+This section defines current V3 AI behavior (4-20mA assumption for this phase).
+
+## 3.1 What An AI Card Provides
+
+An AI card exposes:
+
+- `currentValue`: filtered and scaled engineering value.
+- `state`: AI mission state (currently streaming/continuous).
+
+AI values are part of the global runtime variable tree and can be consumed by other cards through condition logic.
+
+## 3.2 AI Configuration Fields
+
+- `channel`: hardware analog input channel.
+- `inputMin` / `inputMax`: input range (assumed 4..20 for 4-20mA cards in this phase).
+- `outputMin` / `outputMax`: scaled output range.
+- `emaAlphaX100`: filter alpha in centiunit (`0..100` where `100 = 1.00`).
+
+Factory/new-card defaults used by decoder/parser:
+
+- `channel = cardId`
+- `inputMin = 4`
+- `inputMax = 20`
+- `outputMin = 0`
+- `outputMax = 100`
+- `emaAlphaX100 = 100` (no smoothing)
+
+## 3.3 Per-Scan AI Processing
+
+Each scan:
+
+1. Read raw analog sample from `channel` unless force mode is active.
+2. Clamp sample to `[inputMin, inputMax]`.
+3. Linearly map clamped value into `[outputMin, outputMax]`.
+4. Apply EMA filter:
+   - `alpha = emaAlphaX100 / 100`
+   - `currentValue = alpha * scaled + (1 - alpha) * previousCurrentValue`
+5. Publish `currentValue` to runtime/global signal tree.
+
+## 3.4 Force Behavior
+
+AI supports force commands:
+
+- `setAiForce`: uses provided numeric forced sample as AI input.
+- `clearAiForce`: returns to real hardware sample.
+
+Force affects only runtime input selection; it does not change physical wiring/state.
+
+## 3.5 Alpha Behavior Notes
+
+- `emaAlphaX100 = 100`: no smoothing, output follows scaled sample immediately.
+- `emaAlphaX100 = 0`: full hold (output stays at previous value).
+- valid range is `0..100`; higher values are rejected by config validation.

@@ -39,7 +39,7 @@ V3AiRuntimeConfig makeAiRuntimeConfig(const LogicCard& card) {
   cfg.inputMax = legacyAiInputMax(card);
   cfg.outputMin = legacyAiOutputMin(card);
   cfg.outputMax = legacyAiOutputMax(card);
-  cfg.emaAlphaX1000 = legacyAiAlphaX1000(card);
+  cfg.emaAlphaX100 = legacyAiAlphaX1000(card) / 10U;
   return cfg;
 }
 

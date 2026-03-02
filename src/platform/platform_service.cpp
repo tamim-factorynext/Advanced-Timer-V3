@@ -10,6 +10,16 @@ void PlatformService::begin() {}
 
 uint32_t PlatformService::nowMs() const { return millis(); }
 
+void PlatformService::configureInputPin(uint8_t pin) const { pinMode(pin, INPUT); }
+
+bool PlatformService::readDigitalInput(uint8_t pin) const {
+  return digitalRead(pin) != 0;
+}
+
+uint32_t PlatformService::readAnalogInput(uint8_t pin) const {
+  return static_cast<uint32_t>(analogRead(pin));
+}
+
 bool PlatformService::initTaskWatchdog(uint32_t timeoutSeconds,
                                        bool panicOnTrigger) {
 #if ESP_IDF_VERSION_MAJOR >= 5
