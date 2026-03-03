@@ -1,4 +1,25 @@
-﻿#include "kernel/v3_condition_rules.h"
+/*
+File: src/kernel/v3_condition_rules.cpp
+Purpose: Implements the v3 condition rules module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\v3_condition_rules.cpp
+- src\kernel\v3_condition_rules.h
+- src\kernel\v3_payload_rules.cpp
+- src\kernel\v3_typed_card_parser.cpp
+- (+ more call sites)
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_condition_rules.h"
 
 #include <cstring>
 

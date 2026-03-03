@@ -1,3 +1,20 @@
+/*
+File: src/storage/v3_config_service.cpp
+Purpose: Implements the v3 config service module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- firmware build target
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include "storage/v3_config_service.h"
 
 #include <string>

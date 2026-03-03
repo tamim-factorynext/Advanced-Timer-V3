@@ -1,4 +1,23 @@
-﻿#include "kernel/v3_typed_config_rules.h"
+/*
+File: src/kernel/v3_typed_config_rules.cpp
+Purpose: Implements the v3 typed config rules module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\v3_typed_config_rules.cpp
+- src\kernel\v3_typed_config_rules.h
+- src\storage\v3_config_service.cpp
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_typed_config_rules.h"
 
 #include <string>
 

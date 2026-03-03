@@ -1,3 +1,22 @@
+/*
+File: src/portal/transport_command_stub.h
+Purpose: Declares the transport command stub module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\portal\transport_command_stub.cpp
+- src\portal\transport_command_stub.h
+- src\portal\transport_runtime.cpp
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <Arduino.h>

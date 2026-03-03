@@ -1,4 +1,25 @@
-﻿#include "kernel/v3_rtc_runtime.h"
+/*
+File: src/kernel/v3_rtc_runtime.cpp
+Purpose: Implements the v3 rtc runtime module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\kernel_service.h
+- src\kernel\v3_rtc_runtime.cpp
+- src\kernel\v3_rtc_runtime.h
+- src\kernel\v3_runtime_adapters.h
+- (+ more call sites)
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_rtc_runtime.h"
 
 void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
                   const V3RtcStepInput& in) {

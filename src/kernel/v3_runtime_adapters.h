@@ -1,3 +1,22 @@
+/*
+File: src/kernel/v3_runtime_adapters.h
+Purpose: Declares the v3 runtime adapters module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\v3_runtime_adapters.cpp
+- src\kernel\v3_runtime_adapters.h
+- src\kernel\v3_runtime_store.cpp
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include "kernel/card_model.h"

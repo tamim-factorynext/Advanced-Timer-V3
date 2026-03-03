@@ -1,3 +1,22 @@
+/*
+File: src/kernel/v3_typed_card_parser.h
+Purpose: Declares the v3 typed card parser module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\v3_typed_card_parser.cpp
+- src\kernel\v3_typed_card_parser.h
+- src\storage\v3_normalizer.cpp
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stdint.h>

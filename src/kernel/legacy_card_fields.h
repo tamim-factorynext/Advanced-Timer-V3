@@ -1,3 +1,22 @@
+/*
+File: src/kernel/legacy_card_fields.h
+Purpose: Declares the legacy card fields module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\legacy_card_fields.h
+- src\kernel\v3_card_bridge.cpp
+- src\kernel\v3_runtime_adapters.cpp
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include "kernel/card_model.h"

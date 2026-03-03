@@ -1,3 +1,22 @@
+/*
+File: src/storage/v3_normalizer.h
+Purpose: Declares the v3 normalizer module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\storage\v3_config_service.h
+- src\storage\v3_normalizer.cpp
+- src\storage\v3_normalizer.h
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stddef.h>

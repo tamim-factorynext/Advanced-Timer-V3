@@ -1,4 +1,22 @@
-﻿#include "kernel/legacy_card_profile.h"
+/*
+File: src/kernel/legacy_card_profile.cpp
+Purpose: Implements the legacy card profile module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\legacy_card_profile.cpp
+- src\kernel\legacy_card_profile.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/legacy_card_profile.h"
 
 #include "kernel/enum_codec.h"
 #include "kernel/v3_config_sanitize.h"

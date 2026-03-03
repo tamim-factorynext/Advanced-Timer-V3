@@ -1,3 +1,23 @@
+/*
+File: src/runtime/runtime_card_meta.h
+Purpose: Declares the runtime card meta module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\v3_runtime_signals.h
+- src\runtime\runtime_card_meta.cpp
+- src\runtime\runtime_card_meta.h
+- src\runtime\snapshot_card_builder.h
+
+Flow Hook:
+- Runtime snapshot shaping and cross-module data projection.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stdint.h>

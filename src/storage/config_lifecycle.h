@@ -1,3 +1,20 @@
+/*
+File: src/storage/config_lifecycle.h
+Purpose: Declares the config lifecycle module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\storage\config_lifecycle.h
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <ArduinoJson.h>

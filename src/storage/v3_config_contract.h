@@ -1,4 +1,24 @@
-﻿#pragma once
+/*
+File: src/storage/v3_config_contract.h
+Purpose: Declares the v3 config contract module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src/kernel/kernel_service.h
+- src/platform/wifi_runtime.h
+- src/storage/v3_config_decoder.h
+- src/storage/v3_config_validator.h
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#pragma once
 
 #include <stdint.h>
 

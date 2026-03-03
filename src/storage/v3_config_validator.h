@@ -1,3 +1,22 @@
+/*
+File: src/storage/v3_config_validator.h
+Purpose: Declares the v3 config validator module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src/kernel/kernel_service.h
+- src/storage/storage_service.h
+- src/storage/v3_config_decoder.h
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include "storage/v3_config_contract.h"

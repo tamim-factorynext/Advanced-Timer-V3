@@ -1,4 +1,24 @@
-﻿#pragma once
+/*
+File: src/control/control_service.h
+Purpose: Declares the control service module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\control\control_service.cpp
+- src\control\control_service.h
+- src\main.cpp
+- src\portal\portal_service.h
+
+Flow Hook:
+- Control command orchestration and system-level actions.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#pragma once
 
 #include <stdint.h>
 

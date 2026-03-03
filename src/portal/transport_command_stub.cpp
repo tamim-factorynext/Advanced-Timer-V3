@@ -1,4 +1,23 @@
-﻿#include "portal/transport_command_stub.h"
+/*
+File: src/portal/transport_command_stub.cpp
+Purpose: Implements the transport command stub module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\portal\transport_command_stub.cpp
+- src\portal\transport_command_stub.h
+- src\portal\transport_runtime.cpp
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "portal/transport_command_stub.h"
 
 #include <ArduinoJson.h>
 #include <cstring>

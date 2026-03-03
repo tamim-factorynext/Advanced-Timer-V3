@@ -1,4 +1,25 @@
-﻿#pragma once
+/*
+File: src/kernel/v3_card_types.h
+Purpose: Declares the v3 card types module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\v3_card_bridge.h
+- src\kernel\v3_card_types.h
+- src\kernel\v3_runtime_store.h
+- src\kernel\v3_typed_card_parser.h
+- (+ more call sites)
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#pragma once
 
 #include <stdint.h>
 

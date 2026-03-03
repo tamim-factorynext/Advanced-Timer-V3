@@ -1,4 +1,24 @@
-﻿#include "control/control_service.h"
+/*
+File: src/control/control_service.cpp
+Purpose: Implements the control service module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\control\control_service.cpp
+- src\control\control_service.h
+- src\main.cpp
+- src\portal\portal_service.h
+
+Flow Hook:
+- Control command orchestration and system-level actions.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "control/control_service.h"
 
 namespace v3::control {
 

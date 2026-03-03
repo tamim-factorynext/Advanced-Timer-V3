@@ -1,3 +1,20 @@
+/*
+File: src/portal/routes.h
+Purpose: Declares the routes module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\portal\routes.h
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stddef.h>

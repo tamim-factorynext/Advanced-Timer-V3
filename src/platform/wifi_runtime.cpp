@@ -1,4 +1,21 @@
-﻿#include "platform/wifi_runtime.h"
+/*
+File: src/platform/wifi_runtime.cpp
+Purpose: Implements the wifi runtime module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/main.cpp
+
+Flow Hook:
+- Board/platform integration and connectivity runtime.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "platform/wifi_runtime.h"
 
 #include <WiFi.h>
 #include <cstdio>

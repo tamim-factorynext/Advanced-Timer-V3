@@ -1,4 +1,22 @@
-﻿#include "kernel/v3_card_bridge.h"
+/*
+File: src/kernel/v3_card_bridge.cpp
+Purpose: Implements the v3 card bridge module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\v3_card_bridge.cpp
+- src\kernel\v3_card_bridge.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_card_bridge.h"
 #include "kernel/legacy_card_fields.h"
 
 namespace {

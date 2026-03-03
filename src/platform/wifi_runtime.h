@@ -1,3 +1,20 @@
+/*
+File: src/platform/wifi_runtime.h
+Purpose: Declares the wifi runtime module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src/main.cpp
+
+Flow Hook:
+- Board/platform integration and connectivity runtime.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stdint.h>

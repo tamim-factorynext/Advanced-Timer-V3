@@ -1,4 +1,21 @@
-﻿#include "storage/v3_config_contract.h"
+/*
+File: src/storage/v3_config_contract.cpp
+Purpose: Implements the v3 config contract module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/storage/storage_service.cpp
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "storage/v3_config_contract.h"
 
 #include <string.h>
 

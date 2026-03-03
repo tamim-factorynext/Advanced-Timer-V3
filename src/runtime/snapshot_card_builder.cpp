@@ -1,4 +1,22 @@
-﻿#include "runtime/snapshot_card_builder.h"
+/*
+File: src/runtime/snapshot_card_builder.cpp
+Purpose: Implements the snapshot card builder module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/runtime/runtime_card_meta.cpp
+- src/kernel/v3_runtime_store.cpp
+
+Flow Hook:
+- Runtime snapshot shaping and cross-module data projection.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "runtime/snapshot_card_builder.h"
 
 RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
                                              const V3RuntimeStoreView& store) {

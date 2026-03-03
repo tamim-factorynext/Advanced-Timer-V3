@@ -1,4 +1,25 @@
-﻿#pragma once
+/*
+File: src/kernel/v3_sio_runtime.h
+Purpose: Declares the v3 sio runtime module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\kernel_service.h
+- src\kernel\v3_runtime_adapters.h
+- src\kernel\v3_runtime_store.h
+- src\kernel\v3_sio_runtime.cpp
+- (+ more call sites)
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#pragma once
 
 #include <stdint.h>
 

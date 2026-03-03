@@ -1,4 +1,22 @@
-﻿#include "storage/v3_config_validator.h"
+/*
+File: src/storage/v3_config_validator.cpp
+Purpose: Implements the v3 config validator module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/storage/storage_service.cpp
+- src/storage/v3_config_decoder.cpp
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "storage/v3_config_validator.h"
 
 namespace v3::storage {
 

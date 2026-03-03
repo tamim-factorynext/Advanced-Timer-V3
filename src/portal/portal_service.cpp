@@ -1,4 +1,23 @@
-﻿#include "portal/portal_service.h"
+/*
+File: src/portal/portal_service.cpp
+Purpose: Implements the portal service module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/main.cpp
+- src/portal/transport_runtime.cpp
+- src/portal/transport_command_stub.cpp
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "portal/portal_service.h"
 
 #include <ArduinoJson.h>
 

@@ -1,3 +1,23 @@
+/*
+File: src/kernel/v3_runtime_store.h
+Purpose: Declares the v3 runtime store module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src\kernel\v3_runtime_signals.h
+- src\kernel\v3_runtime_store.cpp
+- src\kernel\v3_runtime_store.h
+- src\runtime\snapshot_card_builder.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <stdint.h>

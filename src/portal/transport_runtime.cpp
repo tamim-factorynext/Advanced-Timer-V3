@@ -1,3 +1,20 @@
+/*
+File: src/portal/transport_runtime.cpp
+Purpose: Implements the transport runtime module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/main.cpp
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include "portal/transport_runtime.h"
 
 #include <WebServer.h>

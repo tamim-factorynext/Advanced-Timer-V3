@@ -1,4 +1,23 @@
-﻿#include "kernel/v3_runtime_signals.h"
+/*
+File: src/kernel/v3_runtime_signals.cpp
+Purpose: Implements the v3 runtime signals module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\kernel_service.h
+- src\kernel\v3_runtime_signals.cpp
+- src\kernel\v3_runtime_signals.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_runtime_signals.h"
 
 V3RuntimeSignal makeRuntimeSignal(const RuntimeCardMeta& meta,
                                   const V3RuntimeStoreView& store) {

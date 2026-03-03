@@ -1,3 +1,20 @@
+/*
+File: src/main.cpp
+Purpose: Bootstraps services and starts the firmware runtime loop.
+
+Responsibilities:
+- Initialize services, queues, and task orchestration.
+- Wire module boundaries for runtime execution and transport.
+
+Used By:
+- firmware build target
+
+Flow Hook:
+- Firmware entrypoint and service wiring.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -242,7 +259,7 @@ void core1ServiceTask(void*) {
     const v3::platform::WiFiStatus& wifi = gWiFi.status();
     if (wifi.state != gLastWiFiState ||
         (nowMs - gLastWiFiLogMs) >= kWiFiStatusLogIntervalMs) {
-      Serial.printf("V3 WiFi state=%u connected=%u retries=%lu ip=%s\n",
+      Serial.printf("V3 WiFi state=%u connected=%u retries=%lu ip=%s/n",
                     static_cast<unsigned>(wifi.state),
                     wifi.staConnected ? 1U : 0U,
                     static_cast<unsigned long>(wifi.retryCount), wifi.staIp);

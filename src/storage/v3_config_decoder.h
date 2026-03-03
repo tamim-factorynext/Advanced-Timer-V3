@@ -1,3 +1,20 @@
+/*
+File: src/storage/v3_config_decoder.h
+Purpose: Declares the v3 config decoder module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src/storage/storage_service.cpp
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #pragma once
 
 #include <ArduinoJson.h>

@@ -1,4 +1,23 @@
-﻿#pragma once
+/*
+File: src/portal/portal_service.h
+Purpose: Declares the portal service module interface and data contracts.
+
+Responsibilities:
+- Define stable types/functions consumed by other modules.
+- Keep cross-module contract changes explicit and reviewable.
+
+Used By:
+- src/main.cpp
+- src/portal/transport_runtime.h
+- src/portal/transport_command_stub.h
+
+Flow Hook:
+- Portal request handling and runtime snapshot transport.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>

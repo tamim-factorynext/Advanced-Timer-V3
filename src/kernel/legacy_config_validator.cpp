@@ -1,4 +1,22 @@
-﻿#include "kernel/legacy_config_validator.h"
+/*
+File: src/kernel/legacy_config_validator.cpp
+Purpose: Implements the legacy config validator module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\legacy_config_validator.cpp
+- src\kernel\legacy_config_validator.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/legacy_config_validator.h"
 
 #include <cstring>
 

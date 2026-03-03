@@ -1,4 +1,23 @@
-﻿#include "kernel/v3_typed_card_parser.h"
+/*
+File: src/kernel/v3_typed_card_parser.cpp
+Purpose: Implements the v3 typed card parser module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\v3_typed_card_parser.cpp
+- src\kernel\v3_typed_card_parser.h
+- src\storage\v3_normalizer.cpp
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_typed_card_parser.h"
 
 #include <cstring>
 

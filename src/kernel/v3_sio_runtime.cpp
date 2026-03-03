@@ -1,4 +1,25 @@
-﻿#include "kernel/v3_sio_runtime.h"
+/*
+File: src/kernel/v3_sio_runtime.cpp
+Purpose: Implements the v3 sio runtime module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\kernel_service.h
+- src\kernel\v3_runtime_adapters.h
+- src\kernel\v3_runtime_store.h
+- src\kernel\v3_sio_runtime.cpp
+- (+ more call sites)
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
+#include "kernel/v3_sio_runtime.h"
 
 void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
                   const V3SioStepInput& in, V3SioStepOutput& out) {

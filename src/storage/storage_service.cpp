@@ -1,3 +1,21 @@
+/*
+File: src/storage/storage_service.cpp
+Purpose: Implements the storage service module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src/main.cpp
+- src/runtime/runtime_service.cpp
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include "storage/storage_service.h"
 
 #include <ArduinoJson.h>

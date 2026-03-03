@@ -1,3 +1,22 @@
+/*
+File: src/storage/v3_normalizer.cpp
+Purpose: Implements the v3 normalizer module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\storage\v3_config_service.h
+- src\storage\v3_normalizer.cpp
+- src\storage\v3_normalizer.h
+
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include "storage/v3_normalizer.h"
 
 #include <cstring>

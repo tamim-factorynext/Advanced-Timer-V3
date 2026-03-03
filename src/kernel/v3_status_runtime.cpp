@@ -1,3 +1,22 @@
+/*
+File: src/kernel/v3_status_runtime.cpp
+Purpose: Implements the v3 status runtime module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- src\kernel\kernel_service.cpp
+- src\kernel\v3_status_runtime.cpp
+- src\kernel\v3_status_runtime.h
+
+Flow Hook:
+- Kernel scan cycle and card runtime evaluation.
+
+Notes:
+- Naming follows docs/naming-glossary-v3.md where applicable.
+*/
 #include "kernel/v3_status_runtime.h"
 
 namespace {
