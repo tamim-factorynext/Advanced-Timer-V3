@@ -12,6 +12,7 @@ Purpose: Canonical map of documentation for clean V3 transition.
 ## 2. Active V3 Docs (`docs/`)
 
 - `docs/schema-v3.md` - Config schema and validation rules.
+- `docs/ARCHITECTURE.md` - Runtime architecture source of truth, queue/task boundaries, and execution sequence diagrams.
 - `docs/api-contract-v3.md` - Transport/API envelope contract.
 - `docs/acceptance-matrix-v3.md` - Acceptance test mapping.
 - `docs/hardware-profile-v3.md` - Hardware profile/capability model.

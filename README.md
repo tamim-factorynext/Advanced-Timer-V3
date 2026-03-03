@@ -117,6 +117,9 @@ Our approach is simply a different fit point in that market:
 
 ## 4. System Architecture (Firmware + Portal)
 
+Detailed architecture source of truth:
+- `docs/ARCHITECTURE.md`
+
 ### 4.1 Two-Core Ownership
 
 Core ownership is strict:

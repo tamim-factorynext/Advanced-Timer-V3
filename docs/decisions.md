@@ -571,5 +571,15 @@ Use one short entry per decision with this structure:
 - Impact: Enables controlled migration with compatibility window instead of one-shot breaking rename.
 - References: `docs/naming-glossary-v3.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`.
 
+## DEC-0055: Standardize File Headers And Future Symbol-Level Documentation
+- Date: 2026-03-03
+- Status: Accepted
+- Context: As firmware scope grows, understanding module ownership and call flow directly from source files is increasingly important for onboarding, refactoring, and debugging.
+- Decision: Keep standardized top-of-file header sections (`Purpose`, `Responsibilities`, `Used By`, `Flow Hook`, `Notes`) across source files, and adopt a future symbol-level documentation style for important functions/structs/enums using concise `What`, `Why`, and `Used By` annotations.
+- Impact: Improves codebase navigability and execution-flow comprehension without requiring external tooling.
+- Impact: Establishes consistent documentation expectations for future PRs.
+- Impact: Adds lightweight maintenance overhead that should be handled in review when dependencies/behavior change.
+- References: `src/` file header rollout, `docs/worklog.md`, `docs/naming-glossary-v3.md`.
+
 
 
