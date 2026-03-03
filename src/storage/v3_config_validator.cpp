@@ -1,4 +1,4 @@
-#include "storage/v3_config_validator.h"
+﻿#include "storage/v3_config_validator.h"
 
 namespace v3::storage {
 
@@ -53,8 +53,8 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
     return result;
   }
 
-  if (candidate.scanIntervalMs < kMinScanIntervalMs ||
-      candidate.scanIntervalMs > kMaxScanIntervalMs) {
+  if (candidate.scanPeriodMs < kMinScanIntervalMs ||
+      candidate.scanPeriodMs > kMaxScanIntervalMs) {
     result.error.code = ConfigErrorCode::ScanIntervalOutOfRange;
     return result;
   }
@@ -64,24 +64,24 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
     return result;
   }
 
-  if (!candidate.wifi.staOnly || candidate.wifi.master.editable ||
-      !isNonEmpty(candidate.wifi.master.ssid) ||
-      !isNonEmpty(candidate.wifi.master.password) ||
-      !isNonEmpty(candidate.wifi.user.ssid) ||
-      !isNonEmpty(candidate.wifi.user.password) ||
-      candidate.wifi.master.timeoutSec == 0 || candidate.wifi.user.timeoutSec == 0 ||
-      candidate.wifi.retryBackoffSec == 0) {
+  if (!candidate.wifi.staOnly || candidate.wifi.backupAccessNetwork.editable ||
+      !isNonEmpty(candidate.wifi.backupAccessNetwork.ssid) ||
+      !isNonEmpty(candidate.wifi.backupAccessNetwork.password) ||
+      !isNonEmpty(candidate.wifi.userConfiguredNetwork.ssid) ||
+      !isNonEmpty(candidate.wifi.userConfiguredNetwork.password) ||
+      candidate.wifi.backupAccessNetwork.timeoutSec == 0 || candidate.wifi.userConfiguredNetwork.timeoutSec == 0 ||
+      candidate.wifi.retryDelaySec == 0) {
     result.error.code = ConfigErrorCode::InvalidWiFiPolicy;
     return result;
   }
 
-  if (!isNonEmpty(candidate.clock.timezone) ||
-      !isNonEmpty(candidate.clock.ntp.primaryServer) ||
-      !isNonEmpty(candidate.clock.ntp.secondaryServer) ||
-      !isNonEmpty(candidate.clock.ntp.tertiaryServer) ||
-      candidate.clock.ntp.syncIntervalSec == 0 ||
-      candidate.clock.ntp.startupTimeoutSec == 0 ||
-      candidate.clock.ntp.maxStaleSec == 0) {
+  if (!isNonEmpty(candidate.time.timezone) ||
+      !isNonEmpty(candidate.time.timeSync.primaryTimeServer) ||
+      !isNonEmpty(candidate.time.timeSync.secondaryServer) ||
+      !isNonEmpty(candidate.time.timeSync.tertiaryServer) ||
+      candidate.time.timeSync.syncIntervalSec == 0 ||
+      candidate.time.timeSync.startupTimeoutSec == 0 ||
+      candidate.time.timeSync.maxTimeAgeSec == 0) {
     result.error.code = ConfigErrorCode::ConfigPayloadInvalidShape;
     return result;
   }
@@ -148,14 +148,14 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
 
     if (card.ai.inputMin > card.ai.inputMax ||
         card.ai.outputMin > card.ai.outputMax ||
-        card.ai.emaAlphaX100 > 100U) {
+        card.ai.smoothingFactorPct > 100U) {
       result.error.code = ConfigErrorCode::InvalidAiRange;
       result.error.cardIndex = i;
       return result;
     }
 
     if (card.math.operation > 3U || card.math.inputMin >= card.math.inputMax ||
-        card.math.emaAlphaX100 > 100U) {
+        card.math.smoothingFactorPct > 100U) {
       result.error.code = ConfigErrorCode::InvalidMathClamp;
       result.error.cardIndex = i;
       return result;
@@ -235,3 +235,6 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
 }
 
 }  // namespace v3::storage
+
+
+

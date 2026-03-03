@@ -1,4 +1,4 @@
-#include "kernel/v3_do_runtime.h"
+﻿#include "kernel/v3_do_runtime.h"
 
 namespace {
 bool isDoRunningState(cardState state) {
@@ -6,13 +6,13 @@ bool isDoRunningState(cardState state) {
 }
 
 void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
-  runtime.logicalState = false;
-  runtime.triggerFlag = false;
+  runtime.commandState = false;
+  runtime.edgePulse = false;
   runtime.startOnMs = 0;
   runtime.startOffMs = 0;
   runtime.repeatCounter = 0;
   if (clearCounter) {
-    runtime.currentValue = 0;
+    runtime.liveValue = 0;
   }
   runtime.state = State_DO_Idle;
 }
@@ -20,28 +20,28 @@ void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
 
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out) {
-  out.setResult = in.setCondition;
-  out.resetResult = in.resetCondition;
+  out.setConditionMet = in.setCondition;
+  out.resetConditionMet = in.resetCondition;
   out.resetOverride = in.setCondition && in.resetCondition;
   out.effectiveOutput = false;
 
-  const bool previousPhysical = runtime.physicalState;
+  const bool previousPhysical = runtime.actualState;
   const bool idlePhysical = cfg.invert;
 
   if (in.resetCondition) {
     forceDoIdle(runtime, true);
-    runtime.physicalState = idlePhysical;
-    out.effectiveOutput = runtime.physicalState;
+    runtime.actualState = idlePhysical;
+    out.effectiveOutput = runtime.actualState;
     return;
   }
 
   const bool retriggerable =
       (runtime.state == State_DO_Idle || runtime.state == State_DO_Finished);
   const bool startMission = retriggerable && in.setCondition;
-  runtime.triggerFlag = false;
+  runtime.edgePulse = false;
 
   if (startMission) {
-    runtime.logicalState = true;
+    runtime.commandState = true;
     runtime.repeatCounter = 0;
     if (cfg.mode == Mode_DO_Immediate) {
       runtime.state = State_DO_Active;
@@ -55,8 +55,8 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   if (cfg.mode == Mode_DO_Gated && isDoRunningState(runtime.state) &&
       !in.setCondition) {
     forceDoIdle(runtime, false);
-    runtime.physicalState = idlePhysical;
-    out.effectiveOutput = runtime.physicalState;
+    runtime.actualState = idlePhysical;
+    out.effectiveOutput = runtime.actualState;
     return;
   }
 
@@ -93,7 +93,7 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
         }
 
         if (runtime.repeatCounter >= cfg.repeatCount) {
-          runtime.logicalState = false;
+          runtime.commandState = false;
           runtime.state = State_DO_Finished;
           break;
         }
@@ -113,10 +113,11 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   const bool effectiveOutput = cfg.invert ? !missionOutput : missionOutput;
   const bool risingPhysical = (!previousPhysical && effectiveOutput);
   if (risingPhysical) {
-    runtime.currentValue += 1;
+    runtime.liveValue += 1;
   }
-  runtime.triggerFlag = risingPhysical;
+  runtime.edgePulse = risingPhysical;
 
-  runtime.physicalState = effectiveOutput;
+  runtime.actualState = effectiveOutput;
   out.effectiveOutput = effectiveOutput;
 }
+

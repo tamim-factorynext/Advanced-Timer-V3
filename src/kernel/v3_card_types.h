@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -71,7 +71,7 @@ struct V3AiConfig {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
 };
 
 struct V3SioConfig {
@@ -93,7 +93,7 @@ struct V3MathConfig {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
   V3ConditionBlock set;
   V3ConditionBlock reset;
 };
@@ -126,3 +126,4 @@ struct V3CardConfig {
   V3MathConfig math;
   V3RtcConfig rtc;
 };
+

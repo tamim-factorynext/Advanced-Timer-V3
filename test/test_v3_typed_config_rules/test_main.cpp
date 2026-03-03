@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include <string>
 
@@ -55,7 +55,7 @@ void seedValidCards(V3CardConfig* cards) {
     cards[i].ai.inputMax = 4095;
     cards[i].ai.outputMin = 0;
     cards[i].ai.outputMax = 10000;
-    cards[i].ai.emaAlphaX100 = 50;
+    cards[i].ai.smoothingFactorPct = 50;
     cards[i].rtc.hour = 12;
     cards[i].rtc.minute = 30;
   }
@@ -130,3 +130,4 @@ int main() {
   RUN_TEST(test_validate_typed_cards_rejects_rtc_minute_out_of_range);
   return UNITY_END();
 }
+

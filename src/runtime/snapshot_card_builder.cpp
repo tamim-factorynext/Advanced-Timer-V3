@@ -1,4 +1,4 @@
-#include "runtime/snapshot_card_builder.h"
+﻿#include "runtime/snapshot_card_builder.h"
 
 RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
                                              const V3RuntimeStoreView& store) {
@@ -12,11 +12,11 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
     case DigitalInput: {
       const V3DiRuntimeState* runtime = runtimeDiStateAt(meta.index, store);
       if (runtime != nullptr) {
-        out.logicalState = runtime->logicalState;
-        out.physicalState = runtime->physicalState;
-        out.triggerFlag = runtime->triggerFlag;
+        out.commandState = runtime->commandState;
+        out.actualState = runtime->actualState;
+        out.edgePulse = runtime->edgePulse;
         out.state = runtime->state;
-        out.currentValue = runtime->currentValue;
+        out.liveValue = runtime->liveValue;
         out.startOnMs = runtime->startOnMs;
         out.startOffMs = runtime->startOffMs;
         out.repeatCounter = runtime->repeatCounter;
@@ -26,11 +26,11 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
     case DigitalOutput: {
       const V3DoRuntimeState* runtime = runtimeDoStateAt(meta.index, store);
       if (runtime != nullptr) {
-        out.logicalState = runtime->logicalState;
-        out.physicalState = runtime->physicalState;
-        out.triggerFlag = runtime->triggerFlag;
+        out.commandState = runtime->commandState;
+        out.actualState = runtime->actualState;
+        out.edgePulse = runtime->edgePulse;
         out.state = runtime->state;
-        out.currentValue = runtime->currentValue;
+        out.liveValue = runtime->liveValue;
         out.startOnMs = runtime->startOnMs;
         out.startOffMs = runtime->startOffMs;
         out.repeatCounter = runtime->repeatCounter;
@@ -42,18 +42,18 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
       if (runtime != nullptr) {
         out.state = runtime->state;
         out.mode = runtime->mode;
-        out.currentValue = runtime->currentValue;
+        out.liveValue = runtime->liveValue;
       }
       break;
     }
     case SoftIO: {
       const V3SioRuntimeState* runtime = runtimeSioStateAt(meta.index, store);
       if (runtime != nullptr) {
-        out.logicalState = runtime->logicalState;
-        out.physicalState = runtime->physicalState;
-        out.triggerFlag = runtime->triggerFlag;
+        out.commandState = runtime->commandState;
+        out.actualState = runtime->actualState;
+        out.edgePulse = runtime->edgePulse;
         out.state = runtime->state;
-        out.currentValue = runtime->currentValue;
+        out.liveValue = runtime->liveValue;
         out.startOnMs = runtime->startOnMs;
         out.startOffMs = runtime->startOffMs;
         out.repeatCounter = runtime->repeatCounter;
@@ -63,19 +63,19 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
     case MathCard: {
       const V3MathRuntimeState* runtime = runtimeMathStateAt(meta.index, store);
       if (runtime != nullptr) {
-        out.logicalState = runtime->logicalState;
-        out.physicalState = runtime->physicalState;
-        out.triggerFlag = runtime->triggerFlag;
+        out.commandState = runtime->commandState;
+        out.actualState = runtime->actualState;
+        out.edgePulse = runtime->edgePulse;
         out.state = runtime->state;
-        out.currentValue = runtime->currentValue;
+        out.liveValue = runtime->liveValue;
       }
       break;
     }
     case RtcCard: {
       const V3RtcRuntimeState* runtime = runtimeRtcStateAt(meta.index, store);
       if (runtime != nullptr) {
-        out.logicalState = runtime->logicalState;
-        out.triggerFlag = runtime->triggerFlag;
+        out.commandState = runtime->commandState;
+        out.edgePulse = runtime->edgePulse;
         out.state = runtime->state;
         out.mode = runtime->mode;
         out.startOnMs = runtime->triggerStartMs;
@@ -96,3 +96,4 @@ void buildRuntimeSnapshotCards(const RuntimeCardMeta* meta, uint8_t count,
     outCards[i] = buildRuntimeSnapshotCard(meta[i], store);
   }
 }
+

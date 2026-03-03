@@ -1,4 +1,4 @@
-#include "runtime/runtime_service.h"
+﻿#include "runtime/runtime_service.h"
 
 namespace v3::runtime {
 
@@ -12,7 +12,7 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.nowMs = nowMs;
   snapshot_.completedScans = kernelMetrics.completedScans;
   snapshot_.lastScanMs = kernelMetrics.lastScanMs;
-  snapshot_.scanIntervalMs = kernelMetrics.scanIntervalMs;
+  snapshot_.scanPeriodMs = kernelMetrics.scanPeriodMs;
   snapshot_.configuredCardCount = kernelMetrics.configuredCardCount;
   snapshot_.enabledCardCount = kernelMetrics.enabledCardCount;
   snapshot_.diCardCount = kernelMetrics.diCardCount;
@@ -41,3 +41,4 @@ void RuntimeService::tick(uint32_t nowMs,
 const RuntimeSnapshot& RuntimeService::snapshot() const { return snapshot_; }
 
 }  // namespace v3::runtime
+

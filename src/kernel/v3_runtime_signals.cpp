@@ -1,4 +1,4 @@
-#include "kernel/v3_runtime_signals.h"
+﻿#include "kernel/v3_runtime_signals.h"
 
 V3RuntimeSignal makeRuntimeSignal(const RuntimeCardMeta& meta,
                                   const V3RuntimeStoreView& store) {
@@ -10,60 +10,60 @@ V3RuntimeSignal makeRuntimeSignal(const RuntimeCardMeta& meta,
       if (meta.index >= store.diCount) return signal;
       const V3DiRuntimeState& runtime = store.di[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = runtime.logicalState;
-      signal.physicalState = runtime.physicalState;
-      signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = runtime.currentValue;
+      signal.commandState = runtime.commandState;
+      signal.actualState = runtime.actualState;
+      signal.edgePulse = runtime.edgePulse;
+      signal.liveValue = runtime.liveValue;
       return signal;
     }
     case DigitalOutput: {
       if (meta.index >= store.dOutCount) return signal;
       const V3DoRuntimeState& runtime = store.dOut[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = runtime.logicalState;
-      signal.physicalState = runtime.physicalState;
-      signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = runtime.currentValue;
+      signal.commandState = runtime.commandState;
+      signal.actualState = runtime.actualState;
+      signal.edgePulse = runtime.edgePulse;
+      signal.liveValue = runtime.liveValue;
       return signal;
     }
     case AnalogInput: {
       if (meta.index >= store.aiCount) return signal;
       const V3AiRuntimeState& runtime = store.ai[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = false;
-      signal.physicalState = false;
-      signal.triggerFlag = false;
-      signal.currentValue = runtime.currentValue;
+      signal.commandState = false;
+      signal.actualState = false;
+      signal.edgePulse = false;
+      signal.liveValue = runtime.liveValue;
       return signal;
     }
     case SoftIO: {
       if (meta.index >= store.sioCount) return signal;
       const V3SioRuntimeState& runtime = store.sio[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = runtime.logicalState;
-      signal.physicalState = runtime.physicalState;
-      signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = runtime.currentValue;
+      signal.commandState = runtime.commandState;
+      signal.actualState = runtime.actualState;
+      signal.edgePulse = runtime.edgePulse;
+      signal.liveValue = runtime.liveValue;
       return signal;
     }
     case MathCard: {
       if (meta.index >= store.mathCount) return signal;
       const V3MathRuntimeState& runtime = store.math[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = runtime.logicalState;
-      signal.physicalState = runtime.physicalState;
-      signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = runtime.currentValue;
+      signal.commandState = runtime.commandState;
+      signal.actualState = runtime.actualState;
+      signal.edgePulse = runtime.edgePulse;
+      signal.liveValue = runtime.liveValue;
       return signal;
     }
     case RtcCard: {
       if (meta.index >= store.rtcCount) return signal;
       const V3RtcRuntimeState& runtime = store.rtc[meta.index];
       signal.state = runtime.state;
-      signal.logicalState = runtime.logicalState;
-      signal.physicalState = false;
-      signal.triggerFlag = runtime.triggerFlag;
-      signal.currentValue = 0;
+      signal.commandState = runtime.commandState;
+      signal.actualState = false;
+      signal.edgePulse = runtime.edgePulse;
+      signal.liveValue = 0;
       return signal;
     }
     default:
@@ -86,3 +86,4 @@ void refreshRuntimeSignalAt(const RuntimeCardMeta* cardsMeta,
   if (cardId >= count) return;
   out[cardId] = makeRuntimeSignal(cardsMeta[cardId], store);
 }
+

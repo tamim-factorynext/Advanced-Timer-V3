@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -87,22 +87,22 @@
         <h2>WiFi</h2>
         <div class="row">
           <div class="field">
-            <label>Master SSID (fixed)</label>
-            <input id="masterSsid" disabled />
+            <label>Backup Access Network SSID (fixed)</label>
+            <input id="backupAccessNetworkSsid" disabled />
           </div>
           <div class="field">
-            <label>Master Password (fixed)</label>
-            <input id="masterPassword" type="password" value="********" disabled />
+            <label>Backup Access Network Password (fixed)</label>
+            <input id="backupAccessNetworkPassword" type="password" value="********" disabled />
           </div>
         </div>
         <div class="row">
           <div class="field">
-            <label>User SSID (configurable)</label>
-            <input id="userSsid" />
+            <label>User Configured Network SSID</label>
+            <input id="userConfiguredNetworkSsid" />
           </div>
           <div class="field">
-            <label>User Password (configurable)</label>
-            <input id="userPassword" type="password" />
+            <label>User Configured Network Password</label>
+            <input id="userConfiguredNetworkPassword" type="password" />
           </div>
         </div>
         <div class="row">
@@ -155,12 +155,15 @@
             setStatus("Failed to load settings", false);
             return;
           }
-          document.getElementById("masterSsid").value = data.masterSsid || "";
-          document.getElementById("userSsid").value = data.userSsid || "";
-          document.getElementById("userPassword").value = data.userPassword || "";
+          document.getElementById("backupAccessNetworkSsid").value =
+            data.backupAccessNetworkSsid || "";
+          document.getElementById("userConfiguredNetworkSsid").value =
+            data.userConfiguredNetworkSsid || "";
+          document.getElementById("userConfiguredNetworkPassword").value =
+            data.userConfiguredNetworkPassword || "";
           const scanMin = Number(data.scanIntervalMinMs || 10);
           const scanMax = Number(data.scanIntervalMaxMs || 1000);
-          const scanValue = Number(data.scanIntervalMs || 500);
+          const scanValue = Number(data.scanPeriodMs || 500);
           const scanInput = document.getElementById("scanDelayMs");
           scanInput.min = String(scanMin);
           scanInput.max = String(scanMax);
@@ -189,9 +192,14 @@
       });
 
       document.getElementById("btnSaveWifi").addEventListener("click", async () => {
-        const userSsid = document.getElementById("userSsid").value.trim();
-        const userPassword = document.getElementById("userPassword").value;
-        const ok = await postJson("/api/settings/wifi", { userSsid, userPassword });
+        const userConfiguredNetworkSsid =
+          document.getElementById("userConfiguredNetworkSsid").value.trim();
+        const userConfiguredNetworkPassword =
+          document.getElementById("userConfiguredNetworkPassword").value;
+        const ok = await postJson("/api/settings/wifi", {
+          userConfiguredNetworkSsid,
+          userConfiguredNetworkPassword
+        });
         setStatus(ok ? "WiFi settings saved" : "Failed to save WiFi settings", ok);
       });
 
@@ -203,8 +211,8 @@
       document.getElementById("scanDelayMs").addEventListener("input", updateScanDelayText);
 
       document.getElementById("btnSaveRuntime").addEventListener("click", async () => {
-        const scanIntervalMs = Number(document.getElementById("scanDelayMs").value || 500);
-        const ok = await postJson("/api/settings/runtime", { scanIntervalMs });
+        const scanPeriodMs = Number(document.getElementById("scanDelayMs").value || 500);
+        const ok = await postJson("/api/settings/runtime", { scanPeriodMs });
         setStatus(ok ? "Runtime settings saved" : "Failed to save runtime settings", ok);
       });
 
@@ -217,3 +225,4 @@
     </script>
   </body>
 </html>
+

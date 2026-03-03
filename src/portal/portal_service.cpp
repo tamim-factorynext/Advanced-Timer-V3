@@ -1,4 +1,4 @@
-#include "portal/portal_service.h"
+﻿#include "portal/portal_service.h"
 
 #include <ArduinoJson.h>
 
@@ -6,15 +6,32 @@
 
 namespace v3::portal {
 
+namespace {
+
+const char* kDiagnosticsFallbackJson =
+    "{\"ok\":false,\"reason\":\"diagnostics_memory_pressure\"}";
+const char* kSnapshotFallbackJson =
+    "{\"ok\":false,\"reason\":\"snapshot_memory_pressure\"}";
+
+}  // namespace
+
 void PortalService::begin() {
   lastTickMs_ = 0;
   observedScanCount_ = 0;
   diagnosticsRevision_ = 0;
   diagnosticsReady_ = false;
+  diagnosticsFallbackActive_ = false;
+  diagnosticsSerializeFailureCount_ = 0;
+  diagnosticsCapacityRejectCount_ = 0;
   diagnosticsJson_.remove(0);
+  diagnosticsReserveReady_ = diagnosticsJson_.reserve(kDiagnosticsJsonReserve);
   snapshotRevision_ = 0;
   snapshotReady_ = false;
+  snapshotFallbackActive_ = false;
+  snapshotSerializeFailureCount_ = 0;
+  snapshotCapacityRejectCount_ = 0;
   snapshotJson_.remove(0);
+  snapshotReserveReady_ = snapshotJson_.reserve(kSnapshotJsonReserve);
   head_ = 0;
   tail_ = 0;
   depth_ = 0;
@@ -31,7 +48,7 @@ void PortalService::tick(uint32_t nowMs,
   rebuildSnapshotJson(snapshot, cards, cardCount);
 }
 
-bool PortalService::enqueueSetRunModeRequest(runMode mode, uint32_t requestId,
+bool PortalService::enqueueSetRunModeRequest(engineMode mode, uint32_t requestId,
                                              uint32_t enqueuedUs) {
   PortalCommandRequest request = {};
   request.type = PortalCommandType::SetRunMode;
@@ -67,7 +84,7 @@ bool PortalService::enqueueSetInputForceRequest(uint8_t cardId,
   return enqueueRequest(request);
 }
 
-PortalCommandSubmitResult PortalService::submitSetRunMode(runMode mode,
+PortalCommandSubmitResult PortalService::submitSetRunMode(engineMode mode,
                                                           uint32_t enqueuedUs) {
   PortalCommandSubmitResult result = {};
   result.requestId = ++nextRequestId_;
@@ -134,7 +151,8 @@ PortalDiagnosticsState PortalService::diagnosticsState() const {
   PortalDiagnosticsState state = {};
   state.ready = diagnosticsReady_;
   state.revision = diagnosticsRevision_;
-  state.json = diagnosticsJson_.c_str();
+  state.json =
+      diagnosticsFallbackActive_ ? kDiagnosticsFallbackJson : diagnosticsJson_.c_str();
   return state;
 }
 
@@ -142,7 +160,7 @@ PortalSnapshotState PortalService::snapshotState() const {
   PortalSnapshotState state = {};
   state.ready = snapshotReady_;
   state.revision = snapshotRevision_;
-  state.json = snapshotJson_.c_str();
+  state.json = snapshotFallbackActive_ ? kSnapshotFallbackJson : snapshotJson_.c_str();
   return state;
 }
 
@@ -253,8 +271,33 @@ void PortalService::rebuildDiagnosticsJson(
   commandIngress["queueAcceptedCount"] = ingress_.queueAcceptedCount;
   commandIngress["queueRejectedCount"] = ingress_.queueRejectedCount;
 
+  JsonObject heapGuard = doc["heapGuard"].to<JsonObject>();
+  heapGuard["diagnosticsReserveReady"] = diagnosticsReserveReady_;
+  heapGuard["snapshotReserveReady"] = snapshotReserveReady_;
+  heapGuard["diagnosticsSerializeFailureCount"] =
+      diagnosticsSerializeFailureCount_;
+  heapGuard["snapshotSerializeFailureCount"] = snapshotSerializeFailureCount_;
+  heapGuard["diagnosticsCapacityRejectCount"] = diagnosticsCapacityRejectCount_;
+  heapGuard["snapshotCapacityRejectCount"] = snapshotCapacityRejectCount_;
+  heapGuard["diagnosticsMaxBytes"] = kDiagnosticsJsonReserve;
+  heapGuard["snapshotMaxBytes"] = kSnapshotJsonReserve;
+
+  const size_t requiredBytes = measureJson(doc);
+  if ((requiredBytes + 1U) > kDiagnosticsJsonReserve) {
+    diagnosticsCapacityRejectCount_ += 1;
+    diagnosticsFallbackActive_ = true;
+    diagnosticsRevision_ += 1;
+    diagnosticsReady_ = true;
+    return;
+  }
+
   diagnosticsJson_.remove(0);
-  serializeJson(doc, diagnosticsJson_);
+  if (serializeJson(doc, diagnosticsJson_) == 0) {
+    diagnosticsSerializeFailureCount_ += 1;
+    diagnosticsFallbackActive_ = true;
+  } else {
+    diagnosticsFallbackActive_ = false;
+  }
   diagnosticsRevision_ += 1;
   diagnosticsReady_ = true;
 }
@@ -269,8 +312,8 @@ void PortalService::rebuildSnapshotJson(
   doc["snapshotSeq"] = snapshot.completedScans;
   doc["revision"] = snapshotRevision_ + 1;
   doc["tsMs"] = snapshot.nowMs;
-  doc["scanIntervalMs"] = snapshot.scanIntervalMs;
-  doc["runMode"] = toString(snapshot.mode);
+  doc["scanPeriodMs"] = snapshot.scanPeriodMs;
+  doc["engineMode"] = toString(snapshot.mode);
 
   JsonObject metrics = doc["metrics"].to<JsonObject>();
   metrics["scanLastMs"] = snapshot.lastScanMs;
@@ -293,22 +336,36 @@ void PortalService::rebuildSnapshotJson(
       item["id"] = card.id;
       item["type"] = toString(card.type);
       item["index"] = card.index;
-      item["logicalState"] = card.logicalState;
-      item["physicalState"] = card.physicalState;
-      item["triggerFlag"] = card.triggerFlag;
+      item["commandState"] = card.commandState;
+      item["actualState"] = card.actualState;
+      item["edgePulse"] = card.edgePulse;
       item["state"] = toString(card.state);
       item["mode"] = toString(card.mode);
-      item["currentValue"] = card.currentValue;
+      item["liveValue"] = card.liveValue;
       item["startOnMs"] = card.startOnMs;
       item["startOffMs"] = card.startOffMs;
       item["repeatCounter"] = card.repeatCounter;
-      item["setResult"] = card.setResult;
-      item["resetResult"] = card.resetResult;
+      item["setConditionMet"] = card.setConditionMet;
+      item["resetConditionMet"] = card.resetConditionMet;
     }
   }
 
+  const size_t requiredBytes = measureJson(doc);
+  if ((requiredBytes + 1U) > kSnapshotJsonReserve) {
+    snapshotCapacityRejectCount_ += 1;
+    snapshotFallbackActive_ = true;
+    snapshotRevision_ += 1;
+    snapshotReady_ = true;
+    return;
+  }
+
   snapshotJson_.remove(0);
-  serializeJson(doc, snapshotJson_);
+  if (serializeJson(doc, snapshotJson_) == 0) {
+    snapshotSerializeFailureCount_ += 1;
+    snapshotFallbackActive_ = true;
+  } else {
+    snapshotFallbackActive_ = false;
+  }
   snapshotRevision_ += 1;
   snapshotReady_ = true;
 }
@@ -341,3 +398,4 @@ bool PortalService::enqueueRequest(const PortalCommandRequest& request) {
 }
 
 }  // namespace v3::portal
+

@@ -1,4 +1,4 @@
-# Timing Budget V3
+﻿# Timing Budget V3
 
 Date: 2026-02-28
 Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
@@ -34,7 +34,7 @@ Runtime snapshot MUST expose at minimum:
 
 ## 4. Budget Rules
 
-1. `scanBudgetUs` = active scan interval in microseconds (`scanIntervalMs * 1000`).
+1. `scanBudgetUs` = active scan interval in microseconds (`scanPeriodMs * 1000`).
 2. `scanOverrunLast` is `true` if most recent completed full scan exceeded `scanBudgetUs`.
 3. `scanOverrunCount` increments once per completed full-scan overrun event.
 4. Queue high-water mark must be monotonically non-decreasing until reboot or explicit reset.
@@ -61,3 +61,4 @@ These thresholds are for baseline instrumentation acceptance and may be tightene
 - `AT-REL-*`: scan overrun and stability under portal load.
 - `AT-CORE-*`: deterministic full-scan behavior and run-mode timing integrity.
 - `AT-CFG-*`: config changes must not violate timing budget reporting integrity.
+

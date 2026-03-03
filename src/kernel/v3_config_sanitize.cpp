@@ -1,11 +1,11 @@
-#include "kernel/v3_config_sanitize.h"
+﻿#include "kernel/v3_config_sanitize.h"
 
 void sanitizeConfigCardRuntimeFields(LogicCard& card) {
   // Runtime-mutable fields are never accepted from persisted config payloads.
-  card.logicalState = false;
-  card.physicalState = false;
-  card.triggerFlag = false;
-  card.currentValue = 0;
+  card.commandState = false;
+  card.actualState = false;
+  card.edgePulse = false;
+  card.liveValue = 0;
   card.repeatCounter = 0;
 
   switch (card.type) {
@@ -40,3 +40,4 @@ void sanitizeConfigCardsRuntimeFields(LogicCard* cards, uint8_t count) {
     sanitizeConfigCardRuntimeFields(cards[i]);
   }
 }
+

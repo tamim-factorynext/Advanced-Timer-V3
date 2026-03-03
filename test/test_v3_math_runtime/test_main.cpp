@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/v3_math_runtime.cpp"
 
@@ -15,10 +15,10 @@ void test_math_reset_uses_fallback_and_clears_flags() {
   cfg.clampEnabled = true;
 
   V3MathRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 500;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 500;
   runtime.state = State_DO_Active;
 
   V3MathStepInput in = {};
@@ -28,13 +28,13 @@ void test_math_reset_uses_fallback_and_clears_flags() {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.setResult);
-  TEST_ASSERT_TRUE(out.resetResult);
+  TEST_ASSERT_TRUE(out.setConditionMet);
+  TEST_ASSERT_TRUE(out.resetConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_FALSE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(77, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_FALSE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(77, runtime.liveValue);
   TEST_ASSERT_EQUAL(State_None, runtime.state);
 }
 
@@ -45,10 +45,10 @@ void test_math_no_set_clears_flags_keeps_current_value() {
   cfg.fallbackValue = 9;
 
   V3MathRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 1234;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 1234;
   runtime.state = State_DO_Active;
 
   V3MathStepInput in = {};
@@ -58,13 +58,13 @@ void test_math_no_set_clears_flags_keeps_current_value() {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_FALSE(out.setResult);
-  TEST_ASSERT_FALSE(out.resetResult);
+  TEST_ASSERT_FALSE(out.setConditionMet);
+  TEST_ASSERT_FALSE(out.resetConditionMet);
   TEST_ASSERT_FALSE(out.resetOverride);
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_FALSE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(1234, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_FALSE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(1234, runtime.liveValue);
   TEST_ASSERT_EQUAL(State_None, runtime.state);
 }
 
@@ -84,10 +84,10 @@ void test_math_set_computes_sum_without_clamp() {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(runtime.logicalState);
-  TEST_ASSERT_TRUE(runtime.physicalState);
-  TEST_ASSERT_TRUE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(18, runtime.currentValue);
+  TEST_ASSERT_TRUE(runtime.commandState);
+  TEST_ASSERT_TRUE(runtime.actualState);
+  TEST_ASSERT_TRUE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(18, runtime.liveValue);
   TEST_ASSERT_EQUAL(State_None, runtime.state);
 }
 
@@ -109,7 +109,7 @@ void test_math_set_clamps_sum_when_enabled() {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_EQUAL_UINT32(40, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(40, runtime.liveValue);
 }
 
 void test_math_set_saturates_uint32_max() {
@@ -128,7 +128,7 @@ void test_math_set_saturates_uint32_max() {
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, runtime.liveValue);
 }
 
 int main() {
@@ -140,4 +140,5 @@ int main() {
   RUN_TEST(test_math_set_saturates_uint32_max);
   return UNITY_END();
 }
+
 

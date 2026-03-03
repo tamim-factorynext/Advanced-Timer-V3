@@ -1,4 +1,4 @@
-# Advanced Timer V3 User Guide (Draft)
+﻿# Advanced Timer V3 User Guide (Draft)
 
 Date: 2026-03-02  
 Status: Draft reference for end-user documentation.  
@@ -10,7 +10,7 @@ This guide is written around real runtime behavior:
 
 - shared runtime concepts first,
 - then card-by-card behavior (`DI`, `AI`, `DO`, `SIO`, `MATH`, `RTC`),
-- then device networking/time behavior (`WiFi`, `Clock/NTP`).
+- then device networking/time behavior (`WiFi`, `Time/Time Sync`).
 
 ## 2. Shared Runtime Concepts
 
@@ -24,10 +24,10 @@ In each scan, cards read inputs, evaluate conditions, update state, and publish 
 Card outputs are exposed globally and may be referenced by other cards (where allowed by binding rules).  
 Common runtime signals:
 
-- `physicalState`
-- `logicalState`
-- `triggerFlag`
-- `currentValue`
+- `actualState`
+- `commandState`
+- `edgePulse`
+- `liveValue`
 - `state` (internal mission/runtime state)
 
 ## 2.3 Condition Blocks (`set` / `reset`)
@@ -53,10 +53,10 @@ Integrated counters use unsigned 32-bit range (`0 ... 4,294,967,295`).
 
 A DI card exposes:
 
-- `physicalState`: effective sampled input after force-source selection and invert.
-- `logicalState`: qualified logical input state.
-- `currentValue`: qualified-edge counter.
-- `triggerFlag`: one-scan pulse when a qualified edge increments counter.
+- `actualState`: effective sampled input after force-source selection and invert.
+- `commandState`: qualified logical input state.
+- `liveValue`: qualified-edge counter.
+- `edgePulse`: one-scan pulse when a qualified edge increments counter.
 - `state`: DI runtime state (`IDLE`, `FILTERING`, `QUALIFIED`, `INHIBITED`).
 
 ## 3.2 DI Configuration Fields
@@ -72,17 +72,17 @@ A DI card exposes:
 
 1. Select sample source (`forced` if active, else real hardware).
 2. Apply `invert`.
-3. Update `physicalState`.
+3. Update `actualState`.
 4. Evaluate `set` and `reset`.
 5. Apply gating (`reset` first, then `set`).
 6. If allowed, evaluate edge mode and debounce.
-7. On qualified edge, update `logicalState`, increment `currentValue`, pulse `triggerFlag`.
+7. On qualified edge, update `commandState`, increment `liveValue`, pulse `edgePulse`.
 
 ## 3.4 DI Gating Rules
 
 - `reset=true`:
   - counter reset to `0`
-  - `triggerFlag=false`
+  - `edgePulse=false`
   - qualification blocked in that scan
 - `set=false` with `reset=false`:
   - no edge qualification
@@ -115,7 +115,7 @@ Example: `FORCED_HIGH` with `invert=true` becomes effective low.
 
 ## 4.1 What AI Provides
 
-- `currentValue`: scaled + filtered analog value
+- `liveValue`: scaled + filtered analog value
 - `state`: AI runtime state (continuous streaming in current implementation)
 
 ## 4.2 AI Configuration Fields
@@ -123,7 +123,7 @@ Example: `FORCED_HIGH` with `invert=true` becomes effective low.
 - `channel`
 - `inputMin`, `inputMax`
 - `outputMin`, `outputMax`
-- `emaAlphaX100` (`0..100`, where `100 = 1.00`)
+- `smoothingFactorPct` (`0..100`, where `100 = 1.00`)
 
 Factory/new-card defaults:
 
@@ -132,7 +132,7 @@ Factory/new-card defaults:
 - `inputMax = 20`
 - `outputMin = 0`
 - `outputMax = 100`
-- `emaAlphaX100 = 100` (no smoothing)
+- `smoothingFactorPct = 100` (no smoothing)
 
 ## 4.3 AI Per-Scan Processing
 
@@ -140,7 +140,7 @@ Factory/new-card defaults:
 2. Clamp to input range.
 3. Scale to output range.
 4. Apply EMA filter.
-5. Publish `currentValue`.
+5. Publish `liveValue`.
 
 ## 4.4 AI Force Commands
 
@@ -181,8 +181,8 @@ DO executes a timed mission and drives hardware output.
 
 Runtime first calculates mission output, then applies invert:
 
-- `physicalState = missionOutput` when `invert=false`
-- `physicalState = !missionOutput` when `invert=true`
+- `actualState = missionOutput` when `invert=false`
+- `actualState = !missionOutput` when `invert=true`
 
 Idle/reset mission output is OFF, so:
 
@@ -191,8 +191,8 @@ Idle/reset mission output is OFF, so:
 
 ## 5.6 DO Trigger and Counter
 
-- `triggerFlag` pulses for one scan on rising edge of final `physicalState`.
-- `currentValue` increments on the same rising physical edge.
+- `edgePulse` pulses for one scan on rising edge of final `actualState`.
+- `liveValue` increments on the same rising physical edge.
 
 ## 6. SIO Card (Soft I/O)
 
@@ -216,7 +216,7 @@ SIO uses the same mission engine and timing semantics as DO:
 - same start/abort/retrigger rules,
 - same zero-timer behavior,
 - same invert behavior,
-- same `triggerFlag` and `currentValue` edge rules.
+- same `edgePulse` and `liveValue` edge rules.
 
 Difference from DO:
 
@@ -234,13 +234,13 @@ MATH is treated as a value-processing card, not an I/O mission card.
 
 MATH exposes:
 
-- `currentValue` only (in centiunits).
-- optional `triggerFlag` pulse when output value changes in a scan.
+- `liveValue` only (in centiunits).
+- optional `edgePulse` pulse when output value changes in a scan.
 
 MATH does not expose or use:
 
-- `physicalState`
-- `logicalState`
+- `actualState`
+- `commandState`
 - mission timer phases
 - integrated timing counters like DO/SIO
 
@@ -255,7 +255,7 @@ MATH does not expose or use:
 - `reset=true`:
   - force output to `fallbackValue`.
 - `set=false` and `reset=false`:
-  - hold last output (`currentValue` unchanged).
+  - hold last output (`liveValue` unchanged).
 - `set=true` and `reset=false`:
   - run compute pipeline and update output.
 
@@ -266,8 +266,8 @@ MATH does not expose or use:
    - if below `inputMin`, use `inputMin`
    - if above `inputMax`, use `inputMax`
 3. Apply range scaling from input range to output range.
-4. Apply EMA using `emaAlphaX100` (`0..100`).
-5. Publish final `currentValue` in centiunits.
+4. Apply EMA using `smoothingFactorPct` (`0..100`).
+5. Publish final `liveValue` in centiunits.
 
 Operator enum mapping used by backend/config:
 
@@ -288,27 +288,27 @@ Operator enum mapping used by backend/config:
 - All MATH fields are unsigned.
 - Division-by-zero path should return `fallbackValue`.
 - Arithmetic should saturate safely before clamp if intermediate overflow risk appears.
-- `triggerFlag` should pulse for one scan when output value changes.
+- `edgePulse` should pulse for one scan when output value changes.
 
 ## 8. WiFi Behavior (Draft)
 
 ## 8.1 WiFi Roles
 
-- `Master SSID`: setup/recovery path.
-- `User SSID`: normal operation path.
+- `Backup Access Network`: setup/recovery path.
+- `User Configured Network`: normal operation path.
 
 ## 8.2 Connection Strategy
 
 1. Device tries user-configured SSID first.
 2. If unavailable/misconfigured, user can invoke recovery flow.
-3. Recovery uses master SSID path to access portal and fix settings.
+3. Recovery uses backupAccessNetwork SSID path to access portal and fix settings.
 
 ## 8.3 Intended Recovery Flow
 
-- user starts hotspot/access path with master credentials,
+- user starts hotspot/access path with backupAccessNetwork credentials,
 - user restarts device or triggers recovery action,
-- device connects through master path,
-- user opens portal and updates user SSID settings.
+- device connects through backupAccessNetwork path,
+- user opens portal and updates userConfiguredNetwork SSID settings.
 
 ## 8.4 Pending Finalization
 
@@ -330,13 +330,13 @@ It does not represent hardware I/O and does not use set/reset condition blocks.
 
 RTC exposes:
 
-- `logicalState`
-- `triggerFlag`
+- `commandState`
+- `edgePulse`
 
 RTC does not expose meaningful:
 
-- `physicalState`
-- `currentValue`
+- `actualState`
+- `liveValue`
 
 ## 9.3 RTC Schedule Fields
 
@@ -359,10 +359,10 @@ Wildcard behavior:
 
 ## 9.4 RTC Trigger Behavior
 
-- When schedule match occurs, `triggerFlag` pulses high for one scan.
-- At the same moment, `logicalState` becomes true.
-- `triggerDurationMs` controls how long `logicalState` stays true.
-- After duration expires, `logicalState` returns false.
+- When schedule match occurs, `edgePulse` pulses high for one scan.
+- At the same moment, `commandState` becomes true.
+- `triggerDurationMs` controls how long `commandState` stays true.
+- After duration expires, `commandState` returns false.
 
 Retrigger policy:
 
@@ -379,17 +379,19 @@ RTC firing is gated by base card enable:
 
 - `enabled=false` means scheduler never fires.
 
-## 10. Clock/NTP Settings (Draft)
+## 10. Time/Time Sync Settings (Draft)
 
-Clock settings are system/global, not per-card.
+Time settings are system/global, not per-card.
 
 Planned settings model:
 
 - `timezone` (for local schedule interpretation)
-- `ntp.enabled`
-- `ntp.primaryServer`, `ntp.secondaryServer`, `ntp.tertiaryServer`
-- `ntp.syncIntervalSec`
-- `ntp.startupTimeoutSec`
-- `ntp.maxStaleSec`
+- `timeSync.enabled`
+- `timeSync.primaryTimeServer`, `timeSync.secondaryServer`, `timeSync.tertiaryServer`
+- `timeSync.syncIntervalSec`
+- `timeSync.startupTimeoutSec`
+- `timeSync.maxTimeAgeSec`
 
 These settings are intended to be editable from portal Settings page.
+
+

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -66,10 +66,10 @@ struct LogicCard {
   uint32_t setting1;
   uint32_t setting2;
   uint32_t setting3;
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
-  uint32_t currentValue;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
+  uint32_t liveValue;
   uint32_t startOnMs;
   uint32_t startOffMs;
   uint32_t repeatCounter;
@@ -90,3 +90,4 @@ struct LogicCard {
   uint32_t resetB_Threshold;
   combineMode resetCombine;
 };
+

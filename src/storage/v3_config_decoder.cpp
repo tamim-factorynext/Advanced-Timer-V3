@@ -1,4 +1,4 @@
-#include "storage/v3_config_decoder.h"
+﻿#include "storage/v3_config_decoder.h"
 
 #include <string.h>
 
@@ -183,14 +183,16 @@ bool parseWiFiConfig(JsonObjectConst systemObj, WiFiConfig& outWiFi) {
     return true;
   }
 
-  JsonObjectConst masterObj = wifiObj["master"].as<JsonObjectConst>();
-  JsonObjectConst userObj = wifiObj["user"].as<JsonObjectConst>();
-  if (!parseWiFiCredential(masterObj, outWiFi.master)) return false;
-  if (!parseWiFiCredential(userObj, outWiFi.user)) return false;
-  if (!wifiObj["retryBackoffSec"].is<uint32_t>() || !wifiObj["staOnly"].is<bool>()) {
+  JsonObjectConst masterObj =
+      wifiObj["backupAccessNetwork"].as<JsonObjectConst>();
+  JsonObjectConst userObj =
+      wifiObj["userConfiguredNetwork"].as<JsonObjectConst>();
+  if (!parseWiFiCredential(masterObj, outWiFi.backupAccessNetwork)) return false;
+  if (!parseWiFiCredential(userObj, outWiFi.userConfiguredNetwork)) return false;
+  if (!wifiObj["retryDelaySec"].is<uint32_t>() || !wifiObj["staOnly"].is<bool>()) {
     return false;
   }
-  outWiFi.retryBackoffSec = wifiObj["retryBackoffSec"].as<uint32_t>();
+  outWiFi.retryDelaySec = wifiObj["retryDelaySec"].as<uint32_t>();
   outWiFi.staOnly = wifiObj["staOnly"].as<bool>();
   return true;
 }
@@ -208,7 +210,7 @@ bool parseOptionalStringField(JsonObjectConst obj, const char* key, char* out,
 }
 
 bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
-  JsonObjectConst clockObj = systemObj["clock"].as<JsonObjectConst>();
+  JsonObjectConst clockObj = systemObj["time"].as<JsonObjectConst>();
   if (clockObj.isNull()) {
     return true;
   }
@@ -218,29 +220,29 @@ bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
     return false;
   }
 
-  JsonObjectConst ntpObj = clockObj["ntp"].as<JsonObjectConst>();
+  JsonObjectConst ntpObj = clockObj["timeSync"].as<JsonObjectConst>();
   if (ntpObj.isNull()) return false;
   if (!ntpObj["enabled"].is<bool>() || !ntpObj["syncIntervalSec"].is<uint32_t>() ||
       !ntpObj["startupTimeoutSec"].is<uint32_t>() ||
-      !ntpObj["maxStaleSec"].is<uint32_t>()) {
+      !ntpObj["maxTimeAgeSec"].is<uint32_t>()) {
     return false;
   }
 
-  if (!parseOptionalStringField(ntpObj, "primaryServer", outClock.ntp.primaryServer,
-                                sizeof(outClock.ntp.primaryServer)) ||
+  if (!parseOptionalStringField(ntpObj, "primaryTimeServer", outClock.timeSync.primaryTimeServer,
+                                sizeof(outClock.timeSync.primaryTimeServer)) ||
       !parseOptionalStringField(ntpObj, "secondaryServer",
-                                outClock.ntp.secondaryServer,
-                                sizeof(outClock.ntp.secondaryServer)) ||
+                                outClock.timeSync.secondaryServer,
+                                sizeof(outClock.timeSync.secondaryServer)) ||
       !parseOptionalStringField(ntpObj, "tertiaryServer",
-                                outClock.ntp.tertiaryServer,
-                                sizeof(outClock.ntp.tertiaryServer))) {
+                                outClock.timeSync.tertiaryServer,
+                                sizeof(outClock.timeSync.tertiaryServer))) {
     return false;
   }
 
-  outClock.ntp.enabled = ntpObj["enabled"].as<bool>();
-  outClock.ntp.syncIntervalSec = ntpObj["syncIntervalSec"].as<uint32_t>();
-  outClock.ntp.startupTimeoutSec = ntpObj["startupTimeoutSec"].as<uint32_t>();
-  outClock.ntp.maxStaleSec = ntpObj["maxStaleSec"].as<uint32_t>();
+  outClock.timeSync.enabled = ntpObj["enabled"].as<bool>();
+  outClock.timeSync.syncIntervalSec = ntpObj["syncIntervalSec"].as<uint32_t>();
+  outClock.timeSync.startupTimeoutSec = ntpObj["startupTimeoutSec"].as<uint32_t>();
+  outClock.timeSync.maxTimeAgeSec = ntpObj["maxTimeAgeSec"].as<uint32_t>();
   return true;
 }
 
@@ -374,8 +376,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
            !params["outputMin"].is<uint32_t>()) ||
           (!params["outputMax"].isNull() &&
            !params["outputMax"].is<uint32_t>()) ||
-          (!params["emaAlphaX100"].isNull() &&
-           !params["emaAlphaX100"].is<uint32_t>())) {
+          (!params["smoothingFactorPct"].isNull() &&
+           !params["smoothingFactorPct"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
@@ -384,7 +386,7 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.ai.inputMax = params["inputMax"] | 20U;
       outCard.ai.outputMin = params["outputMin"] | 0U;
       outCard.ai.outputMax = params["outputMax"] | 100U;
-      outCard.ai.emaAlphaX100 = params["emaAlphaX100"] | 100U;
+      outCard.ai.smoothingFactorPct = params["smoothingFactorPct"] | 100U;
       return true;
     case CardFamily::SIO:
       if ((!params["invert"].isNull() && !params["invert"].is<bool>()) ||
@@ -430,8 +432,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
            !params["outputMin"].is<uint32_t>()) ||
           (!params["outputMax"].isNull() &&
            !params["outputMax"].is<uint32_t>()) ||
-          (!params["emaAlphaX100"].isNull() &&
-           !params["emaAlphaX100"].is<uint32_t>()) ||
+          (!params["smoothingFactorPct"].isNull() &&
+           !params["smoothingFactorPct"].is<uint32_t>()) ||
           (!params["fallbackValue"].isNull() &&
            !params["fallbackValue"].is<uint32_t>())) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
@@ -444,7 +446,7 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.math.inputMax = params["inputMax"] | 10000U;
       outCard.math.outputMin = params["outputMin"] | 0U;
       outCard.math.outputMax = params["outputMax"] | 10000U;
-      outCard.math.emaAlphaX100 = params["emaAlphaX100"] | 100U;
+      outCard.math.smoothingFactorPct = params["smoothingFactorPct"] | 100U;
       outCard.math.fallbackValue = params["fallbackValue"] | 0U;
       initDefaultConditionBlock(outCard.math.setCondition, outCard.id, false);
       initDefaultConditionBlock(outCard.math.resetCondition, outCard.id, false);
@@ -521,19 +523,19 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
   if (systemObj.isNull()) systemObj = root;
 
   if (!systemObj["schemaVersion"].is<uint32_t>() ||
-      !systemObj["scanIntervalMs"].is<uint32_t>() ||
+      !systemObj["scanPeriodMs"].is<uint32_t>() ||
       !systemObj["cards"].is<JsonArrayConst>()) {
     result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return result;
   }
 
   result.decoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
-  result.decoded.scanIntervalMs = systemObj["scanIntervalMs"].as<uint32_t>();
+  result.decoded.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
   if (!parseWiFiConfig(systemObj, result.decoded.wifi)) {
     result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return result;
   }
-  if (!parseClockConfig(systemObj, result.decoded.clock)) {
+  if (!parseClockConfig(systemObj, result.decoded.time)) {
     result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return result;
   }
@@ -560,3 +562,6 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
 }
 
 }  // namespace v3::storage
+
+
+

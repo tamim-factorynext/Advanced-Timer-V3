@@ -1,4 +1,4 @@
-# Decision Log
+﻿# Decision Log
 
 Date: 2026-02-28
 Purpose: Minimal "vibe-safe" change log for decisions that affect behavior, contracts, or validation.
@@ -95,7 +95,7 @@ Use one short entry per decision with this structure:
 ## DEC-0007: Non-Deterministic Service Ownership On Networking Core
 - Date: 2026-03-01
 - Status: Accepted
-- Context: Future roadmap includes services such as logging, remote monitoring/control, periodic non-critical sampling, and Modbus RTU master behavior that can introduce variable latency.
+- Context: Future roadmap includes services such as logging, remote monitoring/control, periodic non-critical sampling, and Modbus RTU backupAccessNetwork behavior that can introduce variable latency.
 - Decision: All non-time-critical and non-deterministic services must execute on networking core and interact with deterministic state only via defined control/data contracts.
 - Impact: Protects deterministic runtime from service-side jitter.
 - Impact: Enables feature growth without violating kernel timing guarantees.
@@ -119,7 +119,7 @@ Use one short entry per decision with this structure:
 - Decision: Remove `RUN_SLOW` from runtime mode enum and command handling. Normal-mode pacing is controlled only through configurable scan interval (portal slider UX).
 - Impact: Simplifies run-mode state machine and command validation.
 - Impact: `set_run_mode` accepts only `RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT`.
-- Impact: Runtime pacing path now uses configured `scanIntervalMs` without slow-mode overrides.
+- Impact: Runtime pacing path now uses configured `scanPeriodMs` without slow-mode overrides.
 - References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-v3.md`.
 
 ## DEC-0010: Promote MATH/RTC To First-Class Runtime Families
@@ -165,7 +165,7 @@ Use one short entry per decision with this structure:
 ## DEC-0014: Enforce Per-Family Condition Source Field Applicability
 - Date: 2026-03-01
 - Status: Accepted
-- Context: Condition evaluation references only a subset of runtime outputs (`logicalState`, `physicalState`, `triggerFlag`, `currentValue`, `missionState`), and not all fields are valid for all card families.
+- Context: Condition evaluation references only a subset of runtime outputs (`commandState`, `actualState`, `edgePulse`, `liveValue`, `missionState`), and not all fields are valid for all card families.
 - Decision: Validate V3 condition clauses against source-card family capabilities before bridging to legacy operators, including strict `missionState` rules (`DO/SIO` only, `EQ` only).
 - Impact: Prevents semantically invalid cross-family condition references from entering runtime.
 - Impact: Aligns config validation with typed per-family state ownership.
@@ -177,7 +177,7 @@ Use one short entry per decision with this structure:
 - Status: Accepted
 - Context: Migration safety needs executable evidence that cross-family condition misuse is rejected consistently, independent of target hardware.
 - Decision: Add a native Unity test suite for V3 condition source-field/operator rule helpers and keep a dedicated `native` PlatformIO test environment.
-- Impact: Provides fast CI-style guardrails for core validation semantics (`AI.logicalState` reject, `RTC.missionState` reject, `missionState` operator constraints).
+- Impact: Provides fast CI-style guardrails for core validation semantics (`AI.commandState` reject, `RTC.missionState` reject, `missionState` operator constraints).
 - Impact: Reduces regression risk while runtime remains bridge-based.
 - References: `src/kernel/v3_condition_rules.h`, `src/kernel/v3_condition_rules.cpp`, `test/test_v3_condition_rules/test_main.cpp`, `platformio.ini`.
 
@@ -427,7 +427,7 @@ Use one short entry per decision with this structure:
 - Context: Skeleton phase required completion of transport binding, command contract hardening, observability parity, and freeze review before moving to feature-complete implementation.
 - Decision: Mark skeleton phase complete after `M18`, `M19`, `M20`, and `M21` are all `DONE`, with docs parity and ownership reviews recorded.
 - Impact: Establishes a clean transition point from infrastructure scaffolding to behavior/feature implementation phase.
-- Impact: Prevents premature “feature phase” start before command/snapshot transport and observability contracts are stabilized.
+- Impact: Prevents premature â€œfeature phaseâ€ start before command/snapshot transport and observability contracts are stabilized.
 - Impact: Provides explicit historical checkpoint for future regression triage.
 - References: `docs/milestones-v3.md` (Skeleton Completion Gate + M18..M21), `docs/worklog.md` (M21 freeze review), `src/main.cpp`, `src/portal/transport_runtime.cpp`.
 
@@ -445,9 +445,9 @@ Use one short entry per decision with this structure:
 - Date: 2026-03-02
 - Status: Accepted
 - Context: Initial WiFi runtime scaffold used hardcoded credentials/timeouts, which diverged from the contract-driven V3 configuration model and made policy changes require firmware edits.
-- Decision: Extend storage config contract/decoder/validator with WiFi policy fields (`master/user credentials`, `timeoutSec`, `retryBackoffSec`, `staOnly`) and pass validated policy to `WiFiRuntime::begin(...)` from composition root.
+- Decision: Extend storage config contract/decoder/validator with WiFi policy fields (`master/user credentials`, `timeoutSec`, `retryDelaySec`, `staOnly`) and pass validated policy to `WiFiRuntime::begin(...)` from composition root.
 - Impact: Aligns WiFi behavior with active validated config and removes hardcoded policy drift risk.
-- Impact: Enforces contract invariants at validation boundary (`staOnly=true`, `master.editable=false`, non-empty credentials, non-zero timing values).
+- Impact: Enforces contract invariants at validation boundary (`staOnly=true`, `backupAccessNetwork.editable=false`, non-empty credentials, non-zero timing values).
 - Impact: Preserves runtime architecture boundaries (storage validates policy; platform executes policy; main wires dependencies).
 - References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/platform/wifi_runtime.h`, `src/platform/wifi_runtime.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
 
@@ -475,7 +475,7 @@ Use one short entry per decision with this structure:
 - Date: 2026-03-02
 - Status: Accepted
 - Context: DI family is being integrated first, and downstream card families will consume cross-card variables for conditions and parameter bindings.
-- Decision: Treat DI `physicalState`, `logicalState`, and `currentValue` as authoritative global signal-tree outputs every scan; these must remain available to other cards where binding/condition rules allow.
+- Decision: Treat DI `actualState`, `commandState`, and `liveValue` as authoritative global signal-tree outputs every scan; these must remain available to other cards where binding/condition rules allow.
 - Impact: Prevents DI values from being treated as local-only runtime details.
 - Impact: Preserves compatibility with condition evaluation and future parameter source binding semantics.
 - Impact: Establishes a non-negotiable integration rule for upcoming DO/AI/SIO/MATH/RTC wiring.
@@ -504,7 +504,7 @@ Use one short entry per decision with this structure:
 - Date: 2026-03-02
 - Status: Accepted
 - Context: Initial DI integration used temporary `setEnabled/resetEnabled` booleans, which was insufficient for cross-card logic intent and global variable-tree semantics.
-- Decision: Evaluate DI `set` and `reset` each scan using condition blocks (`clauseA/clauseB/combiner`) against runtime signal tree values (`logicalState`, `physicalState`, `triggerFlag`, `currentValue`, mission state), with backward-compatible defaults derived from legacy boolean fields when explicit blocks are not present.
+- Decision: Evaluate DI `set` and `reset` each scan using condition blocks (`clauseA/clauseB/combiner`) against runtime signal tree values (`commandState`, `actualState`, `edgePulse`, `liveValue`, mission state), with backward-compatible defaults derived from legacy boolean fields when explicit blocks are not present.
 - Impact: Aligns DI gating with contract-style cross-card condition semantics.
 - Impact: Preserves compatibility for existing simplified payloads while enabling richer condition logic.
 - Impact: Establishes reusable condition-eval pattern for subsequent card-family migrations.
@@ -514,18 +514,18 @@ Use one short entry per decision with this structure:
 - Date: 2026-03-02
 - Status: Accepted
 - Context: RTC behavior had mixed legacy/typed assumptions (wildcard sentinel usage, unclear retrigger semantics, and oversized signal surface).
-- Decision: RTC schedule uses non-negative `hasX + value` optional matching fields, with `minute` as the only required match field. RTC runtime meaningful outputs are limited to `logicalState` and `triggerFlag`, and retrigger policy is `RESTART_WINDOW`. If wall-clock time is invalid/unavailable, scheduler does not fire.
+- Decision: RTC schedule uses non-negative `hasX + value` optional matching fields, with `minute` as the only required match field. RTC runtime meaningful outputs are limited to `commandState` and `edgePulse`, and retrigger policy is `RESTART_WINDOW`. If wall-clock time is invalid/unavailable, scheduler does not fire.
 - Impact: Removes wildcard-sentinel ambiguity and aligns with non-negative config policy.
 - Impact: Enables hourly chime use-case by requiring only `minute`.
 - Impact: Standardizes repeated-match behavior during active duration (`RESTART_WINDOW`).
 - Impact: Simplifies RTC observability contract for portal/HIL.
 - References: `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`, `docs/acceptance-matrix-v3.md`, `src/kernel/v3_rtc_runtime.*`, `src/kernel/kernel_service.*`.
 
-## DEC-0050: Add Global Clock/NTP Configuration Model
+## DEC-0050: Add Global Time/TimeSync Configuration Model
 - Date: 2026-03-02
 - Status: Accepted
 - Context: RTC scheduler requires centralized time-source policy and settings exposed through system configuration and future portal settings page.
-- Decision: Add system-level `clock` config with `timezone` and `ntp` policy (`enabled`, three server slots, `syncIntervalSec`, `startupTimeoutSec`, `maxStaleSec`) to validated storage contract.
+- Decision: Add system-level `time` config with `timeZone` and `timeSync` policy (`enabled`, three server slots, `syncIntervalSec`, `startupTimeoutSec`, `maxTimeAgeSec`) to validated storage contract.
 - Impact: Creates a stable firmware config surface for future settings UI and NTP integration.
 - Impact: Keeps RTC/NTP concerns global instead of per-card.
 - Impact: Enables deterministic validation before runtime use.
@@ -540,4 +540,36 @@ Use one short entry per decision with this structure:
 - Impact: Keeps large response buffers out of `.bss`, improving headroom for runtime state growth.
 - Impact: Requires continued attention to heap behavior under sustained high-frequency snapshot updates.
 - References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, build evidence from `esp32doit-devkit-v1` linker run on 2026-03-02.
+
+## DEC-0052: Defer ESP32-S3 + PSRAM Migration With Written Memory Policy
+- Date: 2026-03-03
+- Status: Accepted
+- Context: Current ESP32 build recovered from DRAM overflow via heap-backed portal JSON cache, but long-term snapshot/observability growth can reintroduce memory pressure. Hardware for immediate S3 migration is not yet available.
+- Decision: Defer target migration until ESP32-S3 hardware is available, and capture a concrete migration guide now with explicit memory placement rules (`PSRAM` for bulk transport buffers, internal SRAM for deterministic kernel hot state).
+- Impact: Preserves current delivery momentum while reducing future migration ambiguity.
+- Impact: Prevents ad-hoc memory changes by documenting where PSRAM is safe vs unsafe.
+- Impact: Defines acceptance gates (timing, stability, contract parity, soak evidence) before switching default build target.
+- References: `docs/esp32-s3-psram-migration-guide.md`, `docs/worklog.md`, `src/portal/portal_service.h`, `src/portal/portal_service.cpp`.
+
+## DEC-0053: Add Heap Guardrails For Portal JSON Cache Path
+- Date: 2026-03-03
+- Status: Accepted
+- Context: Heap-backed portal JSON buffers resolved `.bss` overflow but can fail at runtime under long-uptime fragmentation or payload growth.
+- Decision: Add immediate guardrails in `PortalService`: startup `String::reserve(...)`, pre-serialize capacity checks (`measureJson`), explicit memory-pressure fallback payloads, and diagnostics counters for serialize/capacity failures.
+- Impact: Reduces allocation churn and improves long-uptime resilience without changing endpoint contracts.
+- Impact: Converts silent/partial memory failures into observable diagnostics signals.
+- Impact: Creates a safer interim path while ESP32-S3+PSRAM migration remains deferred.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `docs/esp32-s3-psram-migration-guide.md`.
+
+## DEC-0054: Freeze User-Facing Naming Vocabulary Before Portal Build
+- Date: 2026-03-03
+- Status: Accepted
+- Context: Existing terms mix firmware shorthand (`RTC`, `SIO`, `smoothingFactorPct`, etc.) with user-facing payloads, which risks poor UX and inconsistent portal terminology.
+- Decision: Freeze a canonical naming glossary and phased rename plan before portal expansion, including dual-key compatibility stages and explicit `Clock/Time Sync Server` terminology for time synchronization settings.
+- Impact: Aligns UI labels, API keys, and config schema terms under one vocabulary.
+- Impact: Reduces operator confusion and documentation drift during portal implementation.
+- Impact: Enables controlled migration with compatibility window instead of one-shot breaking rename.
+- References: `docs/naming-glossary-v3.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`.
+
+
 

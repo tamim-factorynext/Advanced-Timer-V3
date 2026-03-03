@@ -1,4 +1,4 @@
-#include "kernel/legacy_config_validator.h"
+﻿#include "kernel/legacy_config_validator.h"
 
 #include <cstring>
 
@@ -176,10 +176,10 @@ bool validateLegacyConfigCardsArray(JsonArrayConst array, uint8_t totalCards,
     if (!ensureNonNegativeField(card, "setting1", "setting1")) return false;
     if (!ensureNonNegativeField(card, "setting2", "setting2")) return false;
     if (!ensureNonNegativeField(card, "setting3", "setting3")) return false;
-    if (!rejectFieldIfPresent(card, "logicalState", "logicalState")) return false;
-    if (!rejectFieldIfPresent(card, "physicalState", "physicalState")) return false;
-    if (!rejectFieldIfPresent(card, "triggerFlag", "triggerFlag")) return false;
-    if (!rejectFieldIfPresent(card, "currentValue", "currentValue")) return false;
+    if (!rejectFieldIfPresent(card, "commandState", "commandState")) return false;
+    if (!rejectFieldIfPresent(card, "actualState", "actualState")) return false;
+    if (!rejectFieldIfPresent(card, "edgePulse", "edgePulse")) return false;
+    if (!rejectFieldIfPresent(card, "liveValue", "liveValue")) return false;
     if (!rejectFieldIfPresent(card, "repeatCounter", "repeatCounter")) return false;
     if (!rejectFieldIfPresent(card, "state", "state")) return false;
 
@@ -254,3 +254,4 @@ bool validateLegacyConfigCardsArray(JsonArrayConst array, uint8_t totalCards,
   reason = "";
   return true;
 }
+

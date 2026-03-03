@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include <ArduinoJson.h>
 
@@ -67,7 +67,7 @@ void test_payload_rejects_ai_logical_state() {
   JsonArray cards = doc.to<JsonArray>();
   addBareCards(cards);
   JsonObject cfg = cards[0]["config"].as<JsonObject>();
-  writeBlockNumeric(cfg, 8, "logicalState", "EQ", 1);
+  writeBlockNumeric(cfg, 8, "commandState", "EQ", 1);
 
   std::string reason;
   bool ok = validateV3PayloadConditionSources(cards, kTotalCards, kDoStart,
@@ -155,7 +155,7 @@ void test_payload_rejects_clause_source_card_id_out_of_range() {
   JsonObject clauseA = set["clauseA"].to<JsonObject>();
   JsonObject source = clauseA["source"].to<JsonObject>();
   source["cardId"] = 250;
-  source["field"] = "currentValue";
+  source["field"] = "liveValue";
   source["type"] = "NUMBER";
   clauseA["operator"] = "GT";
   clauseA["threshold"] = 1;
@@ -193,3 +193,4 @@ int main() {
   RUN_TEST(test_payload_rejects_invalid_mission_state_threshold);
   return UNITY_END();
 }
+

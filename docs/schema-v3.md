@@ -1,4 +1,4 @@
-# Schema V3
+﻿# Schema V3
 
 Date: 2026-02-26
 Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
@@ -34,9 +34,9 @@ It is the implementation-facing contract for staged config validation and commit
   "cards": [],
   "bindings": [],
   "wifi": {
-    "master": { "ssid": "factory-ssid", "password": "***", "timeoutSec": 3, "editable": false },
-    "user": { "ssid": "user-ssid", "password": "***", "timeoutSec": 180 },
-    "retryBackoffSec": 30,
+    "backupAccessNetwork": { "ssid": "factory-ssid", "password": "***", "timeoutSec": 3, "editable": false },
+    "userConfiguredNetwork": { "ssid": "user-ssid", "password": "***", "timeoutSec": 180 },
+    "retryDelaySec": 30,
     "staOnly": true
   }
 }
@@ -60,18 +60,18 @@ It is the implementation-facing contract for staged config validation and commit
 
 ### 4.2 `wifi`
 
-- `master`: required object.
-- `user`: required object.
-- `retryBackoffSec`: required `uint32`.
+- `backupAccessNetwork`: required object.
+- `userConfiguredNetwork`: required object.
+- `retryDelaySec`: required `uint32`.
 - `staOnly`: required bool, must be `true`.
 
-`master`:
+`backupAccessNetwork`:
 - `ssid`: required string.
 - `password`: required string.
 - `timeoutSec`: required `uint32`, expected short timeout (2-3 sec).
 - `editable`: required bool, must be `false`.
 
-`user`:
+`userConfiguredNetwork`:
 - `ssid`: required string.
 - `password`: required string.
 - `timeoutSec`: required `uint32`, expected long timeout (about 180 sec).
@@ -112,12 +112,12 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 ```json
 {
   "clauseA": {
-    "source": { "cardId": 5, "field": "currentValue", "type": "NUMBER" },
+    "source": { "cardId": 5, "field": "liveValue", "type": "NUMBER" },
     "operator": "GT",
     "threshold": 200
   },
   "clauseB": {
-    "source": { "cardId": 6, "field": "logicalState", "type": "BOOL" },
+    "source": { "cardId": 6, "field": "commandState", "type": "BOOL" },
     "operator": "EQ",
     "threshold": 1
   },
@@ -232,13 +232,13 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
   "fallbackValue": 0,
   "standard": {
     "inputA": { "sourceMode": "CONSTANT", "value": 100 },
-    "inputB": { "sourceMode": "VARIABLE_REF", "ref": { "cardId": 2, "field": "currentValue", "type": "NUMBER" } },
+    "inputB": { "sourceMode": "VARIABLE_REF", "ref": { "cardId": 2, "field": "liveValue", "type": "NUMBER" } },
     "operator": "ADD",
     "inputMin": 0,
     "inputMax": 10000,
     "outputMin": 0,
     "outputMax": 10000,
-    "emaAlphaX100": 100
+    "smoothingFactorPct": 100
   }
 }
 ```
@@ -247,7 +247,7 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 - `set`, `reset`: required condition blocks.
 - `fallbackValue`: required `uint32`.
 - MATH has no condition-visible `STATE` output.
-- MATH has no `physicalState` / `logicalState` mission semantics.
+- MATH has no `actualState` / `commandState` mission semantics.
 
 `standard` mode fields:
 - `inputA`, `inputB`: required source descriptors.
@@ -260,18 +260,18 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 - `inputMin`, `inputMax`: required `uint32` input clamp range.
 - `outputMin`, `outputMax`: required `uint32` scaling output range.
 - inverse scaling is allowed (`outputMin > outputMax`).
-- `emaAlphaX100`: required `uint32`, range `0..100`; `100` means no smoothing.
+- `smoothingFactorPct`: required `uint32`, range `0..100`; `100` means no smoothing.
 
 Processing contract:
 - all numeric values are integer centiunits.
-- `reset=true` forces `currentValue=fallbackValue`.
+- `reset=true` forces `liveValue=fallbackValue`.
 - `set=false` and `reset=false` holds last output value.
 - standard pipeline order:
   - arithmetic compute
   - input clamp to `[inputMin,inputMax]`
   - range scaling (`input` range to `output` range)
   - EMA
-- `triggerFlag` pulses for one scan when `currentValue` changes versus previous scan.
+- `edgePulse` pulses for one scan when `liveValue` changes versus previous scan.
 - divide-by-zero in `DIV_SAFE` emits `fallbackValue`.
 
 ## 7.6 RTC
@@ -311,10 +311,10 @@ Processing contract:
 
 Scheduler runtime behavior:
 - if no valid wall-clock time is available, RTC scheduler must skip firing.
-- on schedule match, `logicalState=true` and `triggerFlag` pulses for one scan.
-- `triggerDurationMs` defines how long `logicalState` remains true.
+- on schedule match, `commandState=true` and `edgePulse` pulses for one scan.
+- `triggerDurationMs` defines how long `commandState` remains true.
 - retrigger policy is `RESTART_WINDOW` (new qualified match restarts active window).
-- RTC does not expose meaningful `physicalState` or `currentValue`.
+- RTC does not expose meaningful `actualState` or `liveValue`.
 
 ## 8. Binding Schema
 
@@ -326,7 +326,7 @@ Top-level `bindings` allows typed parameter binding.
   "target": { "cardId": 12, "path": "config.standard.inputA" },
   "source": {
     "sourceMode": "VARIABLE_REF",
-    "ref": { "cardId": 3, "field": "currentValue", "type": "NUMBER" }
+    "ref": { "cardId": 3, "field": "liveValue", "type": "NUMBER" }
   }
 }
 ```
@@ -361,7 +361,7 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-020: reject card channel/index bindings outside active hardware profile channel arrays.
 - V-CFG-021: reject `RTC` card payload when active build profile does not support RTC.
 - V-CFG-022: reject RTC schedule fields below minute granularity (`second`, `millisecond`, `ms`).
-- V-CFG-023: reject MATH `emaAlphaX100` outside `0..100`.
+- V-CFG-023: reject MATH `smoothingFactorPct` outside `0..100`.
 
 ## 10. Open Decisions To Freeze
 
@@ -381,6 +381,8 @@ Top-level `bindings` allows typed parameter binding.
 - `docs/api-contract-v3.md`
 - `docs/timing-budget-v3.md`
 - Validation error catalog in code aligned with rule IDs (`V-CFG-*`).
+
+
 
 
 

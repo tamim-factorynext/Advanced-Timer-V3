@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/v3_do_runtime.cpp"
 #include "../../src/kernel/v3_sio_runtime.cpp"
@@ -14,10 +14,10 @@ void test_sio_reset_condition_forces_idle() {
   cfg.repeatCount = 1;
 
   V3SioRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 9;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 9;
   runtime.repeatCounter = 1;
   runtime.state = State_DO_Active;
 
@@ -29,12 +29,12 @@ void test_sio_reset_condition_forces_idle() {
   V3SioStepOutput out = {};
   runV3SioStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.resetResult);
+  TEST_ASSERT_TRUE(out.resetConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
   TEST_ASSERT_EQUAL(State_DO_Idle, runtime.state);
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_EQUAL_UINT32(0, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_EQUAL_UINT32(0, runtime.liveValue);
 }
 
 void test_sio_immediate_enters_active_mission_state() {
@@ -56,8 +56,8 @@ void test_sio_immediate_enters_active_mission_state() {
   runV3SioStep(cfg, runtime, in, out);
 
   TEST_ASSERT_EQUAL(State_DO_Active, runtime.state);
-  TEST_ASSERT_TRUE(runtime.logicalState);
-  TEST_ASSERT_TRUE(runtime.physicalState);
+  TEST_ASSERT_TRUE(runtime.commandState);
+  TEST_ASSERT_TRUE(runtime.actualState);
   TEST_ASSERT_TRUE(out.effectiveOutput);
 }
 
@@ -87,8 +87,8 @@ void test_sio_normal_finishes_at_repeat_limit() {
   in.nowMs = 90;
   runV3SioStep(cfg, runtime, in, out);
   TEST_ASSERT_EQUAL(State_DO_Finished, runtime.state);
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
 }
 
 void test_sio_gated_drops_to_idle_when_gate_false() {
@@ -99,10 +99,10 @@ void test_sio_gated_drops_to_idle_when_gate_false() {
   cfg.repeatCount = 3;
 
   V3SioRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 4;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 4;
   runtime.repeatCounter = 2;
   runtime.state = State_DO_Active;
 
@@ -115,10 +115,10 @@ void test_sio_gated_drops_to_idle_when_gate_false() {
   runV3SioStep(cfg, runtime, in, out);
 
   TEST_ASSERT_EQUAL(State_DO_Idle, runtime.state);
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_FALSE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(4, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_FALSE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(4, runtime.liveValue);
 }
 
 int main() {
@@ -129,3 +129,4 @@ int main() {
   RUN_TEST(test_sio_gated_drops_to_idle_when_gate_false);
   return UNITY_END();
 }
+

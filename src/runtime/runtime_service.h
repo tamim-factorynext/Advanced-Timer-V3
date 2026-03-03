@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -45,7 +45,7 @@ struct RuntimeSnapshot {
   uint32_t nowMs;
   uint32_t completedScans;
   uint32_t lastScanMs;
-  uint32_t scanIntervalMs;
+  uint32_t scanPeriodMs;
   uint8_t configuredCardCount;
   uint8_t enabledCardCount;
   uint8_t diCardCount;
@@ -56,7 +56,7 @@ struct RuntimeSnapshot {
   uint8_t rtcCardCount;
   uint8_t familyCountSum;
   bool bindingConsistent;
-  runMode mode;
+  engineMode mode;
   uint32_t stepAppliedCount;
   uint32_t diTotalQualifiedEdges;
   uint8_t diInhibitedCount;
@@ -83,3 +83,4 @@ class RuntimeService {
 };
 
 }  // namespace v3::runtime
+

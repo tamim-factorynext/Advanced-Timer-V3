@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -12,15 +12,15 @@ struct V3MathRuntimeConfig {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
   uint32_t fallbackValue;
 };
 
 struct V3MathRuntimeState {
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
-  uint32_t currentValue;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
+  uint32_t liveValue;
   cardState state;
 };
 
@@ -30,10 +30,11 @@ struct V3MathStepInput {
 };
 
 struct V3MathStepOutput {
-  bool setResult;
-  bool resetResult;
+  bool setConditionMet;
+  bool resetConditionMet;
   bool resetOverride;
 };
 
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out);
+

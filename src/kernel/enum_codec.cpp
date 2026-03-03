@@ -1,4 +1,4 @@
-#include "kernel/enum_codec.h"
+﻿#include "kernel/enum_codec.h"
 
 #include <cctype>
 #include <cstring>
@@ -140,7 +140,7 @@ const char* toString(combineMode value) {
   }
 }
 
-const char* toString(runMode value) {
+const char* toString(engineMode value) {
   switch (value) {
     case RUN_NORMAL:
       return "RUN_NORMAL";
@@ -278,3 +278,4 @@ combineMode parseOrDefault(const char* s, combineMode fallback) {
   if (tryParseCombineMode(s, value)) return value;
   return fallback;
 }
+

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -27,7 +27,7 @@ class ControlService {
  public:
   void begin();
   void tick(uint32_t nowMs);
-  bool requestSetRunMode(runMode mode, uint32_t nowUs, uint32_t requestId = 0);
+  bool requestSetRunMode(engineMode mode, uint32_t nowUs, uint32_t requestId = 0);
   bool requestStepOnce(uint32_t nowUs, uint32_t requestId = 0);
   bool requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
                             uint32_t nowUs, uint32_t requestId = 0,
@@ -37,7 +37,7 @@ class ControlService {
 
  private:
   bool enqueueCommand(const KernelCommand& command);
-  static bool isValidRunMode(runMode mode);
+  static bool isValidRunMode(engineMode mode);
 
   static constexpr uint16_t kPendingCapacity = 16;
   KernelCommand pending_[kPendingCapacity] = {};
@@ -45,8 +45,9 @@ class ControlService {
   uint16_t tail_ = 0;
   uint16_t depth_ = 0;
   uint32_t lastTickMs_ = 0;
-  runMode desiredMode_ = RUN_NORMAL;
+  engineMode desiredMode_ = RUN_NORMAL;
   ControlDiagnostics diagnostics_ = {};
 };
 
 }  // namespace v3::control
+

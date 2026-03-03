@@ -1,4 +1,4 @@
-# V3 Milestones
+﻿# V3 Milestones
 
 Date: 2026-03-02  
 Status: Active checkpoint tracker for V3 execution progress.
@@ -643,15 +643,15 @@ Deferred items remain out of current execution scope until core functional parit
   - Flash: `498249 / 1310720` (38.0%)
 - Checkpoint SHA: `d3b1840`
 
-## M23: Config-Driven WiFi Policy Wiring (Master -> User -> Offline)
+## M23: Config-Driven WiFi Policy Wiring (BackupAccessNetwork -> UserConfiguredNetwork -> Offline)
 - Status: `DONE`
 - Date: 2026-03-02
 - Summary: replace hardcoded WiFi credentials/timeouts with validated config policy and enforce STA-only dual-SSID strategy in runtime.
 - Implemented outputs:
   - extended storage config contract with WiFi fields:
-    - `wifi.master { ssid, password, timeoutSec, editable }`
-    - `wifi.user { ssid, password, timeoutSec, editable }`
-    - `wifi.retryBackoffSec`
+    - `wifi.backupAccessNetwork { ssid, password, timeoutSec, editable }`
+    - `wifi.userConfiguredNetwork { ssid, password, timeoutSec, editable }`
+    - `wifi.retryDelaySec`
     - `wifi.staOnly`
     - files:
       - `src/storage/v3_config_contract.h`
@@ -662,7 +662,7 @@ Deferred items remain out of current execution scope until core functional parit
     - file: `src/storage/v3_config_decoder.cpp`
   - validator rules for WiFi policy:
     - reject `staOnly=false`
-    - reject `master.editable=true`
+    - reject `backupAccessNetwork.editable=true`
     - reject empty SSIDs/passwords
     - reject zero timeout/backoff values
     - file: `src/storage/v3_config_validator.cpp`
@@ -794,7 +794,7 @@ Deferred items remain out of current execution scope until core functional parit
       - `src/runtime/runtime_service.cpp`
       - `src/portal/portal_service.cpp`
   - AI defaults/policy alignment:
-    - centiunit alpha (`emaAlphaX100` in `0..100`)
+    - centiunit alpha (`smoothingFactorPct` in `0..100`)
     - default parser/storage values aligned to 4-20mA assumption:
       - input: `4..20`
       - output: `0..100`
@@ -812,3 +812,5 @@ Deferred items remain out of current execution scope until core functional parit
   - Duration: `00:00:30.786`
   - RAM: `73140 / 327680` (22.3%)
   - Flash: `883529 / 1310720` (67.4%)
+
+

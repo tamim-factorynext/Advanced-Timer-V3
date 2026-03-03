@@ -1,4 +1,4 @@
-#include "control/control_service.h"
+﻿#include "control/control_service.h"
 
 namespace v3::control {
 
@@ -14,7 +14,7 @@ void ControlService::begin() {
 
 void ControlService::tick(uint32_t nowMs) { lastTickMs_ = nowMs; }
 
-bool ControlService::requestSetRunMode(runMode mode, uint32_t nowUs,
+bool ControlService::requestSetRunMode(engineMode mode, uint32_t nowUs,
                                        uint32_t requestId) {
   diagnostics_.requestedCount += 1;
 
@@ -126,7 +126,7 @@ bool ControlService::enqueueCommand(const KernelCommand& command) {
   return true;
 }
 
-bool ControlService::isValidRunMode(runMode mode) {
+bool ControlService::isValidRunMode(engineMode mode) {
   switch (mode) {
     case RUN_NORMAL:
     case RUN_STEP:
@@ -138,3 +138,4 @@ bool ControlService::isValidRunMode(runMode mode) {
 }
 
 }  // namespace v3::control
+

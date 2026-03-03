@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 #include <WString.h>
 
@@ -24,7 +25,7 @@ struct PortalCommandSubmitResult {
 
 struct PortalCommandRequest {
   PortalCommandType type;
-  runMode mode;
+  engineMode mode;
   uint8_t cardId;
   inputSourceMode inputMode;
   uint32_t inputValue;
@@ -62,13 +63,13 @@ class PortalService {
   void begin();
   void tick(uint32_t nowMs, const v3::runtime::RuntimeSnapshot& snapshot,
             const RuntimeSnapshotCard* cards, uint8_t cardCount);
-  PortalCommandSubmitResult submitSetRunMode(runMode mode, uint32_t enqueuedUs);
+  PortalCommandSubmitResult submitSetRunMode(engineMode mode, uint32_t enqueuedUs);
   PortalCommandSubmitResult submitStepOnce(uint32_t enqueuedUs);
   PortalCommandSubmitResult submitSetInputForce(uint8_t cardId,
                                                 inputSourceMode inputMode,
                                                 uint32_t inputValue,
                                                 uint32_t enqueuedUs);
-  bool enqueueSetRunModeRequest(runMode mode, uint32_t requestId,
+  bool enqueueSetRunModeRequest(engineMode mode, uint32_t requestId,
                                 uint32_t enqueuedUs);
   bool enqueueStepOnceRequest(uint32_t requestId, uint32_t enqueuedUs);
   bool enqueueSetInputForceRequest(uint8_t cardId, inputSourceMode inputMode,
@@ -82,6 +83,9 @@ class PortalService {
   PortalSnapshotState snapshotState() const;
 
  private:
+  static constexpr size_t kDiagnosticsJsonReserve = 1024;
+  static constexpr size_t kSnapshotJsonReserve = 12288;
+
   void rebuildDiagnosticsJson(const v3::runtime::RuntimeSnapshot& snapshot);
   void rebuildSnapshotJson(const v3::runtime::RuntimeSnapshot& snapshot,
                            const RuntimeSnapshotCard* cards, uint8_t cardCount);
@@ -91,9 +95,17 @@ class PortalService {
   uint32_t observedScanCount_ = 0;
   uint32_t diagnosticsRevision_ = 0;
   bool diagnosticsReady_ = false;
+  bool diagnosticsFallbackActive_ = false;
+  bool diagnosticsReserveReady_ = false;
+  uint32_t diagnosticsSerializeFailureCount_ = 0;
+  uint32_t diagnosticsCapacityRejectCount_ = 0;
   String diagnosticsJson_;
   uint32_t snapshotRevision_ = 0;
   bool snapshotReady_ = false;
+  bool snapshotFallbackActive_ = false;
+  bool snapshotReserveReady_ = false;
+  uint32_t snapshotSerializeFailureCount_ = 0;
+  uint32_t snapshotCapacityRejectCount_ = 0;
   String snapshotJson_;
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};
@@ -105,3 +117,4 @@ class PortalService {
 };
 
 }  // namespace v3::portal
+

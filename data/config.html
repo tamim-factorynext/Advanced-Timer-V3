@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -359,10 +359,10 @@
         return labels[op] || op;
       }
 
-      function ensureSelectValue(id, allowed, currentValue) {
+      function ensureSelectValue(id, allowed, liveValue) {
         fillSelect(id, allowed);
         const sel = document.getElementById(id);
-        if (allowed.includes(currentValue)) sel.value = currentValue;
+        if (allowed.includes(liveValue)) sel.value = liveValue;
         else sel.value = allowed[0] || "";
       }
 
@@ -432,7 +432,7 @@
         const typeResetA = getTypeByRef(card.resetA_ID);
         const typeResetB = getTypeByRef(card.resetB_ID);
 
-        const renderOperatorSelect = (id, targetType, currentValue) => {
+        const renderOperatorSelect = (id, targetType, liveValue) => {
           const allowed = allowedOperatorsForTargetType(targetType);
           const sel = document.getElementById(id);
           if (!sel) return;
@@ -443,7 +443,7 @@
             opt.textContent = operatorLabelForTargetType(targetType, op);
             sel.appendChild(opt);
           });
-          sel.value = allowed.includes(currentValue) ? currentValue : (allowed[0] || "");
+          sel.value = allowed.includes(liveValue) ? liveValue : (allowed[0] || "");
         };
 
         renderOperatorSelect("setA_Operator", typeSetA, card.setA_Operator);
@@ -768,3 +768,4 @@
     </script>
   </body>
 </html>
+

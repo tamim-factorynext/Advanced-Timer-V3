@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "control/command_dto.h"
 #include "kernel/card_model.h"
@@ -8,7 +8,7 @@ const char* toString(logicOperator value);
 const char* toString(cardMode value);
 const char* toString(cardState value);
 const char* toString(combineMode value);
-const char* toString(runMode value);
+const char* toString(engineMode value);
 const char* toString(inputSourceMode value);
 
 bool tryParseLogicCardType(const char* s, logicCardType& out);
@@ -22,3 +22,4 @@ logicOperator parseOrDefault(const char* s, logicOperator fallback);
 cardMode parseOrDefault(const char* s, cardMode fallback);
 cardState parseOrDefault(const char* s, cardState fallback);
 combineMode parseOrDefault(const char* s, combineMode fallback);
+

@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/enum_codec.cpp"
 #include "../../src/kernel/v3_condition_rules.cpp"
@@ -53,7 +53,7 @@ void writeSimpleCondition(JsonObject block, uint8_t sourceId, uint8_t threshold)
   JsonObject clauseA = block["clauseA"].to<JsonObject>();
   JsonObject src = clauseA["source"].to<JsonObject>();
   src["cardId"] = sourceId;
-  src["field"] = "logicalState";
+  src["field"] = "commandState";
   src["type"] = "BOOL";
   clauseA["operator"] = "EQ";
   clauseA["threshold"] = threshold;
@@ -224,3 +224,4 @@ int main() {
   RUN_TEST(test_apply_rtc_schedule_channels_from_config_copies_fields);
   return UNITY_END();
 }
+

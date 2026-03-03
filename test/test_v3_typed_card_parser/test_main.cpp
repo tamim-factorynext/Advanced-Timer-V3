@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/v3_condition_rules.cpp"
 #include "../../src/kernel/v3_typed_card_parser.cpp"
@@ -50,7 +50,7 @@ void test_parse_di_card_success() {
   JsonObject setA = set["clauseA"].to<JsonObject>();
   JsonObject setSrc = setA["source"].to<JsonObject>();
   setSrc["cardId"] = 0;
-  setSrc["field"] = "logicalState";
+  setSrc["field"] = "commandState";
   setSrc["type"] = "BOOL";
   setA["operator"] = "EQ";
   setA["threshold"] = 1;
@@ -59,7 +59,7 @@ void test_parse_di_card_success() {
   JsonObject resetA = reset["clauseA"].to<JsonObject>();
   JsonObject resetSrc = resetA["source"].to<JsonObject>();
   resetSrc["cardId"] = 0;
-  resetSrc["field"] = "logicalState";
+  resetSrc["field"] = "commandState";
   resetSrc["type"] = "BOOL";
   resetA["operator"] = "EQ";
   resetA["threshold"] = 0;
@@ -120,7 +120,7 @@ void test_parse_rejects_invalid_mission_state_threshold() {
   JsonObject resetA = reset["clauseA"].to<JsonObject>();
   JsonObject resetSrc = resetA["source"].to<JsonObject>();
   resetSrc["cardId"] = 4;
-  resetSrc["field"] = "logicalState";
+  resetSrc["field"] = "commandState";
   resetSrc["type"] = "BOOL";
   resetA["operator"] = "EQ";
   resetA["threshold"] = 0;
@@ -165,4 +165,5 @@ int main() {
   RUN_TEST(test_parse_rtc_card_success);
   return UNITY_END();
 }
+
 

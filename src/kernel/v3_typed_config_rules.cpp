@@ -1,4 +1,4 @@
-#include "kernel/v3_typed_config_rules.h"
+﻿#include "kernel/v3_typed_config_rules.h"
 
 #include <string>
 
@@ -152,7 +152,7 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "AI output range invalid";
         return false;
       }
-      if (card.ai.emaAlphaX100 > 100U) {
+      if (card.ai.smoothingFactorPct > 100U) {
         reason = "AI emaAlpha out of range";
         return false;
       }
@@ -184,7 +184,7 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "MATH input range invalid";
         return false;
       }
-      if (card.math.emaAlphaX100 > 100U) {
+      if (card.math.smoothingFactorPct > 100U) {
         reason = "MATH emaAlpha out of range";
         return false;
       }
@@ -225,3 +225,4 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
   reason = "";
   return true;
 }
+

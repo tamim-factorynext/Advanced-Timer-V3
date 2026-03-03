@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -8,15 +8,16 @@ struct RuntimeSnapshotCard {
   uint8_t id;
   logicCardType type;
   uint8_t index;
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
   cardState state;
   cardMode mode;
-  uint32_t currentValue;
+  uint32_t liveValue;
   uint32_t startOnMs;
   uint32_t startOffMs;
   uint32_t repeatCounter;
-  bool setResult;
-  bool resetResult;
+  bool setConditionMet;
+  bool resetConditionMet;
 };
+

@@ -1,4 +1,4 @@
-#include "kernel/v3_ai_runtime.h"
+﻿#include "kernel/v3_ai_runtime.h"
 
 namespace {
 uint32_t clampUInt32(uint32_t value, uint32_t lo, uint32_t hi) {
@@ -26,12 +26,13 @@ void runV3AiStep(const V3AiRuntimeConfig& cfg, V3AiRuntimeState& runtime,
     scaled = static_cast<uint32_t>(mapped);
   }
 
-  const uint32_t alpha = (cfg.emaAlphaX100 > 100U) ? 100U : cfg.emaAlphaX100;
+  const uint32_t alpha = (cfg.smoothingFactorPct > 100U) ? 100U : cfg.smoothingFactorPct;
   const uint64_t filtered =
       ((static_cast<uint64_t>(alpha) * scaled) +
-       (static_cast<uint64_t>(100U - alpha) * runtime.currentValue)) /
+       (static_cast<uint64_t>(100U - alpha) * runtime.liveValue)) /
       100ULL;
-  runtime.currentValue = static_cast<uint32_t>(filtered);
+  runtime.liveValue = static_cast<uint32_t>(filtered);
   runtime.mode = Mode_AI_Continuous;
   runtime.state = State_AI_Streaming;
 }
+

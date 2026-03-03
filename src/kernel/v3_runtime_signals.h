@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -9,10 +9,10 @@
 struct V3RuntimeSignal {
   logicCardType type;
   cardState state;
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
-  uint32_t currentValue;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
+  uint32_t liveValue;
 };
 
 V3RuntimeSignal makeRuntimeSignal(const RuntimeCardMeta& meta,
@@ -24,3 +24,4 @@ void refreshRuntimeSignalAt(const RuntimeCardMeta* cardsMeta,
                             const V3RuntimeStoreView& store,
                             V3RuntimeSignal* out, uint8_t count,
                             uint8_t cardId);
+

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -207,7 +207,7 @@
       <div class="header">
         <h1>AdvancedTimer Portal</h1>
         <div class="row">
-          <div class="chip">Mode: <strong id="runMode">RUN_NORMAL</strong></div>
+          <div class="chip">Mode: <strong id="engineMode">RUN_NORMAL</strong></div>
           <div class="chip">Control: <strong>Always Live</strong></div>
           <div class="chip">Breakpoint: <strong id="bpState">Running</strong></div>
           <div class="chip">WiFi: <strong id="wifiState">Unknown</strong></div>
@@ -243,7 +243,7 @@
 
     <script>
       const state = {
-        runMode: "RUN_NORMAL",
+        engineMode: "RUN_NORMAL",
         wifiOnline: true,
         wsOnline: false,
         snapshotSeq: 1,
@@ -256,9 +256,9 @@
         configLoaded: false,
         pendingUiRefresh: false,
         cards: [
-          { id: 0, type: "DigitalInput", logicalState: false, physicalState: false },
-          { id: 4, type: "AnalogInput", logicalState: false, physicalState: true },
-          { id: 8, type: "DigitalOutput", logicalState: true, physicalState: true }
+          { id: 0, type: "DigitalInput", commandState: false, actualState: false },
+          { id: 4, type: "AnalogInput", commandState: false, actualState: true },
+          { id: 8, type: "DigitalOutput", commandState: true, actualState: true }
         ]
       };
 
@@ -516,7 +516,7 @@
       }
 
       function render() {
-        document.getElementById("runMode").textContent = state.runMode;
+        document.getElementById("engineMode").textContent = state.engineMode;
         document.getElementById("bpState").innerHTML = state.breakpointPaused
           ? '<span class="status-warn">Paused</span>'
           : '<span class="status-ok">Running</span>';
@@ -634,16 +634,16 @@
 
           el.innerHTML = `
             <div><strong>${cardFriendlyName(c)}</strong></div>
-            <div class="small">Logical: ${boolText(!!c.logicalState)}</div>
-            <div class="small">Physical: ${boolText(!!c.physicalState)}</div>
-            <div class="small">${liveMetricLabel(c)}: ${Number(c.currentValue || 0)}</div>
+            <div class="small">Logical: ${boolText(!!c.commandState)}</div>
+            <div class="small">Physical: ${boolText(!!c.actualState)}</div>
+            <div class="small">${liveMetricLabel(c)}: ${Number(c.liveValue || 0)}</div>
             <div class="small">State: ${c.state || "-"}</div>
             <div class="indicators">
               <label>Debug Indicators</label>
               <div class="indicator-row">
                 <span class="pill ${evalPulseActive ? "warn" : ""}">Eval: ${evalPulseActive ? "Pulse" : "Idle"}</span>
-                <span class="pill ${c.setResult ? "ok" : ""}">SET: ${c.setResult ? "TRUE" : "FALSE"}</span>
-                <span class="pill ${c.resetResult ? "warn" : ""}">RESET: ${c.resetResult ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.setConditionMet ? "ok" : ""}">SET: ${c.setConditionMet ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.resetConditionMet ? "warn" : ""}">RESET: ${c.resetConditionMet ? "TRUE" : "FALSE"}</span>
                 <span class="pill ${c.resetOverride ? "warn" : ""}">RESET Override: ${c.resetOverride ? "TRUE" : "FALSE"}</span>
               </div>
               <div class="ctrl">
@@ -752,7 +752,7 @@
           const res = await fetch("/api/snapshot");
           if (!res.ok) return;
           const snap = await res.json();
-          state.runMode = snap.runMode || state.runMode;
+          state.engineMode = snap.engineMode || state.engineMode;
           state.wifiOnline = true;
           state.globalMask = !!(snap.testMode && snap.testMode.outputMaskGlobal);
           state.breakpointPaused = !!(snap.testMode && snap.testMode.breakpointPaused);
@@ -772,7 +772,7 @@
       const pending = new Map();
 
       function applySnapshot(snap) {
-        state.runMode = snap.runMode || state.runMode;
+        state.engineMode = snap.engineMode || state.engineMode;
         state.globalMask = !!(snap.testMode && snap.testMode.outputMaskGlobal);
         state.breakpointPaused = !!(snap.testMode && snap.testMode.breakpointPaused);
         state.lastCompleteScanMs = Number(snap.lastCompleteScanMs || 0);
@@ -904,3 +904,4 @@
     </script>
   </body>
 </html>
+

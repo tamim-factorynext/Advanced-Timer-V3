@@ -1,4 +1,4 @@
-#include "kernel/v3_card_bridge.h"
+﻿#include "kernel/v3_card_bridge.h"
 #include "kernel/legacy_card_fields.h"
 
 namespace {
@@ -77,7 +77,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.ai.outputMax = legacyAiOutputMax(legacy);
       uint32_t alphaX100 = (legacyAiAlphaX1000(legacy) + 5U) / 10U;
       if (alphaX100 > 100U) alphaX100 = 100U;
-      out.ai.emaAlphaX100 = alphaX100;
+      out.ai.smoothingFactorPct = alphaX100;
       return true;
     }
     case SoftIO: {
@@ -102,7 +102,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       }
       out.math.outputMin = out.math.inputMin;
       out.math.outputMax = out.math.inputMax;
-      out.math.emaAlphaX100 = 100U;
+      out.math.smoothingFactorPct = 100U;
       copyCondition(legacy, out.math.set, out.math.reset);
       return true;
     }
@@ -181,7 +181,7 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       setLegacyAiInputMax(out, v3.ai.inputMax);
       setLegacyAiOutputMin(out, v3.ai.outputMin);
       setLegacyAiOutputMax(out, v3.ai.outputMax);
-      setLegacyAiAlphaX1000(out, v3.ai.emaAlphaX100 * 10U);
+      setLegacyAiAlphaX1000(out, v3.ai.smoothingFactorPct * 10U);
       out.mode = Mode_AI_Continuous;
       return true;
     case V3CardFamily::SIO:
@@ -244,3 +244,4 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       return false;
   }
 }
+

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -11,10 +11,10 @@ struct V3DiRuntimeConfig {
 };
 
 struct V3DiRuntimeState {
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
-  uint32_t currentValue;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
+  uint32_t liveValue;
   uint32_t startOnMs;
   uint32_t startOffMs;
   uint32_t repeatCounter;
@@ -35,10 +35,11 @@ struct V3DiStepInput {
 struct V3DiStepOutput {
   bool nextPrevSample;
   bool nextPrevSampleValid;
-  bool setResult;
-  bool resetResult;
+  bool setConditionMet;
+  bool resetConditionMet;
   bool resetOverride;
 };
 
 void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
                  const V3DiStepInput& in, V3DiStepOutput& out);
+

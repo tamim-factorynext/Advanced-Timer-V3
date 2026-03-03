@@ -24,6 +24,8 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/milestones-v3.md` - Milestone checkpoint ledger for V3 execution status.
 - `docs/hil-task-list-v3.md` - Hardware-in-the-loop execution checklist and evidence tracking.
 - `docs/user-guide-v3-draft.md` - End-user guide draft (initial DI behavior section included).
+- `docs/esp32-s3-psram-migration-guide.md` - Planned migration path for future ESP32-S3 + PSRAM memory architecture.
+- `docs/naming-glossary-v3.md` - Canonical user-facing naming vocabulary and staged key-migration plan.
 
 ## 2.1 Market/Strategy Research
 

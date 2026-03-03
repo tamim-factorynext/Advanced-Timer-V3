@@ -1,4 +1,4 @@
-#include "kernel/legacy_card_profile.h"
+﻿#include "kernel/legacy_card_profile.h"
 
 #include "kernel/enum_codec.h"
 #include "kernel/v3_config_sanitize.h"
@@ -127,10 +127,10 @@ void profileInitializeCardSafeDefaults(LogicCard& card, uint8_t globalId,
   card.setting1 = 0;
   card.setting2 = 0;
   card.setting3 = 0;
-  card.logicalState = false;
-  card.physicalState = false;
-  card.triggerFlag = false;
-  card.currentValue = 0;
+  card.commandState = false;
+  card.actualState = false;
+  card.edgePulse = false;
+  card.liveValue = 0;
   card.startOnMs = 0;
   card.startOffMs = 0;
   card.repeatCounter = 0;
@@ -243,3 +243,4 @@ bool profileDeserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards,
   sanitizeConfigCardsRuntimeFields(outCards, layout.totalCards);
   return true;
 }
+

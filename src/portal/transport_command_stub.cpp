@@ -1,4 +1,4 @@
-#include "portal/transport_command_stub.h"
+﻿#include "portal/transport_command_stub.h"
 
 #include <ArduinoJson.h>
 #include <cstring>
@@ -64,7 +64,7 @@ const char* errorCodeToMessage(const char* errorCode) {
   return "Command request failed.";
 }
 
-bool parseRunMode(const char* rawMode, runMode& outMode) {
+bool parseRunMode(const char* rawMode, engineMode& outMode) {
   if (rawMode == nullptr) return false;
   if (strcmp(rawMode, "RUN_NORMAL") == 0) {
     outMode = RUN_NORMAL;
@@ -154,7 +154,7 @@ TransportCommandResponse handleTransportCommandStub(
 
   PortalCommandSubmitResult submit = {};
   if (strcmp(command, "setRunMode") == 0) {
-    runMode mode = RUN_NORMAL;
+    engineMode mode = RUN_NORMAL;
     if (!parseRunMode(doc["mode"].as<const char*>(), mode)) {
       return buildError(422, sourceLabel, "invalid_run_mode");
     }
@@ -196,3 +196,4 @@ TransportCommandResponse handleTransportCommandStub(
 }
 
 }  // namespace v3::portal
+

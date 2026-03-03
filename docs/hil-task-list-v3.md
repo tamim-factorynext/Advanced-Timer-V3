@@ -1,4 +1,4 @@
-# HIL Task List (V3)
+﻿# HIL Task List (V3)
 
 Date: 2026-03-02  
 Status: Active checklist for hardware-in-the-loop execution tasks.
@@ -79,9 +79,9 @@ Status: Active checklist for hardware-in-the-loop execution tasks.
   - verify `set=false` with `reset=false` holds last output.
   - inject values below/above input range and verify input-side clamp (`inputMin/inputMax`).
   - verify normal and inverse scaling (`outputMin<outputMax`, `outputMin>outputMax`).
-  - verify EMA behavior at `emaAlphaX100=100` and a smoothing value (for example `20`).
+  - verify EMA behavior at `smoothingFactorPct=100` and a smoothing value (for example `20`).
   - verify divide-by-zero path returns `fallbackValue` deterministically.
-  - verify `triggerFlag` pulses for exactly one scan when output changes and stays low when output is unchanged.
+  - verify `edgePulse` pulses for exactly one scan when output changes and stays low when output is unchanged.
 - Evidence required:
   - input vector and expected/observed output table (centiunits).
   - pass/fail matrix for operator, clamp, scaling direction, EMA, and trigger-pulse scenarios.
@@ -92,8 +92,8 @@ Status: Active checklist for hardware-in-the-loop execution tasks.
 - Steps:
   - run schedule scenarios with `minute` required and optional `hasX` flags (`hasHour/hasWeekday/hasDay/hasMonth/hasYear`).
   - verify card does not fire while wall-clock validity is false.
-  - verify `triggerFlag` pulses for one scan at schedule match.
-  - verify `logicalState` holds for `triggerDurationMs` then deasserts.
+  - verify `edgePulse` pulses for one scan at schedule match.
+  - verify `commandState` holds for `triggerDurationMs` then deasserts.
   - verify retrigger policy `RESTART_WINDOW` when a new qualified minute match occurs during active window.
 - Evidence required:
   - RTC timeline log with trigger timestamps.
@@ -172,3 +172,4 @@ Status: Active checklist for hardware-in-the-loop execution tasks.
   - keep manual override for lab safety and hardware availability.
 - Evidence required:
   - documented trigger flow and reporting template.
+

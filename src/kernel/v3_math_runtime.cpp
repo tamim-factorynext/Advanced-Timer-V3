@@ -1,4 +1,4 @@
-#include "kernel/v3_math_runtime.h"
+﻿#include "kernel/v3_math_runtime.h"
 
 #include <limits.h>
 
@@ -74,11 +74,11 @@ uint32_t applyEma(uint32_t previous, uint32_t sample, uint32_t alphaX100) {
 
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out) {
-  out.setResult = in.setCondition;
-  out.resetResult = in.resetCondition;
+  out.setConditionMet = in.setCondition;
+  out.resetConditionMet = in.resetCondition;
   out.resetOverride = in.setCondition && in.resetCondition;
 
-  const uint32_t previousValue = runtime.currentValue;
+  const uint32_t previousValue = runtime.liveValue;
   uint32_t nextValue = previousValue;
 
   if (in.resetCondition) {
@@ -89,12 +89,13 @@ void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
     const uint32_t scaled =
         mapRange(clampedInput, cfg.inputMin, cfg.inputMax, cfg.outputMin,
                  cfg.outputMax);
-    nextValue = applyEma(previousValue, scaled, cfg.emaAlphaX100);
+    nextValue = applyEma(previousValue, scaled, cfg.smoothingFactorPct);
   }
 
-  runtime.logicalState = false;
-  runtime.physicalState = false;
-  runtime.triggerFlag = (nextValue != previousValue);
-  runtime.currentValue = nextValue;
+  runtime.commandState = false;
+  runtime.actualState = false;
+  runtime.edgePulse = (nextValue != previousValue);
+  runtime.liveValue = nextValue;
   runtime.state = State_None;
 }
+

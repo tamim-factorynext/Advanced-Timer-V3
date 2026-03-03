@@ -1,4 +1,4 @@
-# Advanced Timer V3 Requirements Contract
+﻿# Advanced Timer V3 Requirements Contract
 
 Date: February 26, 2026
 Version: 3.0.0-draft
@@ -38,21 +38,21 @@ Advanced Timer V3 is a deterministic, field-configurable controller with:
 
 - `Card`: Deterministic processing unit with typed inputs/outputs.
 - `Scan`: One complete ordered evaluation pass of all enabled cards.
-- `logicalState`: Internal logic/mission state stored per card.
-- `physicalState`: Effective IO-facing state stored per card.
+- `commandState`: Internal logic/mission state stored per card.
+- `actualState`: Effective IO-facing state stored per card.
 - `Staged config`: Candidate config pending validate/commit.
 - `Active config`: Running config currently applied.
 - `LKG`: Last known good committed config.
 
 State semantics by family:
 
-- `DI.logicalState`: debounced/qualified logic result after set/reset gating.
-- `DI.physicalState`: polarity-adjusted sampled input state.
-- `DO.logicalState`: mission latch/intent state.
-- `DO.physicalState`: effective time-shaped output state used to drive hardware when not masked.
-- `SIO.logicalState`: mission latch/intent state (same as DO semantics).
-- `SIO.physicalState`: effective time-shaped virtual output state (no hardware drive).
-- `AI`: transducer card; `currentValue` is authoritative output value and AI does not use logical/physical mission semantics.
+- `DI.commandState`: debounced/qualified logic result after set/reset gating.
+- `DI.actualState`: polarity-adjusted sampled input state.
+- `DO.commandState`: mission latch/intent state.
+- `DO.actualState`: effective time-shaped output state used to drive hardware when not masked.
+- `SIO.commandState`: mission latch/intent state (same as DO semantics).
+- `SIO.actualState`: effective time-shaped virtual output state (no hardware drive).
+- `AI`: transducer card; `liveValue` is authoritative output value and AI does not use logical/physical mission semantics.
 
 ## 4. Data Representation and Validation Contract
 
@@ -91,7 +91,7 @@ Required logical boundaries:
 - `control`: command validation and dispatch.
 - `storage`: config schema persistence, migration, commit/rollback.
 - `portal`: HTTP/WebSocket endpoints and UI payload mapping.
-- `platform`: board IO adapters, time source, watchdog primitives, and a **System Clock Service** (manages time sync and provides authoritative wall-clock time).
+- `platform`: board IO adapters, time source, watchdog primitives, and a **System Time Service** (manages time sync and provides authoritative wall-clock time).
 
 Forbidden coupling:
 
@@ -109,13 +109,13 @@ This contract establishes the principle of single, authoritative ownership for a
 
 ### 5.2 Ownership Examples
 
-- The integrated cycle counter of a `DO` card (`currentValue`) is owned exclusively by that `DO` card. Its value is modified only by the card's internal timer and mission logic.
-- The final computed result of a `MATH` card (`currentValue`) is owned exclusively by that `MATH` card. Its value is updated only when the card's own evaluation logic runs.
-- The filtered output of an `AI` card (`currentValue`) is owned exclusively by that `AI` card's internal processing pipeline.
+- The integrated cycle counter of a `DO` card (`liveValue`) is owned exclusively by that `DO` card. Its value is modified only by the card's internal timer and mission logic.
+- The final computed result of a `MATH` card (`liveValue`) is owned exclusively by that `MATH` card. Its value is updated only when the card's own evaluation logic runs.
+- The filtered output of an `AI` card (`liveValue`) is owned exclusively by that `AI` card's internal processing pipeline.
 
 ### 5.3 Enforcement
 
-- The configuration validation process **MUST** reject any configuration that attempts to create a write-binding to a variable from a non-owner. For example, a `Variable Assignment` from Card B cannot target a change to Card A's `currentValue`.
+- The configuration validation process **MUST** reject any configuration that attempts to create a write-binding to a variable from a non-owner. For example, a `Variable Assignment` from Card B cannot target a change to Card A's `liveValue`.
 - The dependency topology graph must treat owned variables as root nodes that can only have outgoing (read) edges to consumers.
 
 ## 6. Determinism and Timing Contract
@@ -200,11 +200,11 @@ Every card runtime state must include:
 
 - `cardId`
 - `health` (`OK|WARN|FAULT`)
-- `logicalState` (not used by AI semantics)
-- `physicalState` (not used by AI semantics)
+- `commandState` (not used by AI semantics)
+- `actualState` (not used by AI semantics)
 - `lastEvalUs`
 - `faultCounters` (map)
-- `currentValue` (authoritative numeric output for AI; counter/cycle value for DI/DO/SIO per family rules)
+- `liveValue` (authoritative numeric output for AI; counter/cycle value for DI/DO/SIO per family rules)
 
 ## 8. Set/Reset Condition Contract
 
@@ -276,8 +276,8 @@ Runtime requirements:
 - raw physical read
 - polarity-adjusted sample
 - debounced qualified sample
-- logicalState
-- physicalState
+- commandState
+- actualState
 - edge/trigger indicators
 - integrated counter value
 
@@ -315,7 +315,7 @@ Runtime requirements:
 - mapped/scaled value
 - EMA filtered value
 - quality flag (`GOOD|CLAMPED|INVALID`)
-- `currentValue` as authoritative AI output
+- `liveValue` as authoritative AI output
 
 Force modes:
 
@@ -328,7 +328,7 @@ Rules:
 - EMA is always applied. To disable smoothing behavior, set `emaAlpha = 100` (`1.00`).
 - AI is a transducer/data-capture card and has no internal logical-condition evaluation.
 - AI does not run set/reset gating semantics internally.
-- AI does not use logicalState/physicalState mission semantics for control behavior.
+- AI does not use commandState/actualState mission semantics for control behavior.
 - Type and unit metadata must be preserved through snapshots.
 - Invalid forced values must be rejected by command validation.
 
@@ -347,8 +347,8 @@ Config requirements:
 
 Runtime requirements:
 
-- logicalState
-- physicalState
+- commandState
+- actualState
 - missionState (`IDLE`, `ACTIVE`, `FINISHED`)
 - set/reset active indicators
 - reset-dominance indicator
@@ -376,9 +376,9 @@ Config requirements:
 
 Runtime requirements:
 
-- logicalState
+- commandState
 - masked output result
-- physicalState
+- actualState
 - physical drive state
 - missionState (`IDLE`, `ACTIVE`, `FINISHED`)
 - set/reset active indicators
@@ -433,32 +433,32 @@ The MATH card is a versatile, multi-purpose processing block for performing calc
 
 ### 8.5.2 Runtime requirements
 
-- `setResult`, `resetResult`: The boolean result of the `set`/`reset` condition evaluations.
+- `setConditionMet`, `resetConditionMet`: The boolean result of the `set`/`reset` condition evaluations.
 - `intermediateValue`: The value after the arithmetic stage, before the pipeline.
-- `currentValue`: The final output value after all processing.
+- `liveValue`: The final output value after all processing.
 - `faultStatus`: Indicates faults like divide-by-zero.
 
 ### 8.5.3 Rules
 
-1.  **Gating is paramount**: If the `reset` condition is true, the card's `currentValue` is immediately forced to `fallbackValue` and no other processing occurs. If the `set` condition is false, the card holds its last known `currentValue`.
+1.  **Gating is paramount**: If the `reset` condition is true, the card's `liveValue` is immediately forced to `fallbackValue` and no other processing occurs. If the `set` condition is false, the card holds its last known `liveValue`.
 2.  **`Standard_Pipeline` Execution Order**: When active, the card **MUST** execute the following sequence every scan:
     1.  `Arithmetic`: `intermediateValue = operator(inputA, inputB)`.
     2.  `Rate Limiter`: The output is slewed towards `intermediateValue` at the configured rate.
     3.  `Clamp`: The rate-limited value is clamped.
     4.  `Scale`: The clamped value is scaled.
     5.  `EMA Filter`: The scaled value is filtered.
-    6.  The result is stored in `currentValue`.
+    6.  The result is stored in `liveValue`.
 3.  **Inert Parameter Values**: To bypass a pipeline stage in `Standard` mode, the user can provide inert values:
     - `rateLimit = 0`: Disables the rate limiter.
     - `clampMin >= clampMax`: Disables clamping.
     - `scaleMin == clampMin` AND `scaleMax == clampMax`: Disables scaling.
     - `emaAlpha = 100` (`1.00`): Disables the EMA filter.
 4.  **`PID_Controller` Execution**: When active, the card calculates its output based on the standard PID algorithm, respecting the output limits to prevent integral windup. The `set` condition enables the loop, and `reset` disables it and clears the integral term.
-5.  **Faults**: A fault during calculation (e.g., divide-by-zero) MUST force the `currentValue` to the `fallbackValue` for that scan and set a fault flag.
+5.  **Faults**: A fault during calculation (e.g., divide-by-zero) MUST force the `liveValue` to the `fallbackValue` for that scan and set a fault flag.
 
 ## 8.6 RTC
 
-The RTC card is a logic component that acts as an independent, configurable scheduler. It evaluates a single time-based schedule against the global System Clock Service and produces a boolean output state, making it ideal for triggering time-based events.
+The RTC card is a logic component that acts as an independent, configurable scheduler. It evaluates a single time-based schedule against the global System Time Service and produces a boolean output state, making it ideal for triggering time-based events.
 
 RTC is treated as schedule-based alarm functionality; available RTC card instances are bounded by compile-time RTC alarm channel capacity in the active hardware profile.
 
@@ -480,18 +480,18 @@ RTC is treated as schedule-based alarm functionality; available RTC card instanc
 
 ### 8.6.2 Runtime requirements
 
-- **`logicalState`**: The primary output. Is `true` while the card is inside an active trigger-duration window started by a schedule match; `false` otherwise.
+- **`commandState`**: The primary output. Is `true` while the card is inside an active trigger-duration window started by a schedule match; `false` otherwise.
 - **`timeUntilNextStartSec`**: Seconds until the schedule will next become active.
 - **`timeUntilNextEndSec`**: Seconds until the currently active schedule will end.
 
 ### 8.6.3 Rules
 
-- The RTC card's evaluation **MUST** be based on the authoritative time provided by the global System Clock Service.
+- The RTC card's evaluation **MUST** be based on the authoritative time provided by the global System Time Service.
 - The card itself does not manage time synchronization, timezones, or DST; it is only a schedule evaluator.
-- Its `logicalState` is a standard boolean variable that can be used as an input or condition for any other card in the system.
+- Its `commandState` is a standard boolean variable that can be used as an input or condition for any other card in the system.
 - The card has no `set` or `reset` conditions; its state is purely a function of its schedule and the current time.
 - A schedule trigger occurs when current clock fields match all configured non-wildcard schedule fields at minute-level granularity.
-- On trigger, `logicalState` is asserted for `triggerDuration`; after duration expiry, `logicalState` returns to `false` unless retriggered.
+- On trigger, `commandState` is asserted for `triggerDuration`; after duration expiry, `commandState` returns to `false` unless retriggered.
 
 ## 9. Variable Assignment Contract
 
@@ -602,13 +602,13 @@ This section defines the device's behavior for connecting to a wireless network.
 
 ### 13.1. Dual-SSID Strategy
 The device MUST support two WiFi configurations to ensure both field usability and recoverability:
-- **Master SSID**: A permanent, non-editable network configuration intended for factory setup, diagnostics, or emergency field recovery. Default credentials will be hard-coded.
-- **User SSID**: A user-configurable network that the device will use for its primary operational connection.
+- **Backup Access Network**: A permanent, non-editable network configuration intended for factory setup, diagnostics, or emergency field recovery. Default credentials will be hard-coded.
+- **User Configured Network**: A user-configurable network that the device will use for its primary operational connection.
 
 ### 13.2. Connection Logic
 On boot, the device MUST follow this connection sequence:
-1.  Attempt to connect to the **Master SSID** with a short timeout (e.g., 2-3 seconds).
-2.  If the Master SSID fails, attempt to connect to the **User SSID** with a longer timeout (e.g., 3 minutes).
+1.  Attempt to connect to the **Backup Access Network** with a short timeout (e.g., 2-3 seconds).
+2.  If the backup access network fails, attempt to connect to the **User Configured Network** with a longer timeout (e.g., 3 minutes).
 3.  If both attempts fail, the device MUST enter a fully operational **offline mode**, where the deterministic kernel continues to run without interruption. The device will periodically and non-intrusively re-attempt the connection sequence in the background.
 
 ### 13.3. Architectural Constraints
@@ -791,6 +791,7 @@ Create and maintain:
 - `docs/api-contract-v3.md`
 - `docs/decisions.md`
 - `docs/hardware-profile-v3.md`
+
 
 
 

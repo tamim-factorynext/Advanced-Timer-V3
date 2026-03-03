@@ -1,9 +1,9 @@
-#include "kernel/v3_di_runtime.h"
+﻿#include "kernel/v3_di_runtime.h"
 
 namespace {
 void resetDiCounter(V3DiRuntimeState& runtime) {
-  runtime.triggerFlag = false;
-  runtime.currentValue = 0;
+  runtime.edgePulse = false;
+  runtime.liveValue = 0;
   runtime.startOnMs = 0;
   runtime.startOffMs = 0;
 }
@@ -14,15 +14,15 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   const bool rawSample = in.forceActive ? in.forcedSample : in.sample;
   const bool effectiveSample = cfg.invert ? !rawSample : rawSample;
 
-  out.setResult = in.setCondition;
-  out.resetResult = in.resetCondition;
+  out.setConditionMet = in.setCondition;
+  out.resetConditionMet = in.resetCondition;
   out.resetOverride = in.setCondition && in.resetCondition;
   out.nextPrevSample = effectiveSample;
   out.nextPrevSampleValid = true;
 
   // Physical state is polarity-adjusted signal value and is independent from
   // set/reset gating.
-  runtime.physicalState = effectiveSample;
+  runtime.actualState = effectiveSample;
 
   if (in.resetCondition) {
     // Reset path only clears counter/filter state and inhibits processing.
@@ -32,7 +32,7 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   }
 
   if (!in.setCondition) {
-    runtime.triggerFlag = false;
+    runtime.edgePulse = false;
     runtime.state = State_DI_Idle;
     return;
   }
@@ -45,21 +45,21 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   if (runtime.state == State_DI_Filtering) {
     const bool pendingSample = (runtime.startOffMs != 0U);
     if (effectiveSample != pendingSample) {
-      runtime.triggerFlag = false;
+      runtime.edgePulse = false;
       runtime.state = State_DI_Idle;
       return;
     }
 
     const uint32_t elapsed = in.nowMs - runtime.startOnMs;
     if (cfg.debounceTimeMs > 0 && elapsed < cfg.debounceTimeMs) {
-      runtime.triggerFlag = false;
+      runtime.edgePulse = false;
       runtime.state = State_DI_Filtering;
       return;
     }
 
-    runtime.triggerFlag = true;
-    runtime.currentValue += 1;
-    runtime.logicalState = effectiveSample;
+    runtime.edgePulse = true;
+    runtime.liveValue += 1;
+    runtime.commandState = effectiveSample;
     runtime.state = State_DI_Qualified;
     runtime.startOnMs = in.nowMs;
     return;
@@ -84,7 +84,7 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   }
 
   if (!edgeMatchesMode) {
-    runtime.triggerFlag = false;
+    runtime.edgePulse = false;
     runtime.state = State_DI_Idle;
     return;
   }
@@ -92,13 +92,14 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   runtime.startOnMs = in.nowMs;
   runtime.startOffMs = effectiveSample ? 1U : 0U;
   if (cfg.debounceTimeMs == 0) {
-    runtime.triggerFlag = true;
-    runtime.currentValue += 1;
-    runtime.logicalState = effectiveSample;
+    runtime.edgePulse = true;
+    runtime.liveValue += 1;
+    runtime.commandState = effectiveSample;
     runtime.state = State_DI_Qualified;
     return;
   }
 
-  runtime.triggerFlag = false;
+  runtime.edgePulse = false;
   runtime.state = State_DI_Filtering;
 }
+

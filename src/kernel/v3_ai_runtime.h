@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -9,11 +9,11 @@ struct V3AiRuntimeConfig {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
 };
 
 struct V3AiRuntimeState {
-  uint32_t currentValue;
+  uint32_t liveValue;
   cardMode mode;
   cardState state;
 };
@@ -24,3 +24,4 @@ struct V3AiStepInput {
 
 void runV3AiStep(const V3AiRuntimeConfig& cfg, V3AiRuntimeState& runtime,
                  const V3AiStepInput& in);
+

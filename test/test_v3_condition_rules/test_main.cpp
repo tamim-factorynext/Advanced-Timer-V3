@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "kernel/v3_condition_rules.h"
 #include "../../src/kernel/v3_condition_rules.cpp"
@@ -7,13 +7,13 @@ void setUp() {}
 void tearDown() {}
 
 void test_ai_field_rejects_logical_state() {
-  TEST_ASSERT_FALSE(isV3FieldAllowedForSourceType(AnalogInput, "logicalState"));
-  TEST_ASSERT_TRUE(isV3FieldAllowedForSourceType(AnalogInput, "currentValue"));
+  TEST_ASSERT_FALSE(isV3FieldAllowedForSourceType(AnalogInput, "commandState"));
+  TEST_ASSERT_TRUE(isV3FieldAllowedForSourceType(AnalogInput, "liveValue"));
 }
 
 void test_rtc_field_rejects_mission_state() {
   TEST_ASSERT_FALSE(isV3FieldAllowedForSourceType(RtcCard, "missionState"));
-  TEST_ASSERT_TRUE(isV3FieldAllowedForSourceType(RtcCard, "logicalState"));
+  TEST_ASSERT_TRUE(isV3FieldAllowedForSourceType(RtcCard, "commandState"));
 }
 
 void test_do_and_sio_allow_mission_state_only_eq() {
@@ -24,9 +24,9 @@ void test_do_and_sio_allow_mission_state_only_eq() {
 }
 
 void test_bool_fields_allow_eq_neq_only() {
-  TEST_ASSERT_TRUE(isV3OperatorAllowedForField("logicalState", "EQ"));
-  TEST_ASSERT_TRUE(isV3OperatorAllowedForField("physicalState", "NEQ"));
-  TEST_ASSERT_FALSE(isV3OperatorAllowedForField("triggerFlag", "GT"));
+  TEST_ASSERT_TRUE(isV3OperatorAllowedForField("commandState", "EQ"));
+  TEST_ASSERT_TRUE(isV3OperatorAllowedForField("actualState", "NEQ"));
+  TEST_ASSERT_FALSE(isV3OperatorAllowedForField("edgePulse", "GT"));
 }
 
 void test_card_type_token_parse() {
@@ -45,3 +45,4 @@ int main() {
   RUN_TEST(test_card_type_token_parse);
   return UNITY_END();
 }
+

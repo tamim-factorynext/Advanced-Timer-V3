@@ -1,4 +1,4 @@
-#include "kernel/kernel_service.h"
+﻿#include "kernel/kernel_service.h"
 
 #include <string.h>
 
@@ -116,7 +116,7 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
                           v3::platform::PlatformService& platform) {
   config_ = config;
   platform_ = &platform;
-  metrics_.scanIntervalMs = config_.system.scanIntervalMs;
+  metrics_.scanPeriodMs = config_.system.scanPeriodMs;
   metrics_.configuredCardCount = config_.system.cardCount;
   bindTypedConfigSummary(config_, metrics_);
   metrics_.mode = RUN_NORMAL;
@@ -140,7 +140,7 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
 }
 
 void KernelService::tick(uint32_t nowMs) {
-  if (metrics_.scanIntervalMs == 0) return;
+  if (metrics_.scanPeriodMs == 0) return;
 
   if (metrics_.mode == RUN_STEP && !stepPending_) return;
   if (nowMs < nextScanDueMs_) return;
@@ -157,10 +157,10 @@ void KernelService::tick(uint32_t nowMs) {
   runMathScan();
   runRtcScan(nowMs);
   metrics_.lastScanMs = nowMs;
-  nextScanDueMs_ = nowMs + metrics_.scanIntervalMs;
+  nextScanDueMs_ = nowMs + metrics_.scanPeriodMs;
 }
 
-void KernelService::setRunMode(runMode mode) {
+void KernelService::setRunMode(engineMode mode) {
   metrics_.mode = mode;
   if (mode != RUN_STEP) stepPending_ = false;
 }
@@ -212,16 +212,16 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
         for (uint8_t s = 0; s < diSlotCount_; ++s) {
           const DiSlot& slot = diSlots_[s];
           if (!slot.active || slot.cardId != card.id) continue;
-          out.logicalState = slot.state.logicalState;
-          out.physicalState = slot.state.physicalState;
-          out.triggerFlag = slot.state.triggerFlag;
+          out.commandState = slot.state.commandState;
+          out.actualState = slot.state.actualState;
+          out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
-          out.currentValue = slot.state.currentValue;
+          out.liveValue = slot.state.liveValue;
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setResult = slot.lastSetResult;
-          out.resetResult = slot.lastResetResult;
+          out.setConditionMet = slot.lastSetResult;
+          out.resetConditionMet = slot.lastResetConditionMet;
           break;
         }
         break;
@@ -231,16 +231,16 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
         for (uint8_t s = 0; s < doSlotCount_; ++s) {
           const DoSlot& slot = doSlots_[s];
           if (!slot.active || slot.cardId != card.id) continue;
-          out.logicalState = slot.state.logicalState;
-          out.physicalState = slot.state.physicalState;
-          out.triggerFlag = slot.state.triggerFlag;
+          out.commandState = slot.state.commandState;
+          out.actualState = slot.state.actualState;
+          out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
-          out.currentValue = slot.state.currentValue;
+          out.liveValue = slot.state.liveValue;
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setResult = slot.lastSetResult;
-          out.resetResult = slot.lastResetResult;
+          out.setConditionMet = slot.lastSetResult;
+          out.resetConditionMet = slot.lastResetConditionMet;
           break;
         }
         break;
@@ -252,7 +252,7 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           if (!slot.active || slot.cardId != card.id) continue;
           out.state = slot.state.state;
           out.mode = slot.state.mode;
-          out.currentValue = slot.state.currentValue;
+          out.liveValue = slot.state.liveValue;
           break;
         }
         break;
@@ -262,16 +262,16 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
         for (uint8_t s = 0; s < sioSlotCount_; ++s) {
           const SioSlot& slot = sioSlots_[s];
           if (!slot.active || slot.cardId != card.id) continue;
-          out.logicalState = slot.state.logicalState;
-          out.physicalState = slot.state.physicalState;
-          out.triggerFlag = slot.state.triggerFlag;
+          out.commandState = slot.state.commandState;
+          out.actualState = slot.state.actualState;
+          out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
-          out.currentValue = slot.state.currentValue;
+          out.liveValue = slot.state.liveValue;
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setResult = slot.lastSetResult;
-          out.resetResult = slot.lastResetResult;
+          out.setConditionMet = slot.lastSetResult;
+          out.resetConditionMet = slot.lastResetConditionMet;
           break;
         }
         break;
@@ -281,13 +281,13 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
         for (uint8_t s = 0; s < mathSlotCount_; ++s) {
           const MathSlot& slot = mathSlots_[s];
           if (!slot.active || slot.cardId != card.id) continue;
-          out.logicalState = slot.state.logicalState;
-          out.physicalState = slot.state.physicalState;
-          out.triggerFlag = slot.state.triggerFlag;
+          out.commandState = slot.state.commandState;
+          out.actualState = slot.state.actualState;
+          out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
-          out.currentValue = slot.state.currentValue;
-          out.setResult = slot.lastSetResult;
-          out.resetResult = slot.lastResetResult;
+          out.liveValue = slot.state.liveValue;
+          out.setConditionMet = slot.lastSetResult;
+          out.resetConditionMet = slot.lastResetConditionMet;
           break;
         }
         break;
@@ -297,8 +297,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
         for (uint8_t s = 0; s < rtcSlotCount_; ++s) {
           const RtcSlot& slot = rtcSlots_[s];
           if (!slot.active || slot.cardId != card.id) continue;
-          out.logicalState = slot.state.logicalState;
-          out.triggerFlag = slot.state.triggerFlag;
+          out.commandState = slot.state.commandState;
+          out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
           out.mode = slot.state.mode;
           out.startOnMs = slot.state.triggerStartMs;
@@ -338,7 +338,7 @@ void KernelService::bindAiSlotsFromConfig() {
     slot.cfg.inputMax = card.ai.inputMax;
     slot.cfg.outputMin = card.ai.outputMin;
     slot.cfg.outputMax = card.ai.outputMax;
-    slot.cfg.emaAlphaX100 = card.ai.emaAlphaX100;
+    slot.cfg.smoothingFactorPct = card.ai.smoothingFactorPct;
 
     slot.state = {};
     slot.state.mode = Mode_AI_Continuous;
@@ -387,7 +387,7 @@ void KernelService::bindDiSlotsFromConfig() {
     slot.prevSample = false;
     slot.prevSampleValid = false;
     slot.lastSetResult = false;
-    slot.lastResetResult = false;
+    slot.lastResetConditionMet = false;
 
     slot.cfg.debounceTimeMs = card.di.debounceMs;
     slot.cfg.invert = card.di.invert;
@@ -435,14 +435,14 @@ void KernelService::bindDoSlotsFromConfig() {
     slot.cfg.activeDurationMs = card.dout.activeDurationMs;
     slot.cfg.repeatCount = card.dout.repeatCount;
     slot.lastSetResult = false;
-    slot.lastResetResult = false;
+    slot.lastResetConditionMet = false;
 
     slot.state = {};
     slot.state.state = State_DO_Idle;
-    slot.state.physicalState = slot.cfg.invert;
+    slot.state.actualState = slot.cfg.invert;
     if (platform_ != nullptr) {
       platform_->configureOutputPin(slot.channel);
-      platform_->writeDigitalOutput(slot.channel, slot.state.physicalState);
+      platform_->writeDigitalOutput(slot.channel, slot.state.actualState);
     }
   }
 }
@@ -469,10 +469,10 @@ void KernelService::bindSioSlotsFromConfig() {
     slot.cfg.activeDurationMs = card.sio.activeDurationMs;
     slot.cfg.repeatCount = card.sio.repeatCount;
     slot.lastSetResult = false;
-    slot.lastResetResult = false;
+    slot.lastResetConditionMet = false;
     slot.state = {};
     slot.state.state = State_DO_Idle;
-    slot.state.physicalState = slot.cfg.invert;
+    slot.state.actualState = slot.cfg.invert;
   }
 }
 
@@ -500,17 +500,17 @@ void KernelService::bindMathSlotsFromConfig() {
     slot.cfg.inputMax = card.math.inputMax;
     slot.cfg.outputMin = card.math.outputMin;
     slot.cfg.outputMax = card.math.outputMax;
-    slot.cfg.emaAlphaX100 = card.math.emaAlphaX100;
+    slot.cfg.smoothingFactorPct = card.math.smoothingFactorPct;
     slot.cfg.fallbackValue = card.math.fallbackValue;
     slot.lastSetResult = false;
-    slot.lastResetResult = false;
+    slot.lastResetConditionMet = false;
 
     slot.state = {};
-    slot.state.currentValue = slot.cfg.fallbackValue;
+    slot.state.liveValue = slot.cfg.fallbackValue;
     slot.state.state = State_None;
-    slot.state.logicalState = false;
-    slot.state.physicalState = false;
-    slot.state.triggerFlag = false;
+    slot.state.commandState = false;
+    slot.state.actualState = false;
+    slot.state.edgePulse = false;
   }
 }
 
@@ -559,10 +559,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = DigitalInput;
     signal.state = slot.state.state;
-    signal.logicalState = slot.state.logicalState;
-    signal.physicalState = slot.state.physicalState;
-    signal.triggerFlag = slot.state.triggerFlag;
-    signal.currentValue = slot.state.currentValue;
+    signal.commandState = slot.state.commandState;
+    signal.actualState = slot.state.actualState;
+    signal.edgePulse = slot.state.edgePulse;
+    signal.liveValue = slot.state.liveValue;
   }
   for (uint8_t i = 0; i < aiSlotCount_; ++i) {
     const AiSlot& slot = aiSlots_[i];
@@ -570,10 +570,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = AnalogInput;
     signal.state = slot.state.state;
-    signal.logicalState = false;
-    signal.physicalState = false;
-    signal.triggerFlag = false;
-    signal.currentValue = slot.state.currentValue;
+    signal.commandState = false;
+    signal.actualState = false;
+    signal.edgePulse = false;
+    signal.liveValue = slot.state.liveValue;
   }
   for (uint8_t i = 0; i < doSlotCount_; ++i) {
     const DoSlot& slot = doSlots_[i];
@@ -581,10 +581,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = DigitalOutput;
     signal.state = slot.state.state;
-    signal.logicalState = slot.state.logicalState;
-    signal.physicalState = slot.state.physicalState;
-    signal.triggerFlag = slot.state.triggerFlag;
-    signal.currentValue = slot.state.currentValue;
+    signal.commandState = slot.state.commandState;
+    signal.actualState = slot.state.actualState;
+    signal.edgePulse = slot.state.edgePulse;
+    signal.liveValue = slot.state.liveValue;
   }
   for (uint8_t i = 0; i < sioSlotCount_; ++i) {
     const SioSlot& slot = sioSlots_[i];
@@ -592,10 +592,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = SoftIO;
     signal.state = slot.state.state;
-    signal.logicalState = slot.state.logicalState;
-    signal.physicalState = slot.state.physicalState;
-    signal.triggerFlag = slot.state.triggerFlag;
-    signal.currentValue = slot.state.currentValue;
+    signal.commandState = slot.state.commandState;
+    signal.actualState = slot.state.actualState;
+    signal.edgePulse = slot.state.edgePulse;
+    signal.liveValue = slot.state.liveValue;
   }
   for (uint8_t i = 0; i < mathSlotCount_; ++i) {
     const MathSlot& slot = mathSlots_[i];
@@ -603,10 +603,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = MathCard;
     signal.state = slot.state.state;
-    signal.logicalState = false;
-    signal.physicalState = false;
-    signal.triggerFlag = slot.state.triggerFlag;
-    signal.currentValue = slot.state.currentValue;
+    signal.commandState = false;
+    signal.actualState = false;
+    signal.edgePulse = slot.state.edgePulse;
+    signal.liveValue = slot.state.liveValue;
   }
   for (uint8_t i = 0; i < rtcSlotCount_; ++i) {
     const RtcSlot& slot = rtcSlots_[i];
@@ -614,10 +614,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
     V3RuntimeSignal& signal = signals[slot.cardId];
     signal.type = RtcCard;
     signal.state = slot.state.state;
-    signal.logicalState = slot.state.logicalState;
-    signal.physicalState = false;
-    signal.triggerFlag = slot.state.triggerFlag;
-    signal.currentValue = 0;
+    signal.commandState = slot.state.commandState;
+    signal.actualState = false;
+    signal.edgePulse = slot.state.edgePulse;
+    signal.liveValue = 0;
   }
 }
 
@@ -650,13 +650,13 @@ void KernelService::runDiScan(uint32_t nowMs) {
 
     V3DiStepOutput out = {};
     runV3DiStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setResult;
-    slot.lastResetResult = out.resetResult;
+    slot.lastSetResult = out.setConditionMet;
+    slot.lastResetConditionMet = out.resetConditionMet;
 
     slot.prevSample = out.nextPrevSample;
     slot.prevSampleValid = out.nextPrevSampleValid;
 
-    totalEdges += slot.state.currentValue;
+    totalEdges += slot.state.liveValue;
     if (slot.state.state == State_DI_Inhibited) {
       inhibited += 1;
     }
@@ -668,10 +668,10 @@ void KernelService::runDiScan(uint32_t nowMs) {
       V3RuntimeSignal& signal = signals[slot.cardId];
       signal.type = DigitalInput;
       signal.state = slot.state.state;
-      signal.logicalState = slot.state.logicalState;
-      signal.physicalState = slot.state.physicalState;
-      signal.triggerFlag = slot.state.triggerFlag;
-      signal.currentValue = slot.state.currentValue;
+      signal.commandState = slot.state.commandState;
+      signal.actualState = slot.state.actualState;
+      signal.edgePulse = slot.state.edgePulse;
+      signal.liveValue = slot.state.liveValue;
     }
   }
 
@@ -700,10 +700,10 @@ void KernelService::runDoScan(uint32_t nowMs) {
 
     V3DoStepOutput out = {};
     runV3DoStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setResult;
-    slot.lastResetResult = out.resetResult;
+    slot.lastSetResult = out.setConditionMet;
+    slot.lastResetConditionMet = out.resetConditionMet;
     if (platform_ != nullptr) {
-      platform_->writeDigitalOutput(slot.channel, slot.state.physicalState);
+      platform_->writeDigitalOutput(slot.channel, slot.state.actualState);
     }
     if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
       activeCount += 1;
@@ -733,8 +733,8 @@ void KernelService::runSioScan(uint32_t nowMs) {
 
     V3SioStepOutput out = {};
     runV3SioStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setResult;
-    slot.lastResetResult = out.resetResult;
+    slot.lastSetResult = out.setConditionMet;
+    slot.lastResetConditionMet = out.resetConditionMet;
     if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
       activeCount += 1;
     }
@@ -761,8 +761,8 @@ void KernelService::runMathScan() {
 
     V3MathStepOutput out = {};
     runV3MathStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setResult;
-    slot.lastResetResult = out.resetResult;
+    slot.lastSetResult = out.setConditionMet;
+    slot.lastResetConditionMet = out.resetConditionMet;
   }
 }
 
@@ -794,8 +794,8 @@ void KernelService::runRtcScan(uint32_t nowMs) {
     const uint32_t minuteKey = v3RtcMinuteKey(rtcStamp);
     if (slot.lastMinuteKeyValid && minuteKey == slot.lastMinuteKey) continue;
 
-    slot.state.logicalState = true;
-    slot.state.triggerFlag = true;
+    slot.state.commandState = true;
+    slot.state.edgePulse = true;
     slot.state.triggerStartMs = nowMs;
     slot.lastMinuteKey = minuteKey;
     slot.lastMinuteKeyValid = true;
@@ -824,29 +824,29 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
     case v3::storage::ConditionOperator::AlwaysFalse:
       return false;
     case v3::storage::ConditionOperator::LogicalTrue:
-      return s.logicalState;
+      return s.commandState;
     case v3::storage::ConditionOperator::LogicalFalse:
-      return !s.logicalState;
+      return !s.commandState;
     case v3::storage::ConditionOperator::PhysicalOn:
-      return s.physicalState;
+      return s.actualState;
     case v3::storage::ConditionOperator::PhysicalOff:
-      return !s.physicalState;
+      return !s.actualState;
     case v3::storage::ConditionOperator::Triggered:
-      return s.triggerFlag;
+      return s.edgePulse;
     case v3::storage::ConditionOperator::TriggerCleared:
-      return !s.triggerFlag;
+      return !s.edgePulse;
     case v3::storage::ConditionOperator::GT:
-      return s.currentValue > clause.threshold;
+      return s.liveValue > clause.threshold;
     case v3::storage::ConditionOperator::LT:
-      return s.currentValue < clause.threshold;
+      return s.liveValue < clause.threshold;
     case v3::storage::ConditionOperator::EQ:
-      return s.currentValue == clause.threshold;
+      return s.liveValue == clause.threshold;
     case v3::storage::ConditionOperator::NEQ:
-      return s.currentValue != clause.threshold;
+      return s.liveValue != clause.threshold;
     case v3::storage::ConditionOperator::GTE:
-      return s.currentValue >= clause.threshold;
+      return s.liveValue >= clause.threshold;
     case v3::storage::ConditionOperator::LTE:
-      return s.currentValue <= clause.threshold;
+      return s.liveValue <= clause.threshold;
     case v3::storage::ConditionOperator::Running:
       return isMissionRunning(s.type, s.state);
     case v3::storage::ConditionOperator::Finished:
@@ -859,3 +859,4 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
 }
 
 }  // namespace v3::kernel
+

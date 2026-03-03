@@ -1,20 +1,20 @@
-#include "kernel/v3_rtc_runtime.h"
+﻿#include "kernel/v3_rtc_runtime.h"
 
 void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
                   const V3RtcStepInput& in) {
   runtime.mode = Mode_None;
   runtime.state = State_None;
-  runtime.physicalState = false;
-  runtime.currentValue = 0;
-  runtime.triggerFlag = false;
+  runtime.actualState = false;
+  runtime.liveValue = 0;
+  runtime.edgePulse = false;
 
-  if (!runtime.logicalState) {
+  if (!runtime.commandState) {
     return;
   }
 
   if (cfg.triggerDurationMs > 0 &&
       (in.nowMs - runtime.triggerStartMs) >= cfg.triggerDurationMs) {
-    runtime.logicalState = false;
+    runtime.commandState = false;
     return;
   }
 }
@@ -43,3 +43,4 @@ uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp) {
              60U +
          stamp.minute;
 }
+

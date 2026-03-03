@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/v3_ai_runtime.cpp"
 
@@ -11,17 +11,17 @@ void test_ai_alpha_1000_tracks_scaled_value() {
   cfg.inputMax = 100;
   cfg.outputMin = 0;
   cfg.outputMax = 1000;
-  cfg.emaAlphaX1000 = 1000;
+  cfg.smoothingFactorPct0 = 1000;
 
   V3AiRuntimeState runtime = {};
-  runtime.currentValue = 0;
+  runtime.liveValue = 0;
 
   V3AiStepInput in = {};
   in.rawSample = 50;
 
   runV3AiStep(cfg, runtime, in);
 
-  TEST_ASSERT_EQUAL_UINT32(500, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(500, runtime.liveValue);
   TEST_ASSERT_EQUAL(Mode_AI_Continuous, runtime.mode);
   TEST_ASSERT_EQUAL(State_AI_Streaming, runtime.state);
 }
@@ -32,17 +32,17 @@ void test_ai_alpha_0_keeps_previous_value() {
   cfg.inputMax = 100;
   cfg.outputMin = 0;
   cfg.outputMax = 1000;
-  cfg.emaAlphaX1000 = 0;
+  cfg.smoothingFactorPct0 = 0;
 
   V3AiRuntimeState runtime = {};
-  runtime.currentValue = 333;
+  runtime.liveValue = 333;
 
   V3AiStepInput in = {};
   in.rawSample = 90;
 
   runV3AiStep(cfg, runtime, in);
 
-  TEST_ASSERT_EQUAL_UINT32(333, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(333, runtime.liveValue);
 }
 
 void test_ai_input_bounds_are_order_independent() {
@@ -51,17 +51,17 @@ void test_ai_input_bounds_are_order_independent() {
   cfg.inputMax = 0;
   cfg.outputMin = 0;
   cfg.outputMax = 1000;
-  cfg.emaAlphaX1000 = 1000;
+  cfg.smoothingFactorPct0 = 1000;
 
   V3AiRuntimeState runtime = {};
-  runtime.currentValue = 0;
+  runtime.liveValue = 0;
 
   V3AiStepInput in = {};
   in.rawSample = 25;
 
   runV3AiStep(cfg, runtime, in);
 
-  TEST_ASSERT_EQUAL_UINT32(250, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(250, runtime.liveValue);
 }
 
 void test_ai_equal_input_range_uses_output_min() {
@@ -70,17 +70,17 @@ void test_ai_equal_input_range_uses_output_min() {
   cfg.inputMax = 20;
   cfg.outputMin = 123;
   cfg.outputMax = 999;
-  cfg.emaAlphaX1000 = 1000;
+  cfg.smoothingFactorPct0 = 1000;
 
   V3AiRuntimeState runtime = {};
-  runtime.currentValue = 0;
+  runtime.liveValue = 0;
 
   V3AiStepInput in = {};
   in.rawSample = 9999;
 
   runV3AiStep(cfg, runtime, in);
 
-  TEST_ASSERT_EQUAL_UINT32(123, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(123, runtime.liveValue);
 }
 
 void test_ai_alpha_is_clamped_to_1000() {
@@ -89,17 +89,17 @@ void test_ai_alpha_is_clamped_to_1000() {
   cfg.inputMax = 100;
   cfg.outputMin = 0;
   cfg.outputMax = 1000;
-  cfg.emaAlphaX1000 = 1500;
+  cfg.smoothingFactorPct0 = 1500;
 
   V3AiRuntimeState runtime = {};
-  runtime.currentValue = 0;
+  runtime.liveValue = 0;
 
   V3AiStepInput in = {};
   in.rawSample = 80;
 
   runV3AiStep(cfg, runtime, in);
 
-  TEST_ASSERT_EQUAL_UINT32(800, runtime.currentValue);
+  TEST_ASSERT_EQUAL_UINT32(800, runtime.liveValue);
 }
 
 int main() {
@@ -111,4 +111,5 @@ int main() {
   RUN_TEST(test_ai_alpha_is_clamped_to_1000);
   return UNITY_END();
 }
+
 

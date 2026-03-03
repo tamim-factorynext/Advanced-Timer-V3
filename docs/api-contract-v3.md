@@ -1,4 +1,4 @@
-# API Contract V3
+﻿# API Contract V3
 
 Date: 2026-02-28
 Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
@@ -44,9 +44,9 @@ Message type: `runtime_snapshot`
   "schemaVersion": 1,
   "tsMs": 1740738600000,
   "snapshotSeq": 8123,
-  "scanIntervalMs": 10,
+  "scanPeriodMs": 10,
   "lastCompleteScanMs": 0.812,
-  "runMode": "RUN_NORMAL",
+  "engineMode": "RUN_NORMAL",
   "metrics": {
     "scanLastUs": 812,
     "scanMaxUs": 1240,
@@ -70,17 +70,17 @@ Message type: `runtime_snapshot`
       "id": 8,
       "type": "DigitalOutput",
       "familyOrder": 8,
-      "logicalState": true,
-      "physicalState": true,
-      "triggerFlag": false,
+      "commandState": true,
+      "actualState": true,
+      "edgePulse": false,
       "state": "State_DO_Active",
       "mode": "Mode_DO_Normal",
-      "currentValue": 2,
+      "liveValue": 2,
       "startOnMs": 1740738600000,
       "startOffMs": 1740738600000,
       "repeatCounter": 0,
-      "setResult": true,
-      "resetResult": false,
+      "setConditionMet": true,
+      "resetConditionMet": false,
       "maskForced": {
         "inputSource": "REAL",
         "forcedAIValue": 0,
@@ -88,8 +88,8 @@ Message type: `runtime_snapshot`
         "outputMasked": false
       },
       "breakpointEnabled": false,
-      "setResult": true,
-      "resetResult": false,
+      "setConditionMet": true,
+      "resetConditionMet": false,
       "evalCounter": 120,
       "debug": {
         "evalCounter": 120,
@@ -104,7 +104,7 @@ Rules:
 - `cards[]` order must match deterministic firmware evaluation order.
 - Snapshot values are authoritative; clients must not recompute logical outcomes.
 - Runtime snapshots must include `metrics` object fields defined in `docs/timing-budget-v3.md` Section 3.
-- `metrics.scanBudgetUs` must equal `scanIntervalMs * 1000`.
+- `metrics.scanBudgetUs` must equal `scanPeriodMs * 1000`.
 - `metrics.queueDepth` must be `<= metrics.queueCapacity`.
 - `cards[].evalCounter` is runtime-only metadata and must not be required in config commit payloads.
 
@@ -198,9 +198,9 @@ Success response:
   "schemaVersion": 1,
   "tsMs": 1740738600000,
   "snapshotSeq": 8124,
-  "scanIntervalMs": 10,
+  "scanPeriodMs": 10,
   "lastCompleteScanMs": 0.812,
-  "runMode": "RUN_NORMAL",
+  "engineMode": "RUN_NORMAL",
   "metrics": {},
   "testMode": {},
   "cards": []
@@ -383,9 +383,10 @@ Rules:
 - `AT-API-004`: WebSocket revision ordering.
 - `AT-API-005`: global output mask command behavior.
 - `AT-API-008`: runtime snapshot metrics object shape and required field presence.
-- `AT-API-009`: `metrics.scanBudgetUs == scanIntervalMs * 1000` invariant.
+- `AT-API-009`: `metrics.scanBudgetUs == scanPeriodMs * 1000` invariant.
 - `AT-API-010`: queue depth invariant (`metrics.queueDepth <= metrics.queueCapacity`).
 - `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
+
 
 
 

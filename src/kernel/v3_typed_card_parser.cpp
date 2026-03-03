@@ -1,4 +1,4 @@
-#include "kernel/v3_typed_card_parser.h"
+﻿#include "kernel/v3_typed_card_parser.h"
 
 #include <cstring>
 
@@ -96,23 +96,23 @@ logicOperator mapV3ClauseToLegacyOperator(logicCardType sourceType,
   }
   ioThreshold = numeric;
 
-  if (std::strcmp(field, "logicalState") == 0 ||
-      std::strcmp(field, "physicalState") == 0) {
+  if (std::strcmp(field, "commandState") == 0 ||
+      std::strcmp(field, "actualState") == 0) {
     if (std::strcmp(op, "EQ") == 0) {
-      if (std::strcmp(field, "logicalState") == 0) {
+      if (std::strcmp(field, "commandState") == 0) {
         return (numeric != 0) ? Op_LogicalTrue : Op_LogicalFalse;
       }
       return (numeric != 0) ? Op_PhysicalOn : Op_PhysicalOff;
     }
     if (std::strcmp(op, "NEQ") == 0) {
-      if (std::strcmp(field, "logicalState") == 0) {
+      if (std::strcmp(field, "commandState") == 0) {
         return (numeric != 0) ? Op_LogicalFalse : Op_LogicalTrue;
       }
       return (numeric != 0) ? Op_PhysicalOff : Op_PhysicalOn;
     }
   }
 
-  if (std::strcmp(field, "triggerFlag") == 0) {
+  if (std::strcmp(field, "edgePulse") == 0) {
     if (std::strcmp(op, "EQ") == 0) {
       return (numeric != 0) ? Op_Triggered : Op_TriggerCleared;
     }
@@ -164,7 +164,7 @@ bool mapV3ConditionBlock(JsonObjectConst block, uint8_t totalCards,
     reason = "clauseA source cardId out of range";
     return false;
   }
-  const char* aField = aSource["field"] | "currentValue";
+  const char* aField = aSource["field"] | "liveValue";
   const char* aOperator = a["operator"] | "";
   bool aOk = false;
   outAOp = mapV3ClauseToLegacyOperator(sourceTypeById[outAId], aField, aOperator,
@@ -194,7 +194,7 @@ bool mapV3ConditionBlock(JsonObjectConst block, uint8_t totalCards,
     reason = "clauseB source cardId out of range";
     return false;
   }
-  const char* bField = bSource["field"] | "currentValue";
+  const char* bField = bSource["field"] | "liveValue";
   const char* bOperator = b["operator"] | "";
   bool bOk = false;
   outBOp = mapV3ClauseToLegacyOperator(sourceTypeById[outBId], bField, bOperator,
@@ -305,12 +305,12 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     out.ai.channel = cfg["channel"] | cardId;
     out.ai.inputMin = inputRange["min"] | 4U;
     out.ai.inputMax = inputRange["max"] | 20U;
-    const uint32_t emaAlphaX100 = cfg["emaAlpha"] | 100U;
-    if (emaAlphaX100 > 100U) {
+    const uint32_t smoothingFactorPct = cfg["emaAlpha"] | 100U;
+    if (smoothingFactorPct > 100U) {
       reason = "AI emaAlpha out of range";
       return false;
     }
-    out.ai.emaAlphaX100 = emaAlphaX100;
+    out.ai.smoothingFactorPct = smoothingFactorPct;
     out.ai.outputMin = outputRange["min"] | 0U;
     out.ai.outputMax = outputRange["max"] | 100U;
     return true;
@@ -411,8 +411,8 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     out.math.inputMax = standard["inputMax"] | 10000U;
     out.math.outputMin = standard["outputMin"] | 0U;
     out.math.outputMax = standard["outputMax"] | 10000U;
-    out.math.emaAlphaX100 = standard["emaAlphaX100"] | 100U;
-    if (out.math.emaAlphaX100 > 100U) {
+    out.math.smoothingFactorPct = standard["smoothingFactorPct"] | 100U;
+    if (out.math.smoothingFactorPct > 100U) {
       reason = "MATH emaAlpha out of range";
       return false;
     }
@@ -498,3 +498,4 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   reason = "unsupported card type";
   return false;
 }
+

@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
-enum runMode { RUN_NORMAL, RUN_STEP, RUN_BREAKPOINT };
+enum engineMode { RUN_NORMAL, RUN_STEP, RUN_BREAKPOINT };
 
 enum inputSourceMode {
   InputSource_Real,
@@ -29,6 +29,7 @@ struct KernelCommand {
   uint32_t value;
   uint32_t requestId;
   uint32_t enqueuedUs;
-  runMode mode;
+  engineMode mode;
   inputSourceMode inputMode;
 };
+

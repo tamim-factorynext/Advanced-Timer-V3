@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -18,7 +18,7 @@
 namespace v3::kernel {
 
 struct KernelMetrics {
-  uint32_t scanIntervalMs;
+  uint32_t scanPeriodMs;
   uint8_t configuredCardCount;
   uint8_t enabledCardCount;
   uint8_t diCardCount;
@@ -29,7 +29,7 @@ struct KernelMetrics {
   uint8_t rtcCardCount;
   uint8_t familyCountSum;
   bool bindingConsistent;
-  runMode mode;
+  engineMode mode;
   uint32_t stepAppliedCount;
   uint32_t completedScans;
   uint32_t lastScanMs;
@@ -46,7 +46,7 @@ class KernelService {
   void begin(const v3::storage::ValidatedConfig& config,
              v3::platform::PlatformService& platform);
   void tick(uint32_t nowMs);
-  void setRunMode(runMode mode);
+  void setRunMode(engineMode mode);
   void requestStepOnce();
   bool setDiForce(uint8_t cardId, bool forceActive, bool forcedSample);
   bool setAiForce(uint8_t cardId, bool forceActive, uint32_t forcedValue);
@@ -68,7 +68,7 @@ class KernelService {
     V3DiRuntimeConfig cfg;
     V3DiRuntimeState state;
     bool lastSetResult;
-    bool lastResetResult;
+    bool lastResetConditionMet;
   };
 
   struct AiSlot {
@@ -90,7 +90,7 @@ class KernelService {
     V3DoRuntimeConfig cfg;
     V3DoRuntimeState state;
     bool lastSetResult;
-    bool lastResetResult;
+    bool lastResetConditionMet;
   };
 
   struct SioSlot {
@@ -101,7 +101,7 @@ class KernelService {
     V3SioRuntimeConfig cfg;
     V3SioRuntimeState state;
     bool lastSetResult;
-    bool lastResetResult;
+    bool lastResetConditionMet;
   };
 
   struct MathSlot {
@@ -112,7 +112,7 @@ class KernelService {
     V3MathRuntimeConfig cfg;
     V3MathRuntimeState state;
     bool lastSetResult;
-    bool lastResetResult;
+    bool lastResetConditionMet;
   };
 
   struct RtcSlot {
@@ -165,3 +165,4 @@ class KernelService {
 };
 
 }  // namespace v3::kernel
+

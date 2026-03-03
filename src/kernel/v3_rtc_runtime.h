@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -34,10 +34,10 @@ struct V3RtcRuntimeConfig {
 };
 
 struct V3RtcRuntimeState {
-  bool logicalState;
-  bool physicalState;
-  bool triggerFlag;
-  uint32_t currentValue;
+  bool commandState;
+  bool actualState;
+  bool edgePulse;
+  uint32_t liveValue;
   uint32_t triggerStartMs;
   cardMode mode;
   cardState state;
@@ -54,3 +54,4 @@ bool v3RtcFieldMatches(int fieldValue, int scheduleValue);
 bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
                                const V3RtcMinuteStamp& stamp);
 uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp);
+

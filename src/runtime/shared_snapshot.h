@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -24,7 +24,7 @@ struct SharedRuntimeSnapshotT {
   uint32_t rtcIntentEnqueueCount;
   uint32_t rtcIntentEnqueueFailCount;
   uint32_t rtcLastEvalMs;
-  runMode mode;
+  engineMode mode;
   bool testModeActive;
   bool globalOutputMask;
   bool breakpointPaused;
@@ -34,7 +34,8 @@ struct SharedRuntimeSnapshotT {
   uint32_t forcedAIValue[N];
   bool outputMaskLocal[N];
   bool breakpointEnabled[N];
-  bool setResult[N];
-  bool resetResult[N];
+  bool setConditionMet[N];
+  bool resetConditionMet[N];
   uint32_t evalCounter[N];
 };
+

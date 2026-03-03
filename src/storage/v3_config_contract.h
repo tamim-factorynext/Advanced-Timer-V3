@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stdint.h>
 
@@ -77,7 +77,7 @@ struct AiParams {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
 };
 
 struct SioParams {
@@ -98,7 +98,7 @@ struct MathParams {
   uint32_t inputMax;
   uint32_t outputMin;
   uint32_t outputMax;
-  uint32_t emaAlphaX100;
+  uint32_t smoothingFactorPct;
   uint32_t fallbackValue;
   ConditionBlock setCondition;
   ConditionBlock resetCondition;
@@ -121,17 +121,17 @@ struct RtcParams {
 
 struct NtpConfig {
   bool enabled;
-  char primaryServer[kMaxNtpServerLen + 1];
+  char primaryTimeServer[kMaxNtpServerLen + 1];
   char secondaryServer[kMaxNtpServerLen + 1];
   char tertiaryServer[kMaxNtpServerLen + 1];
   uint32_t syncIntervalSec;
   uint32_t startupTimeoutSec;
-  uint32_t maxStaleSec;
+  uint32_t maxTimeAgeSec;
 };
 
 struct ClockConfig {
   char timezone[kMaxTimezoneLen + 1];
-  NtpConfig ntp;
+  NtpConfig timeSync;
 };
 
 struct WiFiCredential {
@@ -142,9 +142,9 @@ struct WiFiCredential {
 };
 
 struct WiFiConfig {
-  WiFiCredential master;
-  WiFiCredential user;
-  uint32_t retryBackoffSec;
+  WiFiCredential backupAccessNetwork;
+  WiFiCredential userConfiguredNetwork;
+  uint32_t retryDelaySec;
   bool staOnly;
 };
 
@@ -162,9 +162,9 @@ struct CardConfig {
 
 struct SystemConfig {
   uint32_t schemaVersion;
-  uint32_t scanIntervalMs;
+  uint32_t scanPeriodMs;
   WiFiConfig wifi;
-  ClockConfig clock;
+  ClockConfig time;
   uint8_t cardCount;
   CardConfig cards[kMaxCards];
 };
@@ -172,3 +172,4 @@ struct SystemConfig {
 SystemConfig makeDefaultSystemConfig();
 
 }  // namespace v3::storage
+

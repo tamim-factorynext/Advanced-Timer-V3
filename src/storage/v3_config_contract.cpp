@@ -1,4 +1,4 @@
-#include "storage/v3_config_contract.h"
+﻿#include "storage/v3_config_contract.h"
 
 #include <string.h>
 
@@ -7,36 +7,39 @@ namespace v3::storage {
 SystemConfig makeDefaultSystemConfig() {
   SystemConfig cfg = {};
   cfg.schemaVersion = kConfigSchemaVersion;
-  cfg.scanIntervalMs = kMinScanIntervalMs;
-  strncpy(cfg.wifi.master.ssid, "advancedtimer", sizeof(cfg.wifi.master.ssid) - 1);
-  strncpy(cfg.wifi.master.password, "12345678",
-          sizeof(cfg.wifi.master.password) - 1);
-  cfg.wifi.master.timeoutSec = 2;
-  cfg.wifi.master.editable = false;
+  cfg.scanPeriodMs = kMinScanIntervalMs;
+  strncpy(cfg.wifi.backupAccessNetwork.ssid, "advancedtimer", sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
+  strncpy(cfg.wifi.backupAccessNetwork.password, "12345678",
+          sizeof(cfg.wifi.backupAccessNetwork.password) - 1);
+  cfg.wifi.backupAccessNetwork.timeoutSec = 2;
+  cfg.wifi.backupAccessNetwork.editable = false;
 
-  strncpy(cfg.wifi.user.ssid, "FactoryNext", sizeof(cfg.wifi.user.ssid) - 1);
-  strncpy(cfg.wifi.user.password, "FactoryNext20$22#",
-          sizeof(cfg.wifi.user.password) - 1);
-  cfg.wifi.user.timeoutSec = 180;
-  cfg.wifi.user.editable = true;
+  strncpy(cfg.wifi.userConfiguredNetwork.ssid, "FactoryNext", sizeof(cfg.wifi.userConfiguredNetwork.ssid) - 1);
+  strncpy(cfg.wifi.userConfiguredNetwork.password, "FactoryNext20$22#",
+          sizeof(cfg.wifi.userConfiguredNetwork.password) - 1);
+  cfg.wifi.userConfiguredNetwork.timeoutSec = 180;
+  cfg.wifi.userConfiguredNetwork.editable = true;
 
-  cfg.wifi.retryBackoffSec = 30;
+  cfg.wifi.retryDelaySec = 30;
   cfg.wifi.staOnly = true;
 
-  strncpy(cfg.clock.timezone, "UTC", sizeof(cfg.clock.timezone) - 1);
-  cfg.clock.ntp.enabled = true;
-  strncpy(cfg.clock.ntp.primaryServer, "pool.ntp.org",
-          sizeof(cfg.clock.ntp.primaryServer) - 1);
-  strncpy(cfg.clock.ntp.secondaryServer, "time.google.com",
-          sizeof(cfg.clock.ntp.secondaryServer) - 1);
-  strncpy(cfg.clock.ntp.tertiaryServer, "time.cloudflare.com",
-          sizeof(cfg.clock.ntp.tertiaryServer) - 1);
-  cfg.clock.ntp.syncIntervalSec = 3600;
-  cfg.clock.ntp.startupTimeoutSec = 15;
-  cfg.clock.ntp.maxStaleSec = 86400;
+  strncpy(cfg.time.timezone, "UTC", sizeof(cfg.time.timezone) - 1);
+  cfg.time.timeSync.enabled = true;
+  strncpy(cfg.time.timeSync.primaryTimeServer, "pool.ntp.org",
+          sizeof(cfg.time.timeSync.primaryTimeServer) - 1);
+  strncpy(cfg.time.timeSync.secondaryServer, "time.google.com",
+          sizeof(cfg.time.timeSync.secondaryServer) - 1);
+  strncpy(cfg.time.timeSync.tertiaryServer, "time.cloudflare.com",
+          sizeof(cfg.time.timeSync.tertiaryServer) - 1);
+  cfg.time.timeSync.syncIntervalSec = 3600;
+  cfg.time.timeSync.startupTimeoutSec = 15;
+  cfg.time.timeSync.maxTimeAgeSec = 86400;
 
   cfg.cardCount = 0;
   return cfg;
 }
 
 }  // namespace v3::storage
+
+
+

@@ -1,4 +1,4 @@
-# Acceptance Matrix V3
+﻿# Acceptance Matrix V3
 
 Date: 2026-02-26
 Source Contract: `requirements-v3-contract.md` (v3.0.0-draft)
@@ -24,9 +24,9 @@ Status: Draft for implementation kickoff
 | AT-DATA-001 | Sec 4.1 | Centiunit encode/decode timing threshold values | Stored/transmitted values are integer x100 equivalents | Yes | No | Yes |
 | AT-DATA-002 | Sec 4.2 | Negative numeric field in staged config | Validation rejects payload with machine-readable error | Yes | No | Yes |
 | AT-DATA-003 | Sec 4.1, 4.2 | Portal decimal entry and firmware integer handling | Portal converts; firmware receives unsigned integer form only | Yes | No | Yes |
-| AT-STATE-001 | Sec 5.1-5.3 | Non-owner tries to write another card currentValue | Validation rejects write-binding with ownership violation | Yes | No | Yes |
+| AT-STATE-001 | Sec 5.1-5.3 | Non-owner tries to write another card liveValue | Validation rejects write-binding with ownership violation | Yes | No | Yes |
 | AT-STATE-002 | Sec 5.2 | Owner card updates own runtime variable | Update accepted and visible to readers in next snapshot | Yes | No | Yes |
-| AT-DI-001 | Sec 8.1 DI | Debounce qualification before logic update | logicalState updates only after stable debounceTime | Yes | Yes | Yes |
+| AT-DI-001 | Sec 8.1 DI | Debounce qualification before logic update | commandState updates only after stable debounceTime | Yes | Yes | Yes |
 | AT-DI-002 | Sec 8.1 DI | Edge mode RISING/FALLING/CHANGE counter behavior | Counter increments only for configured qualified edge type | Yes | Yes | Yes |
 | AT-DI-003 | Sec 8.3, 8.1 DI | set=false, reset=false on input transitions | DI blocks logical updates and counter increments | Yes | Yes | Yes |
 | AT-DI-004 | Sec 8.3, 8.1 DI | reset=true while set=true and input changes | Reset dominates: counter reset and updates inhibited | Yes | Yes | Yes |
@@ -49,8 +49,8 @@ Status: Draft for implementation kickoff
 | AT-SIO-002 | Sec 8.3 SIO | SIO hardware drive output | No GPIO/relay drive attempts occur | Yes | Yes | Yes |
 | AT-SIO-003 | Sec 8.3 SIO | Mask command against SIO | Mask semantics unavailable/rejected for SIO | Yes | No | Yes |
 | AT-SIO-004 | Sec 8.3 SIO | Unauthorized write attempt | Write denied and audit record emitted | Yes | No | Yes |
-| AT-MATH-001 | Sec 8.5.3 | reset=true regardless of set | currentValue forced to fallbackValue; no further processing | Yes | No | Yes |
-| AT-MATH-002 | Sec 8.5.3 | set=false, reset=false | currentValue holds last value until re-enabled/reset | Yes | No | Yes |
+| AT-MATH-001 | Sec 8.5.3 | reset=true regardless of set | liveValue forced to fallbackValue; no further processing | Yes | No | Yes |
+| AT-MATH-002 | Sec 8.5.3 | set=false, reset=false | liveValue holds last value until re-enabled/reset | Yes | No | Yes |
 | AT-MATH-003 | Sec 8.5.1 | Standard operator correctness: ADD,SUB_SAT,MUL,DIV_SAFE | Arithmetic stage result correct for each supported operator | Yes | No | Yes |
 | AT-MATH-004 | Sec 8.5.1 | Unsupported operator configured | Validation rejects operator outside supported arithmetic enum | Yes | No | Yes |
 | AT-MATH-005 | Sec 8.5.3 | Standard pipeline execution order | Compute->InputClamp->Scale->EMA order preserved | Yes | No | Yes |
@@ -58,16 +58,16 @@ Status: Draft for implementation kickoff
 | AT-MATH-007 | Sec 8.5.3 | Divide-by-zero in DIV_SAFE | `fallbackValue` emitted deterministically | Yes | No | Yes |
 | AT-MATH-008 | Sec 8.5.3 | MATH state model exposure | MATH has no mission state semantics (`STATE` source not exposed for MATH) | Yes | No | Yes |
 | AT-MATH-009 | Sec 4.2, 8.5 | Negative numeric in MATH config payload | Validation rejects payload | Yes | No | Yes |
-| AT-MATH-011 | Sec 8.5.3 | Output change pulse behavior | `triggerFlag` is true for one scan only when `currentValue` changes | Yes | Yes | Yes |
-| AT-RTC-001 | Sec 8.6.3 | RTC evaluates against system clock service | logicalState follows authoritative wall-clock only | Yes | Yes | Yes |
-| AT-RTC-002 | Sec 8.6.1, 8.6.2 | Exact timestamp schedule match | Match starts active window and logicalState transitions as expected | Yes | Yes | Yes |
+| AT-MATH-011 | Sec 8.5.3 | Output change pulse behavior | `edgePulse` is true for one scan only when `liveValue` changes | Yes | Yes | Yes |
+| AT-RTC-001 | Sec 8.6.3 | RTC evaluates against system clock service | commandState follows authoritative wall-clock only | Yes | Yes | Yes |
+| AT-RTC-002 | Sec 8.6.1, 8.6.2 | Exact timestamp schedule match | Match starts active window and commandState transitions as expected | Yes | Yes | Yes |
 | AT-RTC-003 | Sec 8.6.1, 8.6.3 | Field-based match using `hasX` flags | Fields with `hasX=false` are ignored and schedule triggers correctly | Yes | Yes | Yes |
-| AT-RTC-004 | Sec 8.6.1, 8.6.3 | Trigger duration timing | logicalState stays true for `triggerDurationMs` then deasserts | Yes | Yes | Yes |
+| AT-RTC-004 | Sec 8.6.1, 8.6.3 | Trigger duration timing | commandState stays true for `triggerDurationMs` then deasserts | Yes | Yes | Yes |
 | AT-RTC-005 | Sec 8.6.3 | Attempt set/reset on RTC | RTC rejects/ignores set-reset as unsupported | Yes | No | Yes |
 | AT-RTC-006 | Sec 8.6.1 | RTC schedule precision below minute level | Validation rejects `second`/millisecond schedule fields | Yes | No | Yes |
 | AT-RTC-007 | Sec 8.6.3 | Retrigger during active window | New schedule match restarts active window (`RESTART_WINDOW`) | Yes | Yes | Yes |
 | AT-RTC-008 | Sec 8.6.3 | Invalid/unavailable wall-clock time | Scheduler does not fire while time validity is false | Yes | Yes | Yes |
-| AT-RTC-009 | Sec 8.6.3 | RTC runtime output surface | RTC exposes `logicalState` and `triggerFlag` only as meaningful scheduler outputs | Yes | No | Yes |
+| AT-RTC-009 | Sec 8.6.3 | RTC runtime output surface | RTC exposes `commandState` and `edgePulse` only as meaningful scheduler outputs | Yes | No | Yes |
 | AT-HW-001 | Sec 6.4 | Build profile has empty DI channel array | DI card payloads rejected by validation | Yes | No | Yes |
 | AT-HW-002 | Sec 6.4 | Build profile has `hasRtc=false` or RTC gate disabled | RTC card payloads rejected by validation | Yes | No | Yes |
 | AT-HW-003 | Sec 6.4 | AI backend switched (`INTERNAL_ADC` vs `I2C_ADC`) | Card semantics unchanged; backend adapter only changes acquisition path | Yes | Yes | Yes |
@@ -87,7 +87,7 @@ Status: Draft for implementation kickoff
 | AT-CFG-004 | Sec 12.2 | Failure at each commit protocol step | Active remains previous valid config; error surfaced | Yes | Yes | Yes |
 | AT-CFG-005 | Sec 12.1, 12.2 | Single rollback slot rotation and LKG preservation | Active/LKG rotation remains atomic with valid rollback target | Yes | Yes | Yes |
 | AT-CFG-006 | Sec 12.1, 15.1 | Restore source constraints | Only `LKG` and `FACTORY` restore sources are accepted; others rejected | Yes | No | Yes |
-| AT-WIFI-001 | Sec 13.1, 13.2 | Boot connection sequence | Master SSID short timeout then User SSID long timeout | Yes | Yes | Yes |
+| AT-WIFI-001 | Sec 13.1, 13.2 | Boot connection sequence | Backup Access Network short timeout then User Configured Network long timeout | Yes | Yes | Yes |
 | AT-WIFI-002 | Sec 13.2 | Both SSIDs unavailable | Device enters offline mode, kernel remains operational | Yes | Yes | Yes |
 | AT-WIFI-003 | Sec 13.3 | WiFi mode verification | STA-only operation; AP mode disabled | Yes | Yes | Yes |
 | AT-WIFI-004 | Sec 13.3 | Heavy WiFi traffic under scan load | Core0 scan timing budget remains within limits | Yes | Yes | Yes |
@@ -103,7 +103,7 @@ Status: Draft for implementation kickoff
 | AT-API-006 | Sec 6.3, 15.1 | Invalid run mode command payload (`RUN_SLOW`) | Command rejected with machine-readable validation error | Yes | No | Yes |
 | AT-API-007 | Sec 15.2 | Forward compatibility for additional response fields | Client behavior remains correct when unknown fields are present | Yes | No | No |
 | AT-API-008 | Sec 15.2, 18 | Runtime snapshot metrics object contract | Snapshot includes required `metrics.*` fields with correct primitive types | Yes | Yes | Yes |
-| AT-API-009 | Sec 15.2, 19 | Scan budget invariant | `metrics.scanBudgetUs == scanIntervalMs * 1000` for all sampled snapshots | Yes | Yes | Yes |
+| AT-API-009 | Sec 15.2, 19 | Scan budget invariant | `metrics.scanBudgetUs == scanPeriodMs * 1000` for all sampled snapshots | Yes | Yes | Yes |
 | AT-API-010 | Sec 15.2, 19 | Queue depth capacity invariant | `metrics.queueDepth` never exceeds `metrics.queueCapacity` | Yes | Yes | Yes |
 | AT-SEC-001 | Sec 16.1, 16.2 | Role-based access matrix for protected ops | VIEWER/OPERATOR/ENGINEER/ADMIN permissions enforced | Yes | No | Yes |
 | AT-SEC-002 | Sec 16.3 | Successful protected operation audit | Audit record contains all mandatory fields | Yes | No | Yes |
@@ -124,6 +124,7 @@ These tests are defined as acceptance placeholders and should be finalized when 
 
 - Required suite prefixes from contract are present: `AT-CORE`, `AT-DI/AI/SIO/DO`, `AT-MATH`, `AT-RTC`, `AT-BIND`, `AT-CFG`, `AT-SEC`, `AT-REL`.
 - Every major contract section (4 through 20) has at least one mapped acceptance test.
+
 
 
 

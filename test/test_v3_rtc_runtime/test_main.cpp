@@ -1,4 +1,4 @@
-#include <unity.h>
+﻿#include <unity.h>
 
 #include "../../src/kernel/v3_rtc_runtime.cpp"
 
@@ -10,10 +10,10 @@ void test_rtc_step_clears_trigger_when_logical_false() {
   cfg.triggerDurationMs = 60000;
 
   V3RtcRuntimeState runtime = {};
-  runtime.logicalState = false;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 1;
+  runtime.commandState = false;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 1;
   runtime.triggerStartMs = 100;
   runtime.mode = Mode_DO_Normal;
   runtime.state = State_DO_Active;
@@ -23,10 +23,10 @@ void test_rtc_step_clears_trigger_when_logical_false() {
 
   runV3RtcStep(cfg, runtime, in);
 
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_FALSE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(0, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_FALSE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(0, runtime.liveValue);
   TEST_ASSERT_EQUAL(Mode_None, runtime.mode);
   TEST_ASSERT_EQUAL(State_None, runtime.state);
 }
@@ -36,10 +36,10 @@ void test_rtc_step_holds_true_within_trigger_window() {
   cfg.triggerDurationMs = 1000;
 
   V3RtcRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 1;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 1;
   runtime.triggerStartMs = 200;
 
   V3RtcStepInput in = {};
@@ -47,10 +47,10 @@ void test_rtc_step_holds_true_within_trigger_window() {
 
   runV3RtcStep(cfg, runtime, in);
 
-  TEST_ASSERT_TRUE(runtime.logicalState);
-  TEST_ASSERT_TRUE(runtime.physicalState);
-  TEST_ASSERT_TRUE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(1, runtime.currentValue);
+  TEST_ASSERT_TRUE(runtime.commandState);
+  TEST_ASSERT_TRUE(runtime.actualState);
+  TEST_ASSERT_TRUE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(1, runtime.liveValue);
 }
 
 void test_rtc_step_auto_clears_after_trigger_window() {
@@ -58,10 +58,10 @@ void test_rtc_step_auto_clears_after_trigger_window() {
   cfg.triggerDurationMs = 1000;
 
   V3RtcRuntimeState runtime = {};
-  runtime.logicalState = true;
-  runtime.physicalState = true;
-  runtime.triggerFlag = true;
-  runtime.currentValue = 1;
+  runtime.commandState = true;
+  runtime.actualState = true;
+  runtime.edgePulse = true;
+  runtime.liveValue = 1;
   runtime.triggerStartMs = 200;
 
   V3RtcStepInput in = {};
@@ -69,10 +69,10 @@ void test_rtc_step_auto_clears_after_trigger_window() {
 
   runV3RtcStep(cfg, runtime, in);
 
-  TEST_ASSERT_FALSE(runtime.logicalState);
-  TEST_ASSERT_FALSE(runtime.physicalState);
-  TEST_ASSERT_FALSE(runtime.triggerFlag);
-  TEST_ASSERT_EQUAL_UINT32(0, runtime.currentValue);
+  TEST_ASSERT_FALSE(runtime.commandState);
+  TEST_ASSERT_FALSE(runtime.actualState);
+  TEST_ASSERT_FALSE(runtime.edgePulse);
+  TEST_ASSERT_EQUAL_UINT32(0, runtime.liveValue);
 }
 
 void test_rtc_channel_matches_minute_with_wildcards() {
@@ -123,3 +123,4 @@ int main() {
   RUN_TEST(test_rtc_minute_key_changes_per_minute);
   return UNITY_END();
 }
+
