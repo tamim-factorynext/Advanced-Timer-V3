@@ -49,12 +49,6 @@ bool normalizeV3ConfigRequestContext(
     size_t baselineCount, size_t rtcChannelCount, V3ConfigContext& outContext,
     String& reason, const char*& outErrorCode);
 
-bool buildLegacyCardsFromTypedWithBaseline(const V3CardConfig* typedCards,
-                                           size_t typedCount,
-                                           const LogicCard* baselineCards,
-                                           size_t baselineCount,
-                                           LogicCard* outCards, String& reason);
-
 void applyRtcScheduleChannelsFromConfig(const V3RtcScheduleChannel* source,
                                         size_t sourceCount,
                                         V3RtcScheduleChannel* target,

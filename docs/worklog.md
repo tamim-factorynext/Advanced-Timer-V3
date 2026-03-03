@@ -3638,3 +3638,32 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - RAM: `35.3%` (`115748 / 327680`)
   - Flash: `69.5%` (`911337 / 1310720`)
 
+### Active-Path Legacy Cleanup Pass
+
+- Removed remaining active compatibility hooks:
+  - dropped `/api/snapshot` alias route; kept canonical `/api/v3/snapshot`
+    - file: `src/portal/transport_runtime.cpp`
+  - removed `Op_*` operator alias acceptance from config decoder
+    - file: `src/storage/v3_config_decoder.cpp`
+  - removed legacy-shape branch in normalizer (now only V3 shape accepted)
+    - file: `src/storage/v3_normalizer.cpp`
+  - removed unused `buildLegacyCardsFromTypedWithBaseline(...)` API
+    - files:
+      - `src/storage/v3_config_service.h`
+      - `src/storage/v3_config_service.cpp`
+  - updated active placeholder pages text from `Legacy` to `Deprecated`
+    - files:
+      - `data/index.html`
+      - `data/config.html`
+      - `data/settings.html`
+
+- Note:
+  - remaining `legacy_*` symbols/files are isolated in dedicated legacy units and not used by active `main.cpp` execution flow.
+
+- Verification:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Duration: `00:00:37.039`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`910725 / 1310720`)
+

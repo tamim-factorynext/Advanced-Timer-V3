@@ -70,21 +70,6 @@ bool normalizeV3ConfigRequestContext(
       outContext.rtcCount, reason, outErrorCode);
 }
 
-bool buildLegacyCardsFromTypedWithBaseline(const V3CardConfig* typedCards,
-                                           size_t typedCount,
-                                           const LogicCard* baselineCards,
-                                           size_t baselineCount,
-                                           LogicCard* outCards,
-                                           String& reason) {
-  (void)typedCards;
-  (void)typedCount;
-  (void)baselineCards;
-  (void)baselineCount;
-  (void)outCards;
-  reason = "legacy runtime card mapping is disabled in V3 path";
-  return false;
-}
-
 void applyRtcScheduleChannelsFromConfig(const V3RtcScheduleChannel* source,
                                         size_t sourceCount,
                                         V3RtcScheduleChannel* target,

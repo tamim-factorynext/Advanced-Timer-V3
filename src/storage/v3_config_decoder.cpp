@@ -26,7 +26,7 @@ namespace {
  * @brief Initializes a condition block to safe disabled defaults.
  * @param block Destination condition block.
  * @param selfCardId Card id used as default clause source.
- * @param enabled Reserved legacy flag; currently unused.
+ * @param enabled Reserved compatibility flag; currently unused.
  * @par Used By
  * parseFamilyParams().
  */
@@ -44,7 +44,7 @@ void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfC
 
 /**
  * @brief Parses condition operator token into typed enum.
- * @details Accepts both modern token names and legacy `Op_*` aliases.
+ * @details Accepts canonical operator tokens only.
  * @param token Operator token.
  * @param out Parsed operator enum.
  * @retval true Token recognized.
@@ -54,73 +54,71 @@ void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfC
  */
 bool parseConditionOperator(const char* token, v3::storage::ConditionOperator& out) {
   if (token == nullptr) return false;
-  if (strcmp(token, "ALWAYS_TRUE") == 0 || strcmp(token, "Op_AlwaysTrue") == 0) {
+  if (strcmp(token, "ALWAYS_TRUE") == 0) {
     out = v3::storage::ConditionOperator::AlwaysTrue;
     return true;
   }
-  if (strcmp(token, "ALWAYS_FALSE") == 0 || strcmp(token, "Op_AlwaysFalse") == 0) {
+  if (strcmp(token, "ALWAYS_FALSE") == 0) {
     out = v3::storage::ConditionOperator::AlwaysFalse;
     return true;
   }
-  if (strcmp(token, "LOGICAL_TRUE") == 0 || strcmp(token, "Op_LogicalTrue") == 0) {
+  if (strcmp(token, "LOGICAL_TRUE") == 0) {
     out = v3::storage::ConditionOperator::LogicalTrue;
     return true;
   }
-  if (strcmp(token, "LOGICAL_FALSE") == 0 ||
-      strcmp(token, "Op_LogicalFalse") == 0) {
+  if (strcmp(token, "LOGICAL_FALSE") == 0) {
     out = v3::storage::ConditionOperator::LogicalFalse;
     return true;
   }
-  if (strcmp(token, "PHYSICAL_ON") == 0 || strcmp(token, "Op_PhysicalOn") == 0) {
+  if (strcmp(token, "PHYSICAL_ON") == 0) {
     out = v3::storage::ConditionOperator::PhysicalOn;
     return true;
   }
-  if (strcmp(token, "PHYSICAL_OFF") == 0 || strcmp(token, "Op_PhysicalOff") == 0) {
+  if (strcmp(token, "PHYSICAL_OFF") == 0) {
     out = v3::storage::ConditionOperator::PhysicalOff;
     return true;
   }
-  if (strcmp(token, "TRIGGERED") == 0 || strcmp(token, "Op_Triggered") == 0) {
+  if (strcmp(token, "TRIGGERED") == 0) {
     out = v3::storage::ConditionOperator::Triggered;
     return true;
   }
-  if (strcmp(token, "TRIGGER_CLEARED") == 0 ||
-      strcmp(token, "Op_TriggerCleared") == 0) {
+  if (strcmp(token, "TRIGGER_CLEARED") == 0) {
     out = v3::storage::ConditionOperator::TriggerCleared;
     return true;
   }
-  if (strcmp(token, "GT") == 0 || strcmp(token, "Op_GT") == 0) {
+  if (strcmp(token, "GT") == 0) {
     out = v3::storage::ConditionOperator::GT;
     return true;
   }
-  if (strcmp(token, "LT") == 0 || strcmp(token, "Op_LT") == 0) {
+  if (strcmp(token, "LT") == 0) {
     out = v3::storage::ConditionOperator::LT;
     return true;
   }
-  if (strcmp(token, "EQ") == 0 || strcmp(token, "Op_EQ") == 0) {
+  if (strcmp(token, "EQ") == 0) {
     out = v3::storage::ConditionOperator::EQ;
     return true;
   }
-  if (strcmp(token, "NEQ") == 0 || strcmp(token, "Op_NEQ") == 0) {
+  if (strcmp(token, "NEQ") == 0) {
     out = v3::storage::ConditionOperator::NEQ;
     return true;
   }
-  if (strcmp(token, "GTE") == 0 || strcmp(token, "Op_GTE") == 0) {
+  if (strcmp(token, "GTE") == 0) {
     out = v3::storage::ConditionOperator::GTE;
     return true;
   }
-  if (strcmp(token, "LTE") == 0 || strcmp(token, "Op_LTE") == 0) {
+  if (strcmp(token, "LTE") == 0) {
     out = v3::storage::ConditionOperator::LTE;
     return true;
   }
-  if (strcmp(token, "RUNNING") == 0 || strcmp(token, "Op_Running") == 0) {
+  if (strcmp(token, "RUNNING") == 0) {
     out = v3::storage::ConditionOperator::Running;
     return true;
   }
-  if (strcmp(token, "FINISHED") == 0 || strcmp(token, "Op_Finished") == 0) {
+  if (strcmp(token, "FINISHED") == 0) {
     out = v3::storage::ConditionOperator::Finished;
     return true;
   }
-  if (strcmp(token, "STOPPED") == 0 || strcmp(token, "Op_Stopped") == 0) {
+  if (strcmp(token, "STOPPED") == 0) {
     out = v3::storage::ConditionOperator::Stopped;
     return true;
   }

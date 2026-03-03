@@ -53,7 +53,7 @@ void handleHttpCommandSubmit() {
 /**
  * @brief Handles HTTP runtime snapshot endpoint.
  * @par Used By
- * `GET /api/v3/snapshot` and `GET /api/snapshot`.
+ * `GET /api/v3/snapshot`.
  */
 void handleHttpSnapshotGet() {
   if (gPortal == nullptr) {
@@ -125,7 +125,6 @@ void initTransportRuntime(PortalService& portal) {
         gHttpServer.send(200, "application/json", state.json);
       });
   gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
-  gHttpServer.on("/api/snapshot", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.begin();
 
   gWsServer.begin();

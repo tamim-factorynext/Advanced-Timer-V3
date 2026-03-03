@@ -35,16 +35,6 @@ logicCardType expectedTypeForCardId(const V3CardLayout& layout, uint8_t id) {
   return RtcCard;
 }
 
-bool hasLegacyCardsShape(JsonArrayConst cards) {
-  for (JsonVariantConst v : cards) {
-    if (!v.is<JsonObjectConst>()) continue;
-    JsonObjectConst o = v.as<JsonObjectConst>();
-    if (o["id"].is<uint64_t>() || o["type"].is<const char*>()) return true;
-    break;
-  }
-  return false;
-}
-
 bool hasV3CardsShape(JsonArrayConst cards) {
   for (JsonVariantConst v : cards) {
     if (!v.is<JsonObjectConst>()) continue;
@@ -105,12 +95,6 @@ bool normalizeConfigRequestWithLayout(
     rtcOut[i].hour = -1;
     rtcOut[i].minute = -1;
     rtcOut[i].rtcCardId = static_cast<uint8_t>(layout.rtcStart + i);
-  }
-
-  if (hasLegacyCardsShape(inputCards)) {
-    reason = "legacy cards payload is no longer supported; send V3 cardType/cardId cards";
-    outErrorCode = "INVALID_REQUEST";
-    return false;
   }
 
   if (!hasV3CardsShape(inputCards)) {
