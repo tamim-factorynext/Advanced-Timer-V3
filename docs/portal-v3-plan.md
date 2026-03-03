@@ -1,9 +1,23 @@
-# V3 Portal Plan (Vision-Aligned)
+# V3 Portal Plan (Working Draft)
 
-Date: March 1, 2026
-Status: Living Document (Execution Baseline)
+Date: March 3, 2026
+Status: Foundation Stage (not final; evolving with design and contract decisions)
 
-## 1. Product Vision
+## 1. Intent And Maturity
+
+This document is the portal planning baseline for V3.
+
+Current reality:
+- We are in early planning and contract-foundation mode.
+- Scope and UX details are expected to evolve through structured iteration.
+- This plan is intentionally progressive, not frozen.
+
+How to use this document now:
+- Treat it as the current best alignment across product vision, firmware constraints, and implementation direction.
+- Update it whenever a decision is accepted after review.
+- Avoid treating any section as final unless explicitly marked `Frozen`.
+
+## 2. Product Vision
 
 The Advanced Timer V3 portal is a field-ready no-code control interface for professional deployments.
 
@@ -12,269 +26,210 @@ The intended experience is:
 - Clear under stress (alarms, overrides, unstable connectivity).
 - Deterministic and trustworthy: runtime truth always comes from firmware snapshots.
 
-### 1.1 Product Position: Professional-Lite
+### 2.1 Positioning
 
 "Professional-Lite" means:
 - Easier than PLC IDE workflows.
 - Safer and more explicit than hobby dashboards.
-- Structured for installation, operations, and maintenance roles.
+- Structured for installation and maintenance realities.
 
-### 1.2 Self-Explanatory Mandate (Non-Negotiable)
+### 2.2 Non-Negotiable UX Direction
 
-The UI must explain itself in context. Users should not need separate tutorials to complete core tasks.
+- In-place help for key parameters and runtime controls.
+- First-run guided path: connect -> inspect runtime -> edit staged config -> validate -> commit.
+- Explicit labeling that prevents staged vs active confusion.
 
-Required UX mechanisms:
-- In-place help for every parameter and runtime control.
-- First-run guided path for: connect -> inspect runtime -> edit staged config -> validate -> commit.
-- Explicit state labeling that prevents confusion between staged and active configs.
+### 2.3 Drift Guard
 
-### 1.3 Product-Led Non-Goals (Drift Guard)
+- Do not add features only because competitors have them.
+- Do not trade operational clarity for visual polish.
+- Do not expand onboarding methods (for example BLE/Web Serial) unless release scope requires it.
 
-The portal plan is anchored to your product vision, not market feature imitation.
+## 3. Current Scope Baseline (Screens)
 
-Non-goals for V3 planning decisions:
-- Do not add features only because competitors/products have them.
-- Do not prioritize aesthetics over operational clarity and safety.
-- Do not expand onboarding methods (for example BLE/Web Serial) unless they directly support your approved release scope.
-- Do not combine technician maintenance workflows with day-to-day operator configuration in ways that increase misuse risk.
-
----
-
-## 2. Vision Compatibility Gaps To Eliminate
-
-This section captures why the previous plan felt only partially compatible with the vision.
-
-1. The prior plan listed features but lacked measurable "self-explanatory" acceptance criteria.
-2. It did not define explicit operator-safety UI invariants for high-risk actions.
-3. Secondary features (maintenance panel, branding) were not prioritized against contract gates.
-4. It did not map portal milestones to acceptance matrix IDs, making completion ambiguous.
-
----
-
-## 3. Hard Constraints (From Contract + Decisions)
-
-These are mandatory and override design preference:
-
-- Fixed runtime status header always visible with run mode, override state, alarm, connectivity.
-- Card render order must match firmware deterministic scan order.
-- Portal must never recompute authoritative runtime logic values.
-- Staged edits remain local until explicit save/validate/commit actions.
-- Runtime controls must reflect kernel-acknowledged state, not optimistic state.
-- Decimal <-> centiunit conversion is a portal responsibility.
-- Role-based authorization (`VIEWER`, `OPERATOR`, `ENGINEER`, `ADMIN`) must gate protected actions.
-- Frontend is rebuilt from fresh baseline per `DEC-0019` (do not patch legacy UI incrementally).
-
----
-
-## 4. UX Invariants (Vision Contract)
-
-The portal is considered vision-compatible only if all invariants below hold:
-
-1. **Runtime truth is singular**
-   - Every live state visible in UI is sourced from latest snapshot/event payload.
-2. **Active vs Staged cannot be confused**
-   - Persistent visual separation, labels, and action context for each state.
-3. **Dangerous actions are explicit**
-   - Force/mask/commit/restore always show current target, role requirement, and acknowledgement result.
-4. **Mobile-first field usability**
-   - Touch-safe controls, high-contrast status, and reduced typing burden.
-5. **Role clarity by default**
-   - Users see only controls appropriate to role; unavailable actions are explained, not silently hidden.
-6. **Loading must feel alive**
-   - Every blocking fetch/refresh path shows visible progress animation/skeleton state so users never interpret loading as a frozen portal.
-7. **Offline and reconnect behavior is explicit**
-   - Users must always see connection state, last-sync context, and reconnect progress without ambiguous stale-data presentation.
-8. **Operational telemetry is built-in**
-   - Frontend must emit structured telemetry for key user flows and API/transport reliability events to support field diagnostics and release hardening.
-
----
-
-## 5. Information Architecture (Screens)
+Current baseline is 4 pages:
 
 1. **Live Runtime**
-   - Snapshot-driven card states, alarms, overrides, and metrics.
-2. **Configuration Workspace**
-   - Staged editor for card parameters and variable bindings.
-3. **Validation & Commit**
-   - Structured errors tied to fields; transactional commit status.
-4. **Maintenance Panel**
-   - Device health, network diagnostics, firmware management, recovery actions.
-5. **Settings & Access**
-   - User SSID config, role/session controls, theming/branding options.
-6. **Introduction & Tutorial**
-   - Separate interactive first-use experience that explains core concepts, navigation, and safe commissioning flow.
+- Snapshot-driven states, alarms, overrides, metrics, and integrated debugging suite.
 
----
+2. **Config Studio**
+- Unified staged editor + validation results + commit/restore actions.
 
-## 6. Implementation Phases With Exit Gates
+3. **Settings**
+- WiFi user settings, theming/branding options, and operator-facing preferences.
+
+4. **Introduction & Tutorial**
+- Separate interactive first-use learning flow.
+
+## 4. UX Invariants (Must Hold)
+
+1. **Runtime truth is singular**
+- Live values must come from firmware snapshot/event payloads.
+
+2. **Active vs staged cannot be confused**
+- Visual model and context must always separate both states.
+
+3. **Dangerous actions are explicit**
+- Force/mask/commit/restore must always show target and acknowledgement progression.
+
+4. **Mobile-first usability**
+- Touch-safe controls, high contrast status, and low typing friction.
+
+5. **Action clarity by default**
+- Available actions and guardrails are explicit; no ambiguous control states.
+
+6. **Loading must feel alive**
+- Blocking fetch/refresh paths show visible progress (skeleton/spinner/progress state).
+
+7. **Offline and reconnect behavior is explicit**
+- Connection state, reconnect progress, and stale-data context are always visible.
+
+8. **Operational telemetry is built-in**
+- Frontend emits structured reliability and action telemetry for diagnostics.
+
+## 5. Technical Guardrails (ESP32 + Contract)
+
+### 5.1 Contract Alignment
+
+- Card order follows firmware deterministic scan order.
+- Portal does not recompute authoritative runtime logic.
+- Staged edits remain local until explicit validate/commit.
+- Runtime controls reflect kernel-acknowledged state, not optimistic UI assumptions.
+- Decimal <-> centiunit conversion is portal-side responsibility.
+
+### 5.2 Platform Constraints
+
+- Transport split:
+- WebSocket for runtime stream.
+- HTTP for config/validate/commit flows.
+- Rendering budget target: `4-8 FPS` for live-card updates.
+- Snapshot payload target: typical payload `<= ~12 KB`.
+- Asset budget target: compressed portal bundle `<= ~300-400 KB` gzip.
+- Reconnect behavior must follow explicit timeout/retry/backoff policy.
+
+### 5.3 Current Security Scope
+
+- Role-based access control is deferred in this phase.
+- Even without RBAC, dangerous actions must remain explicit and auditable.
+
+## 6. Implementation Roadmap (Progressive)
 
 ### Phase 1: Foundation
 
 Build:
-- `portal/` app scaffold (React + TypeScript + Vite).
-- Bootstrap-based UI system, icon system, theme tokens.
+- Bootstrap-first MPA scaffold with progressive enhancement.
 - Typed HTTP/WebSocket client and shared DTO validation layer.
-- Global app state with explicit separation: `runtime`, `stagedConfig`, `session`, `ui`.
-- Shared loading/refresh UX primitives (skeletons/spinners/progress states) used by all major data views.
-- Connectivity state model and transport policy:
-  - `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`
-  - heartbeat timeout detection
-  - reconnect backoff with capped retry interval
-- Telemetry hook baseline:
-  - app lifecycle (`app_loaded`, `route_opened`)
-  - transport reliability (`ws_connected`, `ws_disconnected`, `ws_reconnect_attempt`, `api_timeout`)
-  - command/config actions (`command_submitted`, `command_acked`, `validate_started`, `validate_failed`, `commit_started`, `commit_result`)
+- Global app state split: `runtime`, `stagedConfig`, `session`, `ui`.
+- Shared loading/refresh UX primitives.
+- Connectivity state model: `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`.
+- Telemetry baseline events:
+- lifecycle (`app_loaded`, `route_opened`)
+- transport (`ws_connected`, `ws_disconnected`, `ws_reconnect_attempt`, `api_timeout`)
+- actions (`command_submitted`, `command_acked`, `validate_started`, `validate_failed`, `commit_started`, `commit_result`)
 
 Exit gate:
-- Core app boots from firmware API mocks and real device endpoint.
-- No runtime derivation logic outside API payload interpretation.
-- No page-level hard-stall during data fetch; loading animation is visible on startup and manual refresh flows.
-- Offline/reconnect UX states are visible and deterministic under forced disconnect/reconnect simulation.
-- Telemetry events are emitted in dev tooling for all baseline lifecycle, transport, and command/config flows.
+- Core app boots against firmware endpoint and mock endpoint.
+- No hard-stall loading behavior.
+- Offline/reconnect states are visible and deterministic in forced simulations.
+- Baseline telemetry is visible in developer diagnostics.
 
-### Phase 2: Runtime + Config Lifecycle
+### Phase 2: Runtime + Config Studio
 
 Build:
-- Fixed runtime header and live snapshot view.
-- Active config load, staged edit flow, validate, commit UI.
-- Clear staged/active visual model with irreversible ambiguity removed.
-- Stale-data and reconnect safety rules:
-  - stale runtime data is visibly marked
-  - mutating actions are guarded/blocked while offline unless explicitly allowed by contract.
+- Live Runtime header + snapshot-driven panels.
+- Config Studio full path: active load -> staged edit -> validate -> commit/restore.
+- Stale-data indicators and offline mutation safeguards.
 
-Exit gate (must pass):
-- `AT-UI-002`, `AT-UI-003`, `AT-UI-004`, `AT-API-001`, `AT-API-002`, `AT-API-003`.
-- Disconnect during runtime view and config workflow does not produce ambiguous state or silent command loss.
+Exit gate:
+- Pass target acceptance anchors: `AT-UI-002`, `AT-UI-003`, `AT-UI-004`, `AT-API-001`, `AT-API-002`, `AT-API-003`.
+- No ambiguous state or silent command loss during disconnect scenarios.
 
-### Phase 3: Card Editors + Roles + Settings
+### Phase 3: Card Editors + Settings
 
 Build:
 - Editors for `DI`, `AI`, `SIO`, `DO`, `MATH`, `RTC`.
-- Variable assignment (`CONSTANT`, `VARIABLE_REF`) UI with compatibility guards.
-- Login/session and role-based action gating.
-- WiFi User SSID settings.
-- Role-aware telemetry enrichment:
-  - event payload includes role and action outcome (success/reject/error) for protected operations.
-
-Exit gate (must pass):
-- `AT-DATA-001`, `AT-DATA-003`, `AT-BIND-001..006`, `AT-SEC-001..003`, `AT-WIFI-001..004`.
-- Role-gated operations produce auditable telemetry entries with reason codes for rejected actions.
-
-### Phase 4: Self-Explanatory + Maintenance + Polish
-
-Build:
-- Context help for all parameters and runtime commands.
-- Guided onboarding flow for first-time users.
-- Separate interactive tutorial/introduction page reachable from first-run and settings/help entrypoints.
-- Dedicated maintenance panel with operational diagnostics.
-- Brand/theming controls constrained by readability and safety contrast rules.
-- Maintenance diagnostics include frontend transport/telemetry health summary for field troubleshooting.
+- Binding support (`CONSTANT`, `VARIABLE_REF`) with compatibility guards.
+- WiFi user settings.
+- Telemetry enrichment for settings and mutating outcomes.
 
 Exit gate:
-- First-run user can complete core commissioning without external docs.
-- Mobile usability smoke and role-based workflows validated on hardware.
-- Tutorial page walkthrough is complete for runtime basics, staged-vs-active model, and validate/commit flow.
-- Field replay evidence exists for at least one disconnect/reconnect incident using telemetry and diagnostics traces.
+- Pass target acceptance anchors: `AT-DATA-001`, `AT-DATA-003`, `AT-BIND-001..006`, `AT-WIFI-001..004`.
+- Rejections and failures include auditable reason codes.
 
----
+### Phase 4: Self-Explanatory + Polish
 
-## 7. Traceability Matrix (Vision -> Contract -> Acceptance)
+Build:
+- Context help across core flows.
+- Tutorial/introduction flow connected from first-run and help/settings entry.
+- Live Runtime debug suite polish (transport health, queue metrics, timing context).
+- Branding/theming controls within readability constraints.
 
-| Vision Objective | Contract/Decision Anchor | Acceptance Anchor |
+Exit gate:
+- First-run user can complete commissioning flow without external documentation.
+- Mobile smoke tests pass for core workflows.
+- At least one disconnect/reconnect incident can be explained end-to-end through telemetry traces.
+
+## 7. Frontend Stack Adoption Plan (Incremental)
+
+Adopt one stack at a time in this order:
+
+1. `Bootstrap 5`
+2. `Bootstrap Icons`
+3. `Alpine.js`
+4. `HTMX`
+5. `Chart.js` (optional, high-value use only)
+
+Adoption policy:
+- Start with CDN assets in development for fast trial and rollback.
+- Add only one new stack per iteration cycle.
+- Measure impact after each addition:
+- UX gain
+- responsiveness
+- network behavior
+- asset size delta
+- Promote only proven additions.
+- Before release, pin versions and move approved assets to local LittleFS hosting.
+
+## 8. Traceability Snapshot
+
+| Objective | Anchor | Acceptance Reference |
 | --- | --- | --- |
-| Always-visible operational awareness | Sec 14.1 | `AT-UI-001` |
-| Deterministic runtime trust | Sec 14.2 | `AT-UI-002`, `AT-UI-003` |
-| No staged/active ambiguity | Sec 14.2 | `AT-UI-004` |
-| Safe command acknowledgement | Sec 15.1, 15.2 | `AT-API-001`, `AT-API-005` |
+| Operational awareness | Sec 14.1 | `AT-UI-001` |
+| Runtime trust | Sec 14.2 | `AT-UI-002`, `AT-UI-003` |
+| Staged/active clarity | Sec 14.2 | `AT-UI-004` |
+| Command acknowledgement integrity | Sec 15.1, 15.2 | `AT-API-001`, `AT-API-005` |
 | Numeric correctness at UI boundary | Sec 4.1, 4.2 | `AT-DATA-001`, `AT-DATA-003` |
-| Role-safe operations | Sec 16 | `AT-SEC-001..003` |
 | Offline/reconnect clarity | Sec 14.2, Sec 15.2 | `AT-API-004`, `AT-UI-003` |
-| Portal observability and diagnostics | Sec 15.2, Sec 16.3 | `AT-API-008`, `AT-SEC-002`, `AT-SEC-003` |
+| Portal diagnostics quality | Sec 15.2 | `AT-API-008` |
 | Fresh V3 UI baseline | `DEC-0019` | Delivery review checkpoint |
 
----
-
-## 8. Out Of Scope For V3.0 (Explicit)
-
-To maintain schedule and quality, the following are excluded from V3.0 unless contract changes:
+## 9. Out Of Scope For Current Phase
 
 - Remote/cloud multi-device fleet management.
 - Full white-label template marketplace.
-- BLE/Web Serial onboarding if firmware-side support is not stable in current release branch.
+- BLE/Web Serial onboarding unless explicitly pulled into release scope.
+- Role-based access control (`VIEWER`/`OPERATOR`/`ENGINEER`/`ADMIN`) and session-policy enforcement.
 
-These can be planned for V3.1+ after V3.0 acceptance gates are green.
+## 10. Working Method (How We Will Evolve This Plan)
 
----
-
-## 9. Definition Of Done For Portal V3
-
-Portal V3 is done only when:
-
-1. Contract-critical UI/API acceptance tests pass for portal scope.
-2. Hardware smoke confirms stable operation under runtime and command load.
-3. Self-explanatory onboarding and help coverage are complete for all card families.
-4. Role and safety behaviors are auditable and predictable in failure paths.
-
----
-
-## 10. Experience Direction (Draft Baseline)
-
-This section is a working product-direction baseline and will be refined iteratively.
-
-### 10.1 Core Product Experience
-
-- Dual-mode portal:
-  - `Operate` mode for live status/control with minimal cognitive load.
-  - `Craft` mode for staged edits, validation, and commit workflow.
-- Confidence UX for all mutating actions:
-  - explicit state progression: `Submitted -> Acknowledged -> Applied`.
-- Living runtime surfaces:
-  - event/state-change animation cues (brief pulse/highlight) instead of constant motion noise.
-- Separate guided introduction page:
-  - interactive first-run path focused on runtime basics, staged vs active, validate, and commit.
-
-### 10.2 Differentiation Principles
-
-- Determinism-first rendering:
-  - card order is always firmware scan order.
-- Truth labels on mutable surfaces:
-  - every relevant value is visibly marked as `Live`, `Staged`, or `Stale`.
-- Risk-aware operations:
-  - force/mask/commit/restore paths require explicit target scope and confirmation.
-- Recovery-native UX:
-  - reconnect status, last sync timestamp, and pending action/result visibility are first-class.
-
-### 10.3 ESP32 Feasibility Envelope (Hard Guardrails)
-
-- Transport split:
-  - WebSocket for runtime stream, HTTP for config/validate/commit actions.
-- Rendering budget:
-  - live-card UI update throttle target `4-8 FPS`.
-- Payload budget:
-  - typical runtime snapshot payload target `<= ~12 KB`.
-- Asset budget:
-  - compressed portal static bundle target `<= ~300-400 KB` gzip.
-- Logic ownership:
-  - portal performs presentation and UX state only; authoritative runtime logic remains firmware-owned.
-- Reconnect discipline:
-  - explicit timeout/retry/backoff policy with visible user-facing state.
-
-### 10.4 Delivery Sequence
-
-1. Freeze UX contract (screen map, mode boundaries, confirmation model, stale-data rules).
-2. Freeze transport contract (snapshot/command/error envelopes and reconnect semantics).
-3. Build architecture baseline (typed API client, state slices, role gates, telemetry hooks).
-4. Implement `Operate` mode first.
-5. Implement `Craft` mode and staged lifecycle tooling.
-6. Implement introduction/tutorial flow.
-7. Polish, HIL verification, and acceptance gate closure.
-
-### 10.5 Brainstorming Cadence
-
-- Run focused brainstorming sessions twice per week, each with one topic only:
-  - Session A: UX flow and operator clarity.
-  - Session B: technical feasibility and contract fit.
+- Run focused brainstorming sessions twice per week:
+- Session A: UX flow and operator clarity.
+- Session B: technical feasibility and contract fit.
 - For each session:
-  - collect candidate ideas,
-  - score against safety/clarity/ESP32 cost,
-  - promote only top items into this plan as explicit scope or backlog.
+- capture candidate ideas,
+- score by safety, clarity, and ESP32 cost,
+- promote only accepted items into this document.
+
+Change discipline:
+- Use small, explicit updates over large ambiguous rewrites.
+- Mark assumptions and unresolved items clearly.
+- Re-check coherence after each major update.
+
+## 11. Provisional Definition Of Ready (Before Full Implementation)
+
+Start large-scale implementation only when:
+
+1. Screen model and page boundaries are stable for at least one review cycle.
+2. Runtime/config/command payload contracts are stable enough for typed client work.
+3. Baseline stack rollout strategy is agreed for first two dependencies.
+4. Acceptance anchors for current phase are mapped and review-approved.
