@@ -34,8 +34,10 @@ struct SharedRuntimeSnapshotT {
   uint32_t forcedAIValue[N];
   bool outputMaskLocal[N];
   bool breakpointEnabled[N];
-  bool setConditionMet[N];
-  bool resetConditionMet[N];
+  bool turnOnConditionMet[N];
+  bool turnOffConditionMet[N];
   uint32_t evalCounter[N];
 };
+
+
 

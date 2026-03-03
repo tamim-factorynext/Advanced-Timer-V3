@@ -79,8 +79,8 @@ Message type: `runtime_snapshot`
       "startOnMs": 1740738600000,
       "startOffMs": 1740738600000,
       "repeatCounter": 0,
-      "setConditionMet": true,
-      "resetConditionMet": false,
+      "turnOnConditionMet": true,
+      "turnOffConditionMet": false,
       "maskForced": {
         "inputSource": "REAL",
         "forcedAIValue": 0,
@@ -88,8 +88,8 @@ Message type: `runtime_snapshot`
         "outputMasked": false
       },
       "breakpointEnabled": false,
-      "setConditionMet": true,
-      "resetConditionMet": false,
+      "turnOnConditionMet": true,
+      "turnOffConditionMet": false,
       "evalCounter": 120,
       "debug": {
         "evalCounter": 120,
@@ -339,7 +339,7 @@ Error object:
 {
   "errorCode": "VALIDATION_FAILED",
   "message": "set clause references unknown cardId",
-  "field": "cards[3].config.set.clauseA.source.cardId",
+  "field": "cards[3].config.turnOnCondition.clauseA.source.cardId",
   "details": { "cardId": 255 }
 }
 ```
@@ -386,6 +386,8 @@ Rules:
 - `AT-API-009`: `metrics.scanBudgetUs == scanPeriodMs * 1000` invariant.
 - `AT-API-010`: queue depth invariant (`metrics.queueDepth <= metrics.queueCapacity`).
 - `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
+
+
 
 
 

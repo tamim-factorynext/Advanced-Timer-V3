@@ -39,15 +39,15 @@ Define one user-first naming vocabulary for portal, API, config, and diagnostics
 | `repeatCounter` | `cycleCount` | User-readable loop count term. |
 | `startOnMs` | `onDelayMs` | Describes timing behavior directly. |
 | `startOffMs` | `onTimeMs` | Describes active/on window duration. |
-| `setConditionMet` | `setConditionMet` | Boolean meaning is explicit. |
-| `resetConditionMet` | `resetConditionMet` | Boolean meaning is explicit. |
+| `turnOnConditionMet` | `turnOnConditionMet` | Boolean meaning is explicit. |
+| `turnOffConditionMet` | `turnOffConditionMet` | Boolean meaning is explicit. |
 
 ## 5. Condition Language
 
 | Current Term | Canonical Term | Notes |
 | --- | --- | --- |
-| `set` | `activate` | User-facing behavior wording. |
-| `reset` | `deactivate` | User-facing behavior wording. |
+| `set` | `turnOnCondition` | Explicit boolean-condition intent with minimal ambiguity. |
+| `reset` | `turnOffCondition` | Explicit boolean-condition intent with minimal ambiguity. |
 | `ConditionBlock` | `RuleBlock` | Portal-level readability. |
 | `clauseA` | `rule1` | Avoid letter-only semantics. |
 | `clauseB` | `rule2` | Avoid letter-only semantics. |
@@ -131,5 +131,7 @@ Single-step plan (firmware-first, no dual-key compatibility):
 - `src/portal/` snapshot/diagnostics serialization keys.
 - `src/kernel/` enum/string mapping where exposed externally.
 - `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`.
+
+
 
 

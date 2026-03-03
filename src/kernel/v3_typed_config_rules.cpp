@@ -118,10 +118,12 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "DI edge mode invalid";
         return false;
       }
-      if (!validateConditionBlock(card.di.set, card.cardId, "di.set")) {
+      if (!validateConditionBlock(card.di.turnOnCondition, card.cardId,
+                                  "di.turnOnCondition")) {
         return false;
       }
-      if (!validateConditionBlock(card.di.reset, card.cardId, "di.reset")) {
+      if (!validateConditionBlock(card.di.turnOffCondition, card.cardId,
+                                  "di.turnOffCondition")) {
         return false;
       }
       continue;
@@ -134,10 +136,12 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "DO mode invalid";
         return false;
       }
-      if (!validateConditionBlock(card.dout.set, card.cardId, "do.set")) {
+      if (!validateConditionBlock(card.dout.turnOnCondition, card.cardId,
+                                  "do.turnOnCondition")) {
         return false;
       }
-      if (!validateConditionBlock(card.dout.reset, card.cardId, "do.reset")) {
+      if (!validateConditionBlock(card.dout.turnOffCondition, card.cardId,
+                                  "do.turnOffCondition")) {
         return false;
       }
       continue;
@@ -166,10 +170,12 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "SIO mode invalid";
         return false;
       }
-      if (!validateConditionBlock(card.sio.set, card.cardId, "sio.set")) {
+      if (!validateConditionBlock(card.sio.turnOnCondition, card.cardId,
+                                  "sio.turnOnCondition")) {
         return false;
       }
-      if (!validateConditionBlock(card.sio.reset, card.cardId, "sio.reset")) {
+      if (!validateConditionBlock(card.sio.turnOffCondition, card.cardId,
+                                  "sio.turnOffCondition")) {
         return false;
       }
       continue;
@@ -188,10 +194,12 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
         reason = "MATH emaAlpha out of range";
         return false;
       }
-      if (!validateConditionBlock(card.math.set, card.cardId, "math.set")) {
+      if (!validateConditionBlock(card.math.turnOnCondition, card.cardId,
+                                  "math.turnOnCondition")) {
         return false;
       }
-      if (!validateConditionBlock(card.math.reset, card.cardId, "math.reset")) {
+      if (!validateConditionBlock(card.math.turnOffCondition, card.cardId,
+                                  "math.turnOffCondition")) {
         return false;
       }
       continue;

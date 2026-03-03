@@ -24,14 +24,14 @@ void test_reset_condition_forces_idle_and_clears_counter() {
 
   V3DoStepInput in = {};
   in.nowMs = 100;
-  in.setCondition = true;
-  in.resetCondition = true;
+  in.turnOnCondition = true;
+  in.turnOffCondition = true;
 
   V3DoStepOutput out = {};
   runV3DoStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.setConditionMet);
-  TEST_ASSERT_TRUE(out.resetConditionMet);
+  TEST_ASSERT_TRUE(out.turnOnConditionMet);
+  TEST_ASSERT_TRUE(out.turnOffConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
   TEST_ASSERT_FALSE(out.effectiveOutput);
   TEST_ASSERT_FALSE(runtime.commandState);
@@ -53,8 +53,8 @@ void test_immediate_mode_triggers_active_output() {
 
   V3DoStepInput in = {};
   in.nowMs = 100;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3DoStepOutput out = {};
   runV3DoStep(cfg, runtime, in, out);
@@ -80,8 +80,8 @@ void test_normal_mode_transitions_ondelay_to_active_after_delay() {
 
   V3DoStepInput in = {};
   in.nowMs = 10;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3DoStepOutput out = {};
   runV3DoStep(cfg, runtime, in, out);
@@ -118,8 +118,8 @@ void test_active_window_completes_to_finished_at_repeat_limit() {
 
   V3DoStepInput in = {};
   in.nowMs = 120;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3DoStepOutput out = {};
   runV3DoStep(cfg, runtime, in, out);
@@ -151,8 +151,8 @@ void test_gated_mode_drops_to_idle_when_gate_false() {
 
   V3DoStepInput in = {};
   in.nowMs = 200;
-  in.setCondition = false;
-  in.resetCondition = false;
+  in.turnOnCondition = false;
+  in.turnOffCondition = false;
 
   V3DoStepOutput out = {};
   runV3DoStep(cfg, runtime, in, out);
@@ -175,5 +175,7 @@ int main() {
   RUN_TEST(test_gated_mode_drops_to_idle_when_gate_false);
   return UNITY_END();
 }
+
+
 
 

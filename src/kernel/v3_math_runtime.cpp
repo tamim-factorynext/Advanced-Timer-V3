@@ -74,16 +74,16 @@ uint32_t applyEma(uint32_t previous, uint32_t sample, uint32_t alphaX100) {
 
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out) {
-  out.setConditionMet = in.setCondition;
-  out.resetConditionMet = in.resetCondition;
-  out.resetOverride = in.setCondition && in.resetCondition;
+  out.turnOnConditionMet = in.turnOnCondition;
+  out.turnOffConditionMet = in.turnOffCondition;
+  out.resetOverride = in.turnOnCondition && in.turnOffCondition;
 
   const uint32_t previousValue = runtime.liveValue;
   uint32_t nextValue = previousValue;
 
-  if (in.resetCondition) {
+  if (in.turnOffCondition) {
     nextValue = cfg.fallbackValue;
-  } else if (in.setCondition) {
+  } else if (in.turnOnCondition) {
     const uint32_t raw = computeRawValue(cfg);
     const uint32_t clampedInput = clampToRange(raw, cfg.inputMin, cfg.inputMax);
     const uint32_t scaled =
@@ -98,4 +98,6 @@ void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
   runtime.liveValue = nextValue;
   runtime.state = State_None;
 }
+
+
 

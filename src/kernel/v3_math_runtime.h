@@ -25,16 +25,18 @@ struct V3MathRuntimeState {
 };
 
 struct V3MathStepInput {
-  bool setCondition;
-  bool resetCondition;
+  bool turnOnCondition;
+  bool turnOffCondition;
 };
 
 struct V3MathStepOutput {
-  bool setConditionMet;
-  bool resetConditionMet;
+  bool turnOnConditionMet;
+  bool turnOffConditionMet;
   bool resetOverride;
 };
 
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out);
+
+
 

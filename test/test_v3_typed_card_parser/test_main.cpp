@@ -45,7 +45,7 @@ void test_parse_di_card_success() {
   cfg["invert"] = false;
   cfg["debounceTime"] = 10;
   cfg["edgeMode"] = "RISING";
-  JsonObject set = cfg["set"].to<JsonObject>();
+  JsonObject set = cfg["turnOnCondition"].to<JsonObject>();
   set["combiner"] = "NONE";
   JsonObject setA = set["clauseA"].to<JsonObject>();
   JsonObject setSrc = setA["source"].to<JsonObject>();
@@ -54,7 +54,7 @@ void test_parse_di_card_success() {
   setSrc["type"] = "BOOL";
   setA["operator"] = "EQ";
   setA["threshold"] = 1;
-  JsonObject reset = cfg["reset"].to<JsonObject>();
+  JsonObject reset = cfg["turnOffCondition"].to<JsonObject>();
   reset["combiner"] = "NONE";
   JsonObject resetA = reset["clauseA"].to<JsonObject>();
   JsonObject resetSrc = resetA["source"].to<JsonObject>();
@@ -106,7 +106,7 @@ void test_parse_rejects_invalid_mission_state_threshold() {
   cfg["delayBeforeON"] = 1;
   cfg["onDuration"] = 1;
   cfg["repeatCount"] = 1;
-  JsonObject set = cfg["set"].to<JsonObject>();
+  JsonObject set = cfg["turnOnCondition"].to<JsonObject>();
   set["combiner"] = "NONE";
   JsonObject setA = set["clauseA"].to<JsonObject>();
   JsonObject setSrc = setA["source"].to<JsonObject>();
@@ -115,7 +115,7 @@ void test_parse_rejects_invalid_mission_state_threshold() {
   setSrc["type"] = "STATE";
   setA["operator"] = "EQ";
   setA["threshold"] = "PAUSED";
-  JsonObject reset = cfg["reset"].to<JsonObject>();
+  JsonObject reset = cfg["turnOffCondition"].to<JsonObject>();
   reset["combiner"] = "NONE";
   JsonObject resetA = reset["clauseA"].to<JsonObject>();
   JsonObject resetSrc = resetA["source"].to<JsonObject>();
@@ -165,5 +165,6 @@ int main() {
   RUN_TEST(test_parse_rtc_card_success);
   return UNITY_END();
 }
+
 
 

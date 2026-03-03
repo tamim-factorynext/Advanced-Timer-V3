@@ -106,8 +106,8 @@ void test_normalize_service_accepts_valid_di_do_payload() {
   diCfg["invert"] = false;
   diCfg["debounceTime"] = 10;
   diCfg["edgeMode"] = "RISING";
-  writeSimpleCondition(diCfg["set"].to<JsonObject>(), 0, 1);
-  writeSimpleCondition(diCfg["reset"].to<JsonObject>(), 0, 0);
+  writeSimpleCondition(diCfg["turnOnCondition"].to<JsonObject>(), 0, 1);
+  writeSimpleCondition(diCfg["turnOffCondition"].to<JsonObject>(), 0, 0);
 
   JsonObject dout = cards.add<JsonObject>();
   dout["cardId"] = 1;
@@ -120,8 +120,8 @@ void test_normalize_service_accepts_valid_di_do_payload() {
   doCfg["delayBeforeON"] = 50;
   doCfg["onDuration"] = 100;
   doCfg["repeatCount"] = 1;
-  writeSimpleCondition(doCfg["set"].to<JsonObject>(), 0, 1);
-  writeSimpleCondition(doCfg["reset"].to<JsonObject>(), 0, 0);
+  writeSimpleCondition(doCfg["turnOnCondition"].to<JsonObject>(), 0, 1);
+  writeSimpleCondition(doCfg["turnOffCondition"].to<JsonObject>(), 0, 0);
 
   V3CardLayout layout = {kTotalCards, kDoStart, kAiStart, kSioStart, kMathStart,
                          kRtcStart};
@@ -152,13 +152,13 @@ void test_build_legacy_cards_from_typed_uses_baseline() {
   typed[0].di.invert = false;
   typed[0].di.debounceTimeMs = 20;
   typed[0].di.edgeMode = Mode_DI_Rising;
-  typed[0].di.set.clauseAId = 0;
-  typed[0].di.set.clauseAOperator = Op_AlwaysFalse;
-  typed[0].di.set.clauseAThreshold = 0;
-  typed[0].di.set.clauseBId = 0;
-  typed[0].di.set.clauseBOperator = Op_AlwaysFalse;
-  typed[0].di.set.clauseBThreshold = 0;
-  typed[0].di.set.combiner = Combine_None;
+  typed[0].di.turnOnCondition.clauseAId = 0;
+  typed[0].di.turnOnCondition.clauseAOperator = Op_AlwaysFalse;
+  typed[0].di.turnOnCondition.clauseAThreshold = 0;
+  typed[0].di.turnOnCondition.clauseBId = 0;
+  typed[0].di.turnOnCondition.clauseBOperator = Op_AlwaysFalse;
+  typed[0].di.turnOnCondition.clauseBThreshold = 0;
+  typed[0].di.turnOnCondition.combiner = Combine_None;
   typed[0].di.reset = typed[0].di.set;
 
   typed[1].cardId = 1;
@@ -224,4 +224,5 @@ int main() {
   RUN_TEST(test_apply_rtc_schedule_channels_from_config_copies_fields);
   return UNITY_END();
 }
+
 

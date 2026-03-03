@@ -315,19 +315,19 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.di.edgeMode = params["edgeMode"] | 0U;  // 0:RISING,1:FALLING,2:CHANGE
       outCard.di.setEnabled = params["setEnabled"] | false;
       outCard.di.resetEnabled = params["resetEnabled"] | false;
-      initDefaultConditionBlock(outCard.di.setCondition, outCard.id,
+      initDefaultConditionBlock(outCard.di.turnOnCondition, outCard.id,
                                 outCard.di.setEnabled);
-      initDefaultConditionBlock(outCard.di.resetCondition, outCard.id,
+      initDefaultConditionBlock(outCard.di.turnOffCondition, outCard.id,
                                 outCard.di.resetEnabled);
-      JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
-      JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+      JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
+      JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
       if (!setObj.isNull() &&
-          !parseConditionBlockOptional(setObj, outCard.di.setCondition)) {
+          !parseConditionBlockOptional(setObj, outCard.di.turnOnCondition)) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
       if (!resetObj.isNull() &&
-          !parseConditionBlockOptional(resetObj, outCard.di.resetCondition)) {
+          !parseConditionBlockOptional(resetObj, outCard.di.turnOffCondition)) {
         outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
         return false;
       }
@@ -352,18 +352,18 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.dout.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
       outCard.dout.activeDurationMs = params["activeDurationMs"] | 0U;
       outCard.dout.repeatCount = params["repeatCount"] | 1U;
-      initDefaultConditionBlock(outCard.dout.setCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.dout.resetCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.dout.turnOnCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.dout.turnOffCondition, outCard.id, false);
       {
-        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
-        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
         if (!setObj.isNull() &&
-            !parseConditionBlockOptional(setObj, outCard.dout.setCondition)) {
+            !parseConditionBlockOptional(setObj, outCard.dout.turnOnCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
         if (!resetObj.isNull() &&
-            !parseConditionBlockOptional(resetObj, outCard.dout.resetCondition)) {
+            !parseConditionBlockOptional(resetObj, outCard.dout.turnOffCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
@@ -405,18 +405,18 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.sio.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
       outCard.sio.activeDurationMs = params["activeDurationMs"] | 0U;
       outCard.sio.repeatCount = params["repeatCount"] | 1U;
-      initDefaultConditionBlock(outCard.sio.setCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.sio.resetCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.sio.turnOnCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.sio.turnOffCondition, outCard.id, false);
       {
-        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
-        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
         if (!setObj.isNull() &&
-            !parseConditionBlockOptional(setObj, outCard.sio.setCondition)) {
+            !parseConditionBlockOptional(setObj, outCard.sio.turnOnCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
         if (!resetObj.isNull() &&
-            !parseConditionBlockOptional(resetObj, outCard.sio.resetCondition)) {
+            !parseConditionBlockOptional(resetObj, outCard.sio.turnOffCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
@@ -448,18 +448,18 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.math.outputMax = params["outputMax"] | 10000U;
       outCard.math.smoothingFactorPct = params["smoothingFactorPct"] | 100U;
       outCard.math.fallbackValue = params["fallbackValue"] | 0U;
-      initDefaultConditionBlock(outCard.math.setCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.math.resetCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.math.turnOnCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.math.turnOffCondition, outCard.id, false);
       {
-        JsonObjectConst setObj = params["set"].as<JsonObjectConst>();
-        JsonObjectConst resetObj = params["reset"].as<JsonObjectConst>();
+        JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
+        JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
         if (!setObj.isNull() &&
-            !parseConditionBlockOptional(setObj, outCard.math.setCondition)) {
+            !parseConditionBlockOptional(setObj, outCard.math.turnOnCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
         if (!resetObj.isNull() &&
-            !parseConditionBlockOptional(resetObj, outCard.math.resetCondition)) {
+            !parseConditionBlockOptional(resetObj, outCard.math.turnOffCondition)) {
           outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
           return false;
         }
@@ -562,6 +562,8 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
 }
 
 }  // namespace v3::storage
+
+
 
 
 

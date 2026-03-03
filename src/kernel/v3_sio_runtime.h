@@ -25,17 +25,19 @@ struct V3SioRuntimeState {
 
 struct V3SioStepInput {
   uint32_t nowMs;
-  bool setCondition;
-  bool resetCondition;
+  bool turnOnCondition;
+  bool turnOffCondition;
 };
 
 struct V3SioStepOutput {
-  bool setConditionMet;
-  bool resetConditionMet;
+  bool turnOnConditionMet;
+  bool turnOffConditionMet;
   bool resetOverride;
   bool effectiveOutput;
 };
 
 void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
                   const V3SioStepInput& in, V3SioStepOutput& out);
+
+
 

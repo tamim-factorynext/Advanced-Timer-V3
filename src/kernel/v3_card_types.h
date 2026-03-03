@@ -50,8 +50,8 @@ struct V3DiConfig {
   bool invert;
   uint32_t debounceTimeMs;
   cardMode edgeMode;
-  V3ConditionBlock set;
-  V3ConditionBlock reset;
+  V3ConditionBlock turnOnCondition;
+  V3ConditionBlock turnOffCondition;
 };
 
 struct V3DoConfig {
@@ -61,8 +61,8 @@ struct V3DoConfig {
   uint32_t delayBeforeOnMs;
   uint32_t onDurationMs;
   uint32_t repeatCount;
-  V3ConditionBlock set;
-  V3ConditionBlock reset;
+  V3ConditionBlock turnOnCondition;
+  V3ConditionBlock turnOffCondition;
 };
 
 struct V3AiConfig {
@@ -80,8 +80,8 @@ struct V3SioConfig {
   uint32_t delayBeforeOnMs;
   uint32_t onDurationMs;
   uint32_t repeatCount;
-  V3ConditionBlock set;
-  V3ConditionBlock reset;
+  V3ConditionBlock turnOnCondition;
+  V3ConditionBlock turnOffCondition;
 };
 
 struct V3MathConfig {
@@ -94,8 +94,8 @@ struct V3MathConfig {
   uint32_t outputMin;
   uint32_t outputMax;
   uint32_t smoothingFactorPct;
-  V3ConditionBlock set;
-  V3ConditionBlock reset;
+  V3ConditionBlock turnOnCondition;
+  V3ConditionBlock turnOffCondition;
 };
 
 struct V3RtcConfig {

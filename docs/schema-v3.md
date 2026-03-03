@@ -144,8 +144,8 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
   "invert": false,
   "debounceTime": 50,
   "edgeMode": "RISING",
-  "set": {},
-  "reset": {},
+  "turnOnCondition": {},
+  "turnOffCondition": {},
   "counterVisible": true
 }
 ```
@@ -184,8 +184,8 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
   "delayBeforeON": 0,
   "onDuration": 500,
   "repeatCount": 1,
-  "set": {},
-  "reset": {},
+  "turnOnCondition": {},
+  "turnOffCondition": {},
   "writePolicy": {
     "allowedRoles": ["OPERATOR", "ENGINEER", "ADMIN"]
   }
@@ -209,8 +209,8 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
   "delayBeforeON": 0,
   "onDuration": 500,
   "repeatCount": 1,
-  "set": {},
-  "reset": {}
+  "turnOnCondition": {},
+  "turnOffCondition": {}
 }
 ```
 
@@ -227,8 +227,8 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 ```json
 {
   "mode": "Mode_Math_Standard",
-  "set": {},
-  "reset": {},
+  "turnOnCondition": {},
+  "turnOffCondition": {},
   "fallbackValue": 0,
   "standard": {
     "inputA": { "sourceMode": "CONSTANT", "value": 100 },
@@ -381,6 +381,7 @@ Top-level `bindings` allows typed parameter binding.
 - `docs/api-contract-v3.md`
 - `docs/timing-budget-v3.md`
 - Validation error catalog in code aligned with rule IDs (`V-CFG-*`).
+
 
 
 

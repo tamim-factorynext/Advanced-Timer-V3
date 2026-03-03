@@ -25,17 +25,19 @@ struct V3DoRuntimeState {
 
 struct V3DoStepInput {
   uint32_t nowMs;
-  bool setCondition;
-  bool resetCondition;
+  bool turnOnCondition;
+  bool turnOffCondition;
 };
 
 struct V3DoStepOutput {
-  bool setConditionMet;
-  bool resetConditionMet;
+  bool turnOnConditionMet;
+  bool turnOffConditionMet;
   bool resetOverride;
   bool effectiveOutput;
 };
 
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out);
+
+
 

@@ -100,9 +100,9 @@ void test_validate_typed_cards_rejects_do_mode_mismatch() {
 void test_validate_typed_cards_rejects_illegal_operator_for_ai_source() {
   V3CardConfig cards[kTotalCards] = {};
   seedValidCards(cards);
-  cards[4].dout.set.clauseAId = 8;  // AI source
-  cards[4].dout.set.clauseAOperator = Op_LogicalTrue;
-  cards[4].dout.set.combiner = Combine_None;
+  cards[4].dout.turnOnCondition.clauseAId = 8;  // AI source
+  cards[4].dout.turnOnCondition.clauseAOperator = Op_LogicalTrue;
+  cards[4].dout.turnOnCondition.combiner = Combine_None;
 
   std::string reason;
   bool ok = validateTypedCardConfigs(cards, kTotalCards, kDoStart, kAiStart,
@@ -130,4 +130,5 @@ int main() {
   RUN_TEST(test_validate_typed_cards_rejects_rtc_minute_out_of_range);
   return UNITY_END();
 }
+
 

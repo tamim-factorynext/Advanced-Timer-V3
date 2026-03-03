@@ -22,14 +22,14 @@ void test_math_reset_uses_fallback_and_clears_flags() {
   runtime.state = State_DO_Active;
 
   V3MathStepInput in = {};
-  in.setCondition = true;
-  in.resetCondition = true;
+  in.turnOnCondition = true;
+  in.turnOffCondition = true;
 
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.setConditionMet);
-  TEST_ASSERT_TRUE(out.resetConditionMet);
+  TEST_ASSERT_TRUE(out.turnOnConditionMet);
+  TEST_ASSERT_TRUE(out.turnOffConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
   TEST_ASSERT_FALSE(runtime.commandState);
   TEST_ASSERT_FALSE(runtime.actualState);
@@ -52,14 +52,14 @@ void test_math_no_set_clears_flags_keeps_current_value() {
   runtime.state = State_DO_Active;
 
   V3MathStepInput in = {};
-  in.setCondition = false;
-  in.resetCondition = false;
+  in.turnOnCondition = false;
+  in.turnOffCondition = false;
 
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_FALSE(out.setConditionMet);
-  TEST_ASSERT_FALSE(out.resetConditionMet);
+  TEST_ASSERT_FALSE(out.turnOnConditionMet);
+  TEST_ASSERT_FALSE(out.turnOffConditionMet);
   TEST_ASSERT_FALSE(out.resetOverride);
   TEST_ASSERT_FALSE(runtime.commandState);
   TEST_ASSERT_FALSE(runtime.actualState);
@@ -78,8 +78,8 @@ void test_math_set_computes_sum_without_clamp() {
   V3MathRuntimeState runtime = {};
 
   V3MathStepInput in = {};
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
@@ -103,8 +103,8 @@ void test_math_set_clamps_sum_when_enabled() {
   V3MathRuntimeState runtime = {};
 
   V3MathStepInput in = {};
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
@@ -122,8 +122,8 @@ void test_math_set_saturates_uint32_max() {
   V3MathRuntimeState runtime = {};
 
   V3MathStepInput in = {};
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3MathStepOutput out = {};
   runV3MathStep(cfg, runtime, in, out);
@@ -140,5 +140,7 @@ int main() {
   RUN_TEST(test_math_set_saturates_uint32_max);
   return UNITY_END();
 }
+
+
 
 

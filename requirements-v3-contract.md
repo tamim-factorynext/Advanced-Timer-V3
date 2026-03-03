@@ -433,7 +433,7 @@ The MATH card is a versatile, multi-purpose processing block for performing calc
 
 ### 8.5.2 Runtime requirements
 
-- `setConditionMet`, `resetConditionMet`: The boolean result of the `set`/`reset` condition evaluations.
+- `turnOnConditionMet`, `turnOffConditionMet`: The boolean result of the `set`/`reset` condition evaluations.
 - `intermediateValue`: The value after the arithmetic stage, before the pipeline.
 - `liveValue`: The final output value after all processing.
 - `faultStatus`: Indicates faults like divide-by-zero.
@@ -791,6 +791,8 @@ Create and maintain:
 - `docs/api-contract-v3.md`
 - `docs/decisions.md`
 - `docs/hardware-profile-v3.md`
+
+
 
 
 

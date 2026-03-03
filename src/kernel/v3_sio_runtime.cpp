@@ -21,8 +21,8 @@ void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
 
   V3DoStepInput doIn = {};
   doIn.nowMs = in.nowMs;
-  doIn.setCondition = in.setCondition;
-  doIn.resetCondition = in.resetCondition;
+  doIn.turnOnCondition = in.turnOnCondition;
+  doIn.turnOffCondition = in.turnOffCondition;
 
   V3DoStepOutput doOut = {};
   runV3DoStep(doCfg, doState, doIn, doOut);
@@ -36,9 +36,11 @@ void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
   runtime.repeatCounter = doState.repeatCounter;
   runtime.state = doState.state;
 
-  out.setConditionMet = doOut.setConditionMet;
-  out.resetConditionMet = doOut.resetConditionMet;
+  out.turnOnConditionMet = doOut.turnOnConditionMet;
+  out.turnOffConditionMet = doOut.turnOffConditionMet;
   out.resetOverride = doOut.resetOverride;
   out.effectiveOutput = doOut.effectiveOutput;
 }
+
+
 

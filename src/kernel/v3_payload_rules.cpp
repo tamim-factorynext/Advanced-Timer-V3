@@ -1,4 +1,4 @@
-#include "kernel/v3_payload_rules.h"
+﻿#include "kernel/v3_payload_rules.h"
 
 #include <cstring>
 
@@ -146,14 +146,14 @@ bool validateV3PayloadConditionSources(JsonArrayConst cards, uint8_t totalCards,
                            type == SoftIO || type == MathCard);
     if (!usesConditions) continue;
 
-    if (cfg["set"].is<JsonObjectConst>()) {
-      if (!validateConditionBlock(cfg["set"].as<JsonObjectConst>(), sourceTypeById,
+    if (cfg["turnOnCondition"].is<JsonObjectConst>()) {
+      if (!validateConditionBlock(cfg["turnOnCondition"].as<JsonObjectConst>(), sourceTypeById,
                                   totalCards, reason, "set")) {
         return false;
       }
     }
-    if (cfg["reset"].is<JsonObjectConst>()) {
-      if (!validateConditionBlock(cfg["reset"].as<JsonObjectConst>(),
+    if (cfg["turnOffCondition"].is<JsonObjectConst>()) {
+      if (!validateConditionBlock(cfg["turnOffCondition"].as<JsonObjectConst>(),
                                   sourceTypeById, totalCards, reason, "reset")) {
         return false;
       }
@@ -163,4 +163,5 @@ bool validateV3PayloadConditionSources(JsonArrayConst cards, uint8_t totalCards,
   reason.clear();
   return true;
 }
+
 

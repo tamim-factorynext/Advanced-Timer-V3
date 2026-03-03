@@ -20,15 +20,15 @@ void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
 
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out) {
-  out.setConditionMet = in.setCondition;
-  out.resetConditionMet = in.resetCondition;
-  out.resetOverride = in.setCondition && in.resetCondition;
+  out.turnOnConditionMet = in.turnOnCondition;
+  out.turnOffConditionMet = in.turnOffCondition;
+  out.resetOverride = in.turnOnCondition && in.turnOffCondition;
   out.effectiveOutput = false;
 
   const bool previousPhysical = runtime.actualState;
   const bool idlePhysical = cfg.invert;
 
-  if (in.resetCondition) {
+  if (in.turnOffCondition) {
     forceDoIdle(runtime, true);
     runtime.actualState = idlePhysical;
     out.effectiveOutput = runtime.actualState;
@@ -37,7 +37,7 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
 
   const bool retriggerable =
       (runtime.state == State_DO_Idle || runtime.state == State_DO_Finished);
-  const bool startMission = retriggerable && in.setCondition;
+  const bool startMission = retriggerable && in.turnOnCondition;
   runtime.edgePulse = false;
 
   if (startMission) {
@@ -53,7 +53,7 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   }
 
   if (cfg.mode == Mode_DO_Gated && isDoRunningState(runtime.state) &&
-      !in.setCondition) {
+      !in.turnOnCondition) {
     forceDoIdle(runtime, false);
     runtime.actualState = idlePhysical;
     out.effectiveOutput = runtime.actualState;
@@ -120,4 +120,6 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   runtime.actualState = effectiveOutput;
   out.effectiveOutput = effectiveOutput;
 }
+
+
 

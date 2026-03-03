@@ -276,24 +276,24 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
       return false;
     }
     out.di.edgeMode = diMode;
-    if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
+    if (!cfg["turnOnCondition"].is<JsonObjectConst>() || !cfg["turnOffCondition"].is<JsonObjectConst>()) {
       reason = "DI require set and reset blocks";
       return false;
     }
-    if (!mapV3ConditionBlock(cfg["set"].as<JsonObjectConst>(), totalCards,
-                             out.di.set.clauseAId, out.di.set.clauseAOperator,
-                             out.di.set.clauseAThreshold, out.di.set.clauseBId,
-                             out.di.set.clauseBOperator,
-                             out.di.set.clauseBThreshold, out.di.set.combiner,
+    if (!mapV3ConditionBlock(cfg["turnOnCondition"].as<JsonObjectConst>(), totalCards,
+                             out.di.turnOnCondition.clauseAId, out.di.turnOnCondition.clauseAOperator,
+                             out.di.turnOnCondition.clauseAThreshold, out.di.turnOnCondition.clauseBId,
+                             out.di.turnOnCondition.clauseBOperator,
+                             out.di.turnOnCondition.clauseBThreshold, out.di.turnOnCondition.combiner,
                              reason, sourceTypeById)) {
       return false;
     }
-    if (!mapV3ConditionBlock(cfg["reset"].as<JsonObjectConst>(), totalCards,
-                             out.di.reset.clauseAId, out.di.reset.clauseAOperator,
-                             out.di.reset.clauseAThreshold, out.di.reset.clauseBId,
-                             out.di.reset.clauseBOperator,
-                             out.di.reset.clauseBThreshold,
-                             out.di.reset.combiner, reason, sourceTypeById)) {
+    if (!mapV3ConditionBlock(cfg["turnOffCondition"].as<JsonObjectConst>(), totalCards,
+                             out.di.turnOffCondition.clauseAId, out.di.turnOffCondition.clauseAOperator,
+                             out.di.turnOffCondition.clauseAThreshold, out.di.turnOffCondition.clauseBId,
+                             out.di.turnOffCondition.clauseBOperator,
+                             out.di.turnOffCondition.clauseBThreshold,
+                             out.di.turnOffCondition.combiner, reason, sourceTypeById)) {
       return false;
     }
     return true;
@@ -337,42 +337,42 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
       out.sio.onDurationMs = cfg["onDuration"] | 0U;
       out.sio.repeatCount = cfg["repeatCount"] | 1U;
     }
-    if (!cfg["set"].is<JsonObjectConst>() || !cfg["reset"].is<JsonObjectConst>()) {
+    if (!cfg["turnOnCondition"].is<JsonObjectConst>() || !cfg["turnOffCondition"].is<JsonObjectConst>()) {
       reason = "DO/SIO require set and reset blocks";
       return false;
     }
     if (expectedType == DigitalOutput) {
       if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), totalCards, out.dout.set.clauseAId,
-              out.dout.set.clauseAOperator, out.dout.set.clauseAThreshold,
-              out.dout.set.clauseBId, out.dout.set.clauseBOperator,
-              out.dout.set.clauseBThreshold, out.dout.set.combiner, reason,
+              cfg["turnOnCondition"].as<JsonObjectConst>(), totalCards, out.dout.turnOnCondition.clauseAId,
+              out.dout.turnOnCondition.clauseAOperator, out.dout.turnOnCondition.clauseAThreshold,
+              out.dout.turnOnCondition.clauseBId, out.dout.turnOnCondition.clauseBOperator,
+              out.dout.turnOnCondition.clauseBThreshold, out.dout.turnOnCondition.combiner, reason,
               sourceTypeById)) {
         return false;
       }
       if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), totalCards,
-              out.dout.reset.clauseAId, out.dout.reset.clauseAOperator,
-              out.dout.reset.clauseAThreshold, out.dout.reset.clauseBId,
-              out.dout.reset.clauseBOperator, out.dout.reset.clauseBThreshold,
-              out.dout.reset.combiner, reason, sourceTypeById)) {
+              cfg["turnOffCondition"].as<JsonObjectConst>(), totalCards,
+              out.dout.turnOffCondition.clauseAId, out.dout.turnOffCondition.clauseAOperator,
+              out.dout.turnOffCondition.clauseAThreshold, out.dout.turnOffCondition.clauseBId,
+              out.dout.turnOffCondition.clauseBOperator, out.dout.turnOffCondition.clauseBThreshold,
+              out.dout.turnOffCondition.combiner, reason, sourceTypeById)) {
         return false;
       }
     } else {
       if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), totalCards, out.sio.set.clauseAId,
-              out.sio.set.clauseAOperator, out.sio.set.clauseAThreshold,
-              out.sio.set.clauseBId, out.sio.set.clauseBOperator,
-              out.sio.set.clauseBThreshold, out.sio.set.combiner, reason,
+              cfg["turnOnCondition"].as<JsonObjectConst>(), totalCards, out.sio.turnOnCondition.clauseAId,
+              out.sio.turnOnCondition.clauseAOperator, out.sio.turnOnCondition.clauseAThreshold,
+              out.sio.turnOnCondition.clauseBId, out.sio.turnOnCondition.clauseBOperator,
+              out.sio.turnOnCondition.clauseBThreshold, out.sio.turnOnCondition.combiner, reason,
               sourceTypeById)) {
         return false;
       }
       if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), totalCards,
-              out.sio.reset.clauseAId, out.sio.reset.clauseAOperator,
-              out.sio.reset.clauseAThreshold, out.sio.reset.clauseBId,
-              out.sio.reset.clauseBOperator, out.sio.reset.clauseBThreshold,
-              out.sio.reset.combiner, reason, sourceTypeById)) {
+              cfg["turnOffCondition"].as<JsonObjectConst>(), totalCards,
+              out.sio.turnOffCondition.clauseAId, out.sio.turnOffCondition.clauseAOperator,
+              out.sio.turnOffCondition.clauseAThreshold, out.sio.turnOffCondition.clauseBId,
+              out.sio.turnOffCondition.clauseBOperator, out.sio.turnOffCondition.clauseBThreshold,
+              out.sio.turnOffCondition.combiner, reason, sourceTypeById)) {
         return false;
       }
     }
@@ -380,20 +380,20 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   }
 
   if (expectedType == MathCard) {
-    out.math.set.clauseAId = cardId;
-    out.math.set.clauseAOperator = Op_AlwaysFalse;
-    out.math.set.clauseAThreshold = 0U;
-    out.math.set.clauseBId = cardId;
-    out.math.set.clauseBOperator = Op_AlwaysFalse;
-    out.math.set.clauseBThreshold = 0U;
-    out.math.set.combiner = Combine_None;
-    out.math.reset.clauseAId = cardId;
-    out.math.reset.clauseAOperator = Op_AlwaysFalse;
-    out.math.reset.clauseAThreshold = 0U;
-    out.math.reset.clauseBId = cardId;
-    out.math.reset.clauseBOperator = Op_AlwaysFalse;
-    out.math.reset.clauseBThreshold = 0U;
-    out.math.reset.combiner = Combine_None;
+    out.math.turnOnCondition.clauseAId = cardId;
+    out.math.turnOnCondition.clauseAOperator = Op_AlwaysFalse;
+    out.math.turnOnCondition.clauseAThreshold = 0U;
+    out.math.turnOnCondition.clauseBId = cardId;
+    out.math.turnOnCondition.clauseBOperator = Op_AlwaysFalse;
+    out.math.turnOnCondition.clauseBThreshold = 0U;
+    out.math.turnOnCondition.combiner = Combine_None;
+    out.math.turnOffCondition.clauseAId = cardId;
+    out.math.turnOffCondition.clauseAOperator = Op_AlwaysFalse;
+    out.math.turnOffCondition.clauseAThreshold = 0U;
+    out.math.turnOffCondition.clauseBId = cardId;
+    out.math.turnOffCondition.clauseBOperator = Op_AlwaysFalse;
+    out.math.turnOffCondition.clauseBThreshold = 0U;
+    out.math.turnOffCondition.combiner = Combine_None;
 
     out.math.operation = 0U;
     out.math.fallbackValue = cfg["fallbackValue"] | 0U;
@@ -420,23 +420,23 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
       reason = "MATH input range invalid";
       return false;
     }
-    if (cfg["set"].is<JsonObjectConst>()) {
+    if (cfg["turnOnCondition"].is<JsonObjectConst>()) {
       if (!mapV3ConditionBlock(
-              cfg["set"].as<JsonObjectConst>(), totalCards, out.math.set.clauseAId,
-              out.math.set.clauseAOperator, out.math.set.clauseAThreshold,
-              out.math.set.clauseBId, out.math.set.clauseBOperator,
-              out.math.set.clauseBThreshold, out.math.set.combiner, reason,
+              cfg["turnOnCondition"].as<JsonObjectConst>(), totalCards, out.math.turnOnCondition.clauseAId,
+              out.math.turnOnCondition.clauseAOperator, out.math.turnOnCondition.clauseAThreshold,
+              out.math.turnOnCondition.clauseBId, out.math.turnOnCondition.clauseBOperator,
+              out.math.turnOnCondition.clauseBThreshold, out.math.turnOnCondition.combiner, reason,
               sourceTypeById)) {
         return false;
       }
     }
-    if (cfg["reset"].is<JsonObjectConst>()) {
+    if (cfg["turnOffCondition"].is<JsonObjectConst>()) {
       if (!mapV3ConditionBlock(
-              cfg["reset"].as<JsonObjectConst>(), totalCards,
-              out.math.reset.clauseAId, out.math.reset.clauseAOperator,
-              out.math.reset.clauseAThreshold, out.math.reset.clauseBId,
-              out.math.reset.clauseBOperator, out.math.reset.clauseBThreshold,
-              out.math.reset.combiner, reason, sourceTypeById)) {
+              cfg["turnOffCondition"].as<JsonObjectConst>(), totalCards,
+              out.math.turnOffCondition.clauseAId, out.math.turnOffCondition.clauseAOperator,
+              out.math.turnOffCondition.clauseAThreshold, out.math.turnOffCondition.clauseBId,
+              out.math.turnOffCondition.clauseBOperator, out.math.turnOffCondition.clauseBThreshold,
+              out.math.turnOffCondition.combiner, reason, sourceTypeById)) {
         return false;
       }
     }
@@ -498,4 +498,5 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
   reason = "unsupported card type";
   return false;
 }
+
 

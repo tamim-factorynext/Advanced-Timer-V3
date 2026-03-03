@@ -23,16 +23,16 @@ void test_reset_condition_inhibits_and_clears_runtime() {
   V3DiStepInput in = {};
   in.nowMs = 100;
   in.sample = true;
-  in.setCondition = true;
-  in.resetCondition = true;
+  in.turnOnCondition = true;
+  in.turnOffCondition = true;
   in.prevSample = false;
   in.prevSampleValid = true;
 
   V3DiStepOutput out = {};
   runV3DiStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.setConditionMet);
-  TEST_ASSERT_TRUE(out.resetConditionMet);
+  TEST_ASSERT_TRUE(out.turnOnConditionMet);
+  TEST_ASSERT_TRUE(out.turnOffConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
   TEST_ASSERT_FALSE(runtime.commandState);
   TEST_ASSERT_TRUE(runtime.actualState);
@@ -55,16 +55,16 @@ void test_set_condition_false_forces_idle_and_clears_trigger_only() {
   V3DiStepInput in = {};
   in.nowMs = 100;
   in.sample = false;
-  in.setCondition = false;
-  in.resetCondition = false;
+  in.turnOnCondition = false;
+  in.turnOffCondition = false;
   in.prevSample = true;
   in.prevSampleValid = true;
 
   V3DiStepOutput out = {};
   runV3DiStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_FALSE(out.setConditionMet);
-  TEST_ASSERT_FALSE(out.resetConditionMet);
+  TEST_ASSERT_FALSE(out.turnOnConditionMet);
+  TEST_ASSERT_FALSE(out.turnOffConditionMet);
   TEST_ASSERT_FALSE(out.resetOverride);
   TEST_ASSERT_TRUE(runtime.commandState);
   TEST_ASSERT_FALSE(runtime.actualState);
@@ -86,8 +86,8 @@ void test_rising_edge_qualifies_and_increments_counter() {
   V3DiStepInput in = {};
   in.nowMs = 120;
   in.sample = true;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
   in.prevSample = false;
   in.prevSampleValid = true;
 
@@ -115,8 +115,8 @@ void test_non_matching_edge_does_not_qualify() {
   V3DiStepInput in = {};
   in.nowMs = 200;
   in.sample = false;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
   in.prevSample = true;
   in.prevSampleValid = true;
 
@@ -143,8 +143,8 @@ void test_debounce_window_blocks_qualification() {
   V3DiStepInput in = {};
   in.nowMs = 130;
   in.sample = true;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
   in.prevSample = false;
   in.prevSampleValid = true;
 
@@ -166,4 +166,6 @@ int main() {
   RUN_TEST(test_debounce_window_blocks_qualification);
   return UNITY_END();
 }
+
+
 

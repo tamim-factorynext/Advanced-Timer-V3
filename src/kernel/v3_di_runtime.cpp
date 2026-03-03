@@ -14,9 +14,9 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   const bool rawSample = in.forceActive ? in.forcedSample : in.sample;
   const bool effectiveSample = cfg.invert ? !rawSample : rawSample;
 
-  out.setConditionMet = in.setCondition;
-  out.resetConditionMet = in.resetCondition;
-  out.resetOverride = in.setCondition && in.resetCondition;
+  out.turnOnConditionMet = in.turnOnCondition;
+  out.turnOffConditionMet = in.turnOffCondition;
+  out.resetOverride = in.turnOnCondition && in.turnOffCondition;
   out.nextPrevSample = effectiveSample;
   out.nextPrevSampleValid = true;
 
@@ -24,14 +24,14 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   // set/reset gating.
   runtime.actualState = effectiveSample;
 
-  if (in.resetCondition) {
+  if (in.turnOffCondition) {
     // Reset path only clears counter/filter state and inhibits processing.
     resetDiCounter(runtime);
     runtime.state = State_DI_Inhibited;
     return;
   }
 
-  if (!in.setCondition) {
+  if (!in.turnOnCondition) {
     runtime.edgePulse = false;
     runtime.state = State_DI_Idle;
     return;
@@ -102,4 +102,6 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   runtime.edgePulse = false;
   runtime.state = State_DI_Filtering;
 }
+
+
 

@@ -38,7 +38,7 @@ void addBareCards(JsonArray& cards) {
 
 void writeBlockNumeric(JsonObject cfg, uint8_t sourceId, const char* field,
                        const char* op, uint32_t threshold) {
-  JsonObject set = cfg["set"].to<JsonObject>();
+  JsonObject set = cfg["turnOnCondition"].to<JsonObject>();
   set["combiner"] = "NONE";
   JsonObject clauseA = set["clauseA"].to<JsonObject>();
   JsonObject source = clauseA["source"].to<JsonObject>();
@@ -51,7 +51,7 @@ void writeBlockNumeric(JsonObject cfg, uint8_t sourceId, const char* field,
 
 void writeBlockState(JsonObject cfg, uint8_t sourceId, const char* field,
                      const char* op, const char* threshold) {
-  JsonObject set = cfg["set"].to<JsonObject>();
+  JsonObject set = cfg["turnOnCondition"].to<JsonObject>();
   set["combiner"] = "NONE";
   JsonObject clauseA = set["clauseA"].to<JsonObject>();
   JsonObject source = clauseA["source"].to<JsonObject>();
@@ -150,7 +150,7 @@ void test_payload_rejects_clause_source_card_id_out_of_range() {
   addBareCards(cards);
 
   JsonObject cfg = cards[4]["config"].as<JsonObject>();
-  JsonObject set = cfg["set"].to<JsonObject>();
+  JsonObject set = cfg["turnOnCondition"].to<JsonObject>();
   set["combiner"] = "NONE";
   JsonObject clauseA = set["clauseA"].to<JsonObject>();
   JsonObject source = clauseA["source"].to<JsonObject>();
@@ -193,4 +193,5 @@ int main() {
   RUN_TEST(test_payload_rejects_invalid_mission_state_threshold);
   return UNITY_END();
 }
+
 

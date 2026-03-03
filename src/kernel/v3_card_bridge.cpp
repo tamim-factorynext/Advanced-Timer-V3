@@ -56,7 +56,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.di.invert = legacy.invert;
       out.di.debounceTimeMs = legacyDiDebounceMs(legacy);
       out.di.edgeMode = legacy.mode;
-      copyCondition(legacy, out.di.set, out.di.reset);
+      copyCondition(legacy, out.di.turnOnCondition, out.di.turnOffCondition);
       return true;
     }
     case DigitalOutput: {
@@ -66,7 +66,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.dout.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
       out.dout.onDurationMs = legacyDoOnDurationMs(legacy);
       out.dout.repeatCount = legacyDoRepeatCount(legacy);
-      copyCondition(legacy, out.dout.set, out.dout.reset);
+      copyCondition(legacy, out.dout.turnOnCondition, out.dout.turnOffCondition);
       return true;
     }
     case AnalogInput: {
@@ -86,7 +86,7 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.sio.delayBeforeOnMs = legacyDoDelayBeforeOnMs(legacy);
       out.sio.onDurationMs = legacyDoOnDurationMs(legacy);
       out.sio.repeatCount = legacyDoRepeatCount(legacy);
-      copyCondition(legacy, out.sio.set, out.sio.reset);
+      copyCondition(legacy, out.sio.turnOnCondition, out.sio.turnOffCondition);
       return true;
     }
     case MathCard: {
@@ -103,7 +103,8 @@ bool legacyToV3CardConfig(const LogicCard& legacy, const int16_t rtcYear,
       out.math.outputMin = out.math.inputMin;
       out.math.outputMax = out.math.inputMax;
       out.math.smoothingFactorPct = 100U;
-      copyCondition(legacy, out.math.set, out.math.reset);
+      copyCondition(legacy, out.math.turnOnCondition,
+                    out.math.turnOffCondition);
       return true;
     }
     case RtcCard: {
@@ -136,20 +137,20 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       out.invert = v3.di.invert;
       setLegacyDiDebounceMs(out, v3.di.debounceTimeMs);
       out.mode = v3.di.edgeMode;
-      out.setA_ID = v3.di.set.clauseAId;
-      out.setA_Operator = v3.di.set.clauseAOperator;
-      out.setA_Threshold = v3.di.set.clauseAThreshold;
-      out.setB_ID = v3.di.set.clauseBId;
-      out.setB_Operator = v3.di.set.clauseBOperator;
-      out.setB_Threshold = v3.di.set.clauseBThreshold;
-      out.setCombine = v3.di.set.combiner;
-      out.resetA_ID = v3.di.reset.clauseAId;
-      out.resetA_Operator = v3.di.reset.clauseAOperator;
-      out.resetA_Threshold = v3.di.reset.clauseAThreshold;
-      out.resetB_ID = v3.di.reset.clauseBId;
-      out.resetB_Operator = v3.di.reset.clauseBOperator;
-      out.resetB_Threshold = v3.di.reset.clauseBThreshold;
-      out.resetCombine = v3.di.reset.combiner;
+      out.setA_ID = v3.di.turnOnCondition.clauseAId;
+      out.setA_Operator = v3.di.turnOnCondition.clauseAOperator;
+      out.setA_Threshold = v3.di.turnOnCondition.clauseAThreshold;
+      out.setB_ID = v3.di.turnOnCondition.clauseBId;
+      out.setB_Operator = v3.di.turnOnCondition.clauseBOperator;
+      out.setB_Threshold = v3.di.turnOnCondition.clauseBThreshold;
+      out.setCombine = v3.di.turnOnCondition.combiner;
+      out.resetA_ID = v3.di.turnOffCondition.clauseAId;
+      out.resetA_Operator = v3.di.turnOffCondition.clauseAOperator;
+      out.resetA_Threshold = v3.di.turnOffCondition.clauseAThreshold;
+      out.resetB_ID = v3.di.turnOffCondition.clauseBId;
+      out.resetB_Operator = v3.di.turnOffCondition.clauseBOperator;
+      out.resetB_Threshold = v3.di.turnOffCondition.clauseBThreshold;
+      out.resetCombine = v3.di.turnOffCondition.combiner;
       return true;
     case V3CardFamily::DO:
       out.type = DigitalOutput;
@@ -159,20 +160,20 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       setLegacyDoDelayBeforeOnMs(out, v3.dout.delayBeforeOnMs);
       setLegacyDoOnDurationMs(out, v3.dout.onDurationMs);
       setLegacyDoRepeatCount(out, v3.dout.repeatCount);
-      out.setA_ID = v3.dout.set.clauseAId;
-      out.setA_Operator = v3.dout.set.clauseAOperator;
-      out.setA_Threshold = v3.dout.set.clauseAThreshold;
-      out.setB_ID = v3.dout.set.clauseBId;
-      out.setB_Operator = v3.dout.set.clauseBOperator;
-      out.setB_Threshold = v3.dout.set.clauseBThreshold;
-      out.setCombine = v3.dout.set.combiner;
-      out.resetA_ID = v3.dout.reset.clauseAId;
-      out.resetA_Operator = v3.dout.reset.clauseAOperator;
-      out.resetA_Threshold = v3.dout.reset.clauseAThreshold;
-      out.resetB_ID = v3.dout.reset.clauseBId;
-      out.resetB_Operator = v3.dout.reset.clauseBOperator;
-      out.resetB_Threshold = v3.dout.reset.clauseBThreshold;
-      out.resetCombine = v3.dout.reset.combiner;
+      out.setA_ID = v3.dout.turnOnCondition.clauseAId;
+      out.setA_Operator = v3.dout.turnOnCondition.clauseAOperator;
+      out.setA_Threshold = v3.dout.turnOnCondition.clauseAThreshold;
+      out.setB_ID = v3.dout.turnOnCondition.clauseBId;
+      out.setB_Operator = v3.dout.turnOnCondition.clauseBOperator;
+      out.setB_Threshold = v3.dout.turnOnCondition.clauseBThreshold;
+      out.setCombine = v3.dout.turnOnCondition.combiner;
+      out.resetA_ID = v3.dout.turnOffCondition.clauseAId;
+      out.resetA_Operator = v3.dout.turnOffCondition.clauseAOperator;
+      out.resetA_Threshold = v3.dout.turnOffCondition.clauseAThreshold;
+      out.resetB_ID = v3.dout.turnOffCondition.clauseBId;
+      out.resetB_Operator = v3.dout.turnOffCondition.clauseBOperator;
+      out.resetB_Threshold = v3.dout.turnOffCondition.clauseBThreshold;
+      out.resetCombine = v3.dout.turnOffCondition.combiner;
       return true;
     case V3CardFamily::AI:
       out.type = AnalogInput;
@@ -191,20 +192,20 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       setLegacyDoDelayBeforeOnMs(out, v3.sio.delayBeforeOnMs);
       setLegacyDoOnDurationMs(out, v3.sio.onDurationMs);
       setLegacyDoRepeatCount(out, v3.sio.repeatCount);
-      out.setA_ID = v3.sio.set.clauseAId;
-      out.setA_Operator = v3.sio.set.clauseAOperator;
-      out.setA_Threshold = v3.sio.set.clauseAThreshold;
-      out.setB_ID = v3.sio.set.clauseBId;
-      out.setB_Operator = v3.sio.set.clauseBOperator;
-      out.setB_Threshold = v3.sio.set.clauseBThreshold;
-      out.setCombine = v3.sio.set.combiner;
-      out.resetA_ID = v3.sio.reset.clauseAId;
-      out.resetA_Operator = v3.sio.reset.clauseAOperator;
-      out.resetA_Threshold = v3.sio.reset.clauseAThreshold;
-      out.resetB_ID = v3.sio.reset.clauseBId;
-      out.resetB_Operator = v3.sio.reset.clauseBOperator;
-      out.resetB_Threshold = v3.sio.reset.clauseBThreshold;
-      out.resetCombine = v3.sio.reset.combiner;
+      out.setA_ID = v3.sio.turnOnCondition.clauseAId;
+      out.setA_Operator = v3.sio.turnOnCondition.clauseAOperator;
+      out.setA_Threshold = v3.sio.turnOnCondition.clauseAThreshold;
+      out.setB_ID = v3.sio.turnOnCondition.clauseBId;
+      out.setB_Operator = v3.sio.turnOnCondition.clauseBOperator;
+      out.setB_Threshold = v3.sio.turnOnCondition.clauseBThreshold;
+      out.setCombine = v3.sio.turnOnCondition.combiner;
+      out.resetA_ID = v3.sio.turnOffCondition.clauseAId;
+      out.resetA_Operator = v3.sio.turnOffCondition.clauseAOperator;
+      out.resetA_Threshold = v3.sio.turnOffCondition.clauseAThreshold;
+      out.resetB_ID = v3.sio.turnOffCondition.clauseBId;
+      out.resetB_Operator = v3.sio.turnOffCondition.clauseBOperator;
+      out.resetB_Threshold = v3.sio.turnOffCondition.clauseBThreshold;
+      out.resetCombine = v3.sio.turnOffCondition.combiner;
       return true;
     case V3CardFamily::MATH:
       out.type = MathCard;
@@ -214,20 +215,20 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       setLegacyMathClampMin(out, v3.math.inputMin);
       setLegacyMathClampMax(out, v3.math.inputMax);
       out.mode = Mode_None;
-      out.setA_ID = v3.math.set.clauseAId;
-      out.setA_Operator = v3.math.set.clauseAOperator;
-      out.setA_Threshold = v3.math.set.clauseAThreshold;
-      out.setB_ID = v3.math.set.clauseBId;
-      out.setB_Operator = v3.math.set.clauseBOperator;
-      out.setB_Threshold = v3.math.set.clauseBThreshold;
-      out.setCombine = v3.math.set.combiner;
-      out.resetA_ID = v3.math.reset.clauseAId;
-      out.resetA_Operator = v3.math.reset.clauseAOperator;
-      out.resetA_Threshold = v3.math.reset.clauseAThreshold;
-      out.resetB_ID = v3.math.reset.clauseBId;
-      out.resetB_Operator = v3.math.reset.clauseBOperator;
-      out.resetB_Threshold = v3.math.reset.clauseBThreshold;
-      out.resetCombine = v3.math.reset.combiner;
+      out.setA_ID = v3.math.turnOnCondition.clauseAId;
+      out.setA_Operator = v3.math.turnOnCondition.clauseAOperator;
+      out.setA_Threshold = v3.math.turnOnCondition.clauseAThreshold;
+      out.setB_ID = v3.math.turnOnCondition.clauseBId;
+      out.setB_Operator = v3.math.turnOnCondition.clauseBOperator;
+      out.setB_Threshold = v3.math.turnOnCondition.clauseBThreshold;
+      out.setCombine = v3.math.turnOnCondition.combiner;
+      out.resetA_ID = v3.math.turnOffCondition.clauseAId;
+      out.resetA_Operator = v3.math.turnOffCondition.clauseAOperator;
+      out.resetA_Threshold = v3.math.turnOffCondition.clauseAThreshold;
+      out.resetB_ID = v3.math.turnOffCondition.clauseBId;
+      out.resetB_Operator = v3.math.turnOffCondition.clauseBOperator;
+      out.resetB_Threshold = v3.math.turnOffCondition.clauseBThreshold;
+      out.resetCombine = v3.math.turnOffCondition.combiner;
       return true;
     case V3CardFamily::RTC:
       out.type = RtcCard;
@@ -244,4 +245,5 @@ bool v3CardConfigToLegacy(const V3CardConfig& v3, LogicCard& out) {
       return false;
   }
 }
+
 

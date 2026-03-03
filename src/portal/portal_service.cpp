@@ -345,8 +345,8 @@ void PortalService::rebuildSnapshotJson(
       item["startOnMs"] = card.startOnMs;
       item["startOffMs"] = card.startOffMs;
       item["repeatCounter"] = card.repeatCounter;
-      item["setConditionMet"] = card.setConditionMet;
-      item["resetConditionMet"] = card.resetConditionMet;
+      item["turnOnConditionMet"] = card.turnOnConditionMet;
+      item["turnOffConditionMet"] = card.turnOffConditionMet;
     }
   }
 
@@ -398,4 +398,6 @@ bool PortalService::enqueueRequest(const PortalCommandRequest& request) {
 }
 
 }  // namespace v3::portal
+
+
 

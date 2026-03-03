@@ -26,8 +26,8 @@ struct V3DiStepInput {
   bool sample;
   bool forcedSample;
   bool forceActive;
-  bool setCondition;
-  bool resetCondition;
+  bool turnOnCondition;
+  bool turnOffCondition;
   bool prevSample;
   bool prevSampleValid;
 };
@@ -35,11 +35,13 @@ struct V3DiStepInput {
 struct V3DiStepOutput {
   bool nextPrevSample;
   bool nextPrevSampleValid;
-  bool setConditionMet;
-  bool resetConditionMet;
+  bool turnOnConditionMet;
+  bool turnOffConditionMet;
   bool resetOverride;
 };
 
 void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
                  const V3DiStepInput& in, V3DiStepOutput& out);
+
+
 

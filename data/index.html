@@ -642,8 +642,8 @@
               <label>Debug Indicators</label>
               <div class="indicator-row">
                 <span class="pill ${evalPulseActive ? "warn" : ""}">Eval: ${evalPulseActive ? "Pulse" : "Idle"}</span>
-                <span class="pill ${c.setConditionMet ? "ok" : ""}">SET: ${c.setConditionMet ? "TRUE" : "FALSE"}</span>
-                <span class="pill ${c.resetConditionMet ? "warn" : ""}">RESET: ${c.resetConditionMet ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.turnOnConditionMet ? "ok" : ""}">SET: ${c.turnOnConditionMet ? "TRUE" : "FALSE"}</span>
+                <span class="pill ${c.turnOffConditionMet ? "warn" : ""}">RESET: ${c.turnOffConditionMet ? "TRUE" : "FALSE"}</span>
                 <span class="pill ${c.resetOverride ? "warn" : ""}">RESET Override: ${c.resetOverride ? "TRUE" : "FALSE"}</span>
               </div>
               <div class="ctrl">
@@ -904,4 +904,6 @@
     </script>
   </body>
 </html>
+
+
 

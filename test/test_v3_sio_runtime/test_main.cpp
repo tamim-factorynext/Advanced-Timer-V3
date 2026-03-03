@@ -23,13 +23,13 @@ void test_sio_reset_condition_forces_idle() {
 
   V3SioStepInput in = {};
   in.nowMs = 100;
-  in.setCondition = true;
-  in.resetCondition = true;
+  in.turnOnCondition = true;
+  in.turnOffCondition = true;
 
   V3SioStepOutput out = {};
   runV3SioStep(cfg, runtime, in, out);
 
-  TEST_ASSERT_TRUE(out.resetConditionMet);
+  TEST_ASSERT_TRUE(out.turnOffConditionMet);
   TEST_ASSERT_TRUE(out.resetOverride);
   TEST_ASSERT_EQUAL(State_DO_Idle, runtime.state);
   TEST_ASSERT_FALSE(runtime.commandState);
@@ -49,8 +49,8 @@ void test_sio_immediate_enters_active_mission_state() {
 
   V3SioStepInput in = {};
   in.nowMs = 10;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3SioStepOutput out = {};
   runV3SioStep(cfg, runtime, in, out);
@@ -73,8 +73,8 @@ void test_sio_normal_finishes_at_repeat_limit() {
 
   V3SioStepInput in = {};
   in.nowMs = 0;
-  in.setCondition = true;
-  in.resetCondition = false;
+  in.turnOnCondition = true;
+  in.turnOffCondition = false;
 
   V3SioStepOutput out = {};
   runV3SioStep(cfg, runtime, in, out);
@@ -108,8 +108,8 @@ void test_sio_gated_drops_to_idle_when_gate_false() {
 
   V3SioStepInput in = {};
   in.nowMs = 200;
-  in.setCondition = false;
-  in.resetCondition = false;
+  in.turnOnCondition = false;
+  in.turnOffCondition = false;
 
   V3SioStepOutput out = {};
   runV3SioStep(cfg, runtime, in, out);
@@ -129,4 +129,6 @@ int main() {
   RUN_TEST(test_sio_gated_drops_to_idle_when_gate_false);
   return UNITY_END();
 }
+
+
 

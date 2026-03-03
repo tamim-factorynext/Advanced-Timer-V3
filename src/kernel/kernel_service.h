@@ -59,8 +59,8 @@ class KernelService {
     bool active;
     uint8_t cardId;
     uint8_t channel;
-    v3::storage::ConditionBlock setCondition;
-    v3::storage::ConditionBlock resetCondition;
+    v3::storage::ConditionBlock turnOnCondition;
+    v3::storage::ConditionBlock turnOffCondition;
     bool forceActive;
     bool forcedSample;
     bool prevSample;
@@ -68,7 +68,7 @@ class KernelService {
     V3DiRuntimeConfig cfg;
     V3DiRuntimeState state;
     bool lastSetResult;
-    bool lastResetConditionMet;
+    bool lastTurnOffConditionMet;
   };
 
   struct AiSlot {
@@ -85,34 +85,34 @@ class KernelService {
     bool active;
     uint8_t cardId;
     uint8_t channel;
-    v3::storage::ConditionBlock setCondition;
-    v3::storage::ConditionBlock resetCondition;
+    v3::storage::ConditionBlock turnOnCondition;
+    v3::storage::ConditionBlock turnOffCondition;
     V3DoRuntimeConfig cfg;
     V3DoRuntimeState state;
     bool lastSetResult;
-    bool lastResetConditionMet;
+    bool lastTurnOffConditionMet;
   };
 
   struct SioSlot {
     bool active;
     uint8_t cardId;
-    v3::storage::ConditionBlock setCondition;
-    v3::storage::ConditionBlock resetCondition;
+    v3::storage::ConditionBlock turnOnCondition;
+    v3::storage::ConditionBlock turnOffCondition;
     V3SioRuntimeConfig cfg;
     V3SioRuntimeState state;
     bool lastSetResult;
-    bool lastResetConditionMet;
+    bool lastTurnOffConditionMet;
   };
 
   struct MathSlot {
     bool active;
     uint8_t cardId;
-    v3::storage::ConditionBlock setCondition;
-    v3::storage::ConditionBlock resetCondition;
+    v3::storage::ConditionBlock turnOnCondition;
+    v3::storage::ConditionBlock turnOffCondition;
     V3MathRuntimeConfig cfg;
     V3MathRuntimeState state;
     bool lastSetResult;
-    bool lastResetConditionMet;
+    bool lastTurnOffConditionMet;
   };
 
   struct RtcSlot {
@@ -165,4 +165,6 @@ class KernelService {
 };
 
 }  // namespace v3::kernel
+
+
 

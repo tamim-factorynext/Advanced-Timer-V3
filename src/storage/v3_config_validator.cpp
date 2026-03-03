@@ -118,29 +118,29 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       return result;
     }
     if (card.family == CardFamily::DI &&
-        (!validateConditionBlock(card.di.setCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.di.resetCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.di.turnOnCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.di.turnOffCondition, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::DO &&
-        (!validateConditionBlock(card.dout.setCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.dout.resetCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.dout.turnOnCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.dout.turnOffCondition, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::SIO &&
-        (!validateConditionBlock(card.sio.setCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.sio.resetCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.sio.turnOnCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.sio.turnOffCondition, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::MATH &&
-        (!validateConditionBlock(card.math.setCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.math.resetCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.math.turnOnCondition, candidate.cardCount) ||
+         !validateConditionBlock(card.math.turnOffCondition, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
@@ -235,6 +235,8 @@ const char* configErrorCodeToString(ConfigErrorCode code) {
 }
 
 }  // namespace v3::storage
+
+
 
 
 

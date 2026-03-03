@@ -56,8 +56,8 @@ struct DiParams {
   uint8_t edgeMode;
   bool setEnabled;
   bool resetEnabled;
-  ConditionBlock setCondition;
-  ConditionBlock resetCondition;
+  ConditionBlock turnOnCondition;
+  ConditionBlock turnOffCondition;
 };
 
 struct DoParams {
@@ -67,8 +67,8 @@ struct DoParams {
   uint32_t delayBeforeOnMs;
   uint32_t activeDurationMs;
   uint32_t repeatCount;
-  ConditionBlock setCondition;
-  ConditionBlock resetCondition;
+  ConditionBlock turnOnCondition;
+  ConditionBlock turnOffCondition;
 };
 
 struct AiParams {
@@ -86,8 +86,8 @@ struct SioParams {
   uint32_t delayBeforeOnMs;
   uint32_t activeDurationMs;
   uint32_t repeatCount;
-  ConditionBlock setCondition;
-  ConditionBlock resetCondition;
+  ConditionBlock turnOnCondition;
+  ConditionBlock turnOffCondition;
 };
 
 struct MathParams {
@@ -100,8 +100,8 @@ struct MathParams {
   uint32_t outputMax;
   uint32_t smoothingFactorPct;
   uint32_t fallbackValue;
-  ConditionBlock setCondition;
-  ConditionBlock resetCondition;
+  ConditionBlock turnOnCondition;
+  ConditionBlock turnOffCondition;
 };
 
 struct RtcParams {
@@ -172,4 +172,6 @@ struct SystemConfig {
 SystemConfig makeDefaultSystemConfig();
 
 }  // namespace v3::storage
+
+
 

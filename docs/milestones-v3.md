@@ -727,7 +727,7 @@ Deferred items remain out of current execution scope until core functional parit
 - Implemented outputs:
   - storage DI condition contract:
     - `ConditionOperator`, `ConditionCombiner`, `ConditionClause`, `ConditionBlock`
-    - DI params now include `setCondition`/`resetCondition`
+    - DI params now include `turnOnCondition`/`turnOffCondition`
     - file: `src/storage/v3_config_contract.h`
   - decoder support + backward-compatible defaults:
     - parses `params.set` / `params.reset` blocks when provided
@@ -740,7 +740,7 @@ Deferred items remain out of current execution scope until core functional parit
       - `src/storage/v3_config_validator.h`
       - `src/storage/v3_config_validator.cpp`
   - kernel DI gating source migrated:
-    - `setCondition`/`resetCondition` now evaluated each scan from global runtime signals
+    - `turnOnCondition`/`turnOffCondition` now evaluated each scan from global runtime signals
     - supports boolean, numeric, trigger, and mission-state operator families
     - files:
       - `src/kernel/kernel_service.h`
@@ -812,5 +812,7 @@ Deferred items remain out of current execution scope until core functional parit
   - Duration: `00:00:30.786`
   - RAM: `73140 / 327680` (22.3%)
   - Flash: `883529 / 1310720` (67.4%)
+
+
 
 

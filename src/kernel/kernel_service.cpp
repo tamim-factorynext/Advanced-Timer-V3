@@ -220,8 +220,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setConditionMet = slot.lastSetResult;
-          out.resetConditionMet = slot.lastResetConditionMet;
+          out.turnOnConditionMet = slot.lastSetResult;
+          out.turnOffConditionMet = slot.lastTurnOffConditionMet;
           break;
         }
         break;
@@ -239,8 +239,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setConditionMet = slot.lastSetResult;
-          out.resetConditionMet = slot.lastResetConditionMet;
+          out.turnOnConditionMet = slot.lastSetResult;
+          out.turnOffConditionMet = slot.lastTurnOffConditionMet;
           break;
         }
         break;
@@ -270,8 +270,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.startOnMs = slot.state.startOnMs;
           out.startOffMs = slot.state.startOffMs;
           out.repeatCounter = slot.state.repeatCounter;
-          out.setConditionMet = slot.lastSetResult;
-          out.resetConditionMet = slot.lastResetConditionMet;
+          out.turnOnConditionMet = slot.lastSetResult;
+          out.turnOffConditionMet = slot.lastTurnOffConditionMet;
           break;
         }
         break;
@@ -286,8 +286,8 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
           out.edgePulse = slot.state.edgePulse;
           out.state = slot.state.state;
           out.liveValue = slot.state.liveValue;
-          out.setConditionMet = slot.lastSetResult;
-          out.resetConditionMet = slot.lastResetConditionMet;
+          out.turnOnConditionMet = slot.lastSetResult;
+          out.turnOffConditionMet = slot.lastTurnOffConditionMet;
           break;
         }
         break;
@@ -380,14 +380,14 @@ void KernelService::bindDiSlotsFromConfig() {
     slot.active = true;
     slot.cardId = card.id;
     slot.channel = card.di.channel;
-    slot.setCondition = card.di.setCondition;
-    slot.resetCondition = card.di.resetCondition;
+    slot.turnOnCondition = card.di.turnOnCondition;
+    slot.turnOffCondition = card.di.turnOffCondition;
     slot.forceActive = false;
     slot.forcedSample = false;
     slot.prevSample = false;
     slot.prevSampleValid = false;
     slot.lastSetResult = false;
-    slot.lastResetConditionMet = false;
+    slot.lastTurnOffConditionMet = false;
 
     slot.cfg.debounceTimeMs = card.di.debounceMs;
     slot.cfg.invert = card.di.invert;
@@ -426,8 +426,8 @@ void KernelService::bindDoSlotsFromConfig() {
     slot.active = true;
     slot.cardId = card.id;
     slot.channel = card.dout.channel;
-    slot.setCondition = card.dout.setCondition;
-    slot.resetCondition = card.dout.resetCondition;
+    slot.turnOnCondition = card.dout.turnOnCondition;
+    slot.turnOffCondition = card.dout.turnOffCondition;
 
     slot.cfg.mode = static_cast<cardMode>(card.dout.mode);
     slot.cfg.invert = card.dout.invert;
@@ -435,7 +435,7 @@ void KernelService::bindDoSlotsFromConfig() {
     slot.cfg.activeDurationMs = card.dout.activeDurationMs;
     slot.cfg.repeatCount = card.dout.repeatCount;
     slot.lastSetResult = false;
-    slot.lastResetConditionMet = false;
+    slot.lastTurnOffConditionMet = false;
 
     slot.state = {};
     slot.state.state = State_DO_Idle;
@@ -461,15 +461,15 @@ void KernelService::bindSioSlotsFromConfig() {
     SioSlot& slot = sioSlots_[sioSlotCount_++];
     slot.active = true;
     slot.cardId = card.id;
-    slot.setCondition = card.sio.setCondition;
-    slot.resetCondition = card.sio.resetCondition;
+    slot.turnOnCondition = card.sio.turnOnCondition;
+    slot.turnOffCondition = card.sio.turnOffCondition;
     slot.cfg.mode = static_cast<cardMode>(card.sio.mode);
     slot.cfg.invert = card.sio.invert;
     slot.cfg.delayBeforeOnMs = card.sio.delayBeforeOnMs;
     slot.cfg.activeDurationMs = card.sio.activeDurationMs;
     slot.cfg.repeatCount = card.sio.repeatCount;
     slot.lastSetResult = false;
-    slot.lastResetConditionMet = false;
+    slot.lastTurnOffConditionMet = false;
     slot.state = {};
     slot.state.state = State_DO_Idle;
     slot.state.actualState = slot.cfg.invert;
@@ -490,8 +490,8 @@ void KernelService::bindMathSlotsFromConfig() {
     MathSlot& slot = mathSlots_[mathSlotCount_++];
     slot.active = true;
     slot.cardId = card.id;
-    slot.setCondition = card.math.setCondition;
-    slot.resetCondition = card.math.resetCondition;
+    slot.turnOnCondition = card.math.turnOnCondition;
+    slot.turnOffCondition = card.math.turnOffCondition;
 
     slot.cfg.operation = card.math.operation;
     slot.cfg.inputA = card.math.inputA;
@@ -503,7 +503,7 @@ void KernelService::bindMathSlotsFromConfig() {
     slot.cfg.smoothingFactorPct = card.math.smoothingFactorPct;
     slot.cfg.fallbackValue = card.math.fallbackValue;
     slot.lastSetResult = false;
-    slot.lastResetConditionMet = false;
+    slot.lastTurnOffConditionMet = false;
 
     slot.state = {};
     slot.state.liveValue = slot.cfg.fallbackValue;
@@ -641,17 +641,17 @@ void KernelService::runDiScan(uint32_t nowMs) {
     in.sample = sampled;
     in.forceActive = slot.forceActive;
     in.forcedSample = slot.forcedSample;
-    in.setCondition =
-        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
-    in.resetCondition =
-        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+    in.turnOnCondition =
+        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+    in.turnOffCondition =
+        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
     in.prevSample = slot.prevSample;
     in.prevSampleValid = slot.prevSampleValid;
 
     V3DiStepOutput out = {};
     runV3DiStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setConditionMet;
-    slot.lastResetConditionMet = out.resetConditionMet;
+    slot.lastSetResult = out.turnOnConditionMet;
+    slot.lastTurnOffConditionMet = out.turnOffConditionMet;
 
     slot.prevSample = out.nextPrevSample;
     slot.prevSampleValid = out.nextPrevSampleValid;
@@ -693,15 +693,15 @@ void KernelService::runDoScan(uint32_t nowMs) {
 
     V3DoStepInput in = {};
     in.nowMs = nowMs;
-    in.setCondition =
-        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
-    in.resetCondition =
-        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+    in.turnOnCondition =
+        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+    in.turnOffCondition =
+        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
 
     V3DoStepOutput out = {};
     runV3DoStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setConditionMet;
-    slot.lastResetConditionMet = out.resetConditionMet;
+    slot.lastSetResult = out.turnOnConditionMet;
+    slot.lastTurnOffConditionMet = out.turnOffConditionMet;
     if (platform_ != nullptr) {
       platform_->writeDigitalOutput(slot.channel, slot.state.actualState);
     }
@@ -726,15 +726,15 @@ void KernelService::runSioScan(uint32_t nowMs) {
 
     V3SioStepInput in = {};
     in.nowMs = nowMs;
-    in.setCondition =
-        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
-    in.resetCondition =
-        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+    in.turnOnCondition =
+        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+    in.turnOffCondition =
+        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
 
     V3SioStepOutput out = {};
     runV3SioStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setConditionMet;
-    slot.lastResetConditionMet = out.resetConditionMet;
+    slot.lastSetResult = out.turnOnConditionMet;
+    slot.lastTurnOffConditionMet = out.turnOffConditionMet;
     if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
       activeCount += 1;
     }
@@ -754,15 +754,15 @@ void KernelService::runMathScan() {
     buildSignalSnapshot(signals, v3::storage::kMaxCards);
 
     V3MathStepInput in = {};
-    in.setCondition =
-        evalConditionBlock(slot.setCondition, signals, v3::storage::kMaxCards);
-    in.resetCondition =
-        evalConditionBlock(slot.resetCondition, signals, v3::storage::kMaxCards);
+    in.turnOnCondition =
+        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+    in.turnOffCondition =
+        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
 
     V3MathStepOutput out = {};
     runV3MathStep(slot.cfg, slot.state, in, out);
-    slot.lastSetResult = out.setConditionMet;
-    slot.lastResetConditionMet = out.resetConditionMet;
+    slot.lastSetResult = out.turnOnConditionMet;
+    slot.lastTurnOffConditionMet = out.turnOffConditionMet;
   }
 }
 
@@ -859,4 +859,6 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
 }
 
 }  // namespace v3::kernel
+
+
 
