@@ -22,6 +22,14 @@ namespace v3::storage {
 
 namespace {
 
+/**
+ * @brief Initializes a condition block to safe disabled defaults.
+ * @param block Destination condition block.
+ * @param selfCardId Card id used as default clause source.
+ * @param enabled Reserved legacy flag; currently unused.
+ * @par Used By
+ * parseFamilyParams().
+ */
 void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfCardId,
                                bool enabled) {
   (void)enabled;
@@ -34,6 +42,16 @@ void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfC
   block.clauseB.threshold = 0;
 }
 
+/**
+ * @brief Parses condition operator token into typed enum.
+ * @details Accepts both modern token names and legacy `Op_*` aliases.
+ * @param token Operator token.
+ * @param out Parsed operator enum.
+ * @retval true Token recognized.
+ * @retval false Token invalid.
+ * @par Used By
+ * parseConditionClause().
+ */
 bool parseConditionOperator(const char* token, v3::storage::ConditionOperator& out) {
   if (token == nullptr) return false;
   if (strcmp(token, "ALWAYS_TRUE") == 0 || strcmp(token, "Op_AlwaysTrue") == 0) {
@@ -109,6 +127,15 @@ bool parseConditionOperator(const char* token, v3::storage::ConditionOperator& o
   return false;
 }
 
+/**
+ * @brief Parses condition combiner token.
+ * @param token Combiner text (NONE/AND/OR).
+ * @param out Parsed combiner.
+ * @retval true Token recognized.
+ * @retval false Token invalid.
+ * @par Used By
+ * parseConditionBlockOptional().
+ */
 bool parseConditionCombiner(const char* token, v3::storage::ConditionCombiner& out) {
   if (token == nullptr) return false;
   if (strcmp(token, "NONE") == 0) {
@@ -126,6 +153,15 @@ bool parseConditionCombiner(const char* token, v3::storage::ConditionCombiner& o
   return false;
 }
 
+/**
+ * @brief Parses one condition clause object.
+ * @param obj Clause JSON object.
+ * @param outClause Parsed clause destination.
+ * @retval true Clause is valid and parsed.
+ * @retval false Clause shape or values are invalid.
+ * @par Used By
+ * parseConditionBlockOptional().
+ */
 bool parseConditionClause(JsonObjectConst obj, v3::storage::ConditionClause& outClause) {
   if (!obj["sourceCardId"].is<uint8_t>()) return false;
   if (!obj["threshold"].is<uint32_t>()) return false;
@@ -138,6 +174,15 @@ bool parseConditionClause(JsonObjectConst obj, v3::storage::ConditionClause& out
   return true;
 }
 
+/**
+ * @brief Parses optional condition block with combiner and one/two clauses.
+ * @param obj Condition block JSON object.
+ * @param outBlock Parsed block destination.
+ * @retval true Block parsed.
+ * @retval false Block missing or invalid.
+ * @par Used By
+ * parseFamilyParams().
+ */
 bool parseConditionBlockOptional(JsonObjectConst obj, v3::storage::ConditionBlock& outBlock) {
   if (obj.isNull()) return false;
   if (!obj["clauseA"].is<JsonObjectConst>() || !obj["combiner"].is<const char*>()) {
@@ -164,6 +209,17 @@ bool parseConditionBlockOptional(JsonObjectConst obj, v3::storage::ConditionBloc
   return true;
 }
 
+/**
+ * @brief Parses one required bounded string field.
+ * @param obj Source JSON object.
+ * @param key Field key.
+ * @param out Destination buffer.
+ * @param outSize Destination buffer size.
+ * @retval true Field present and copied.
+ * @retval false Field missing/empty/too long.
+ * @par Used By
+ * parseWiFiCredential().
+ */
 bool parseStringField(JsonObjectConst obj, const char* key, char* out,
                       size_t outSize) {
   if (!obj[key].is<const char*>()) return false;
@@ -176,6 +232,15 @@ bool parseStringField(JsonObjectConst obj, const char* key, char* out,
   return true;
 }
 
+/**
+ * @brief Parses Wi-Fi credential object.
+ * @param obj Credential JSON object.
+ * @param outCredential Parsed credential destination.
+ * @retval true Credential is valid.
+ * @retval false Credential shape invalid.
+ * @par Used By
+ * parseWiFiConfig().
+ */
 bool parseWiFiCredential(JsonObjectConst obj, WiFiCredential& outCredential) {
   if (obj.isNull()) return false;
   if (!parseStringField(obj, "ssid", outCredential.ssid,
@@ -193,6 +258,17 @@ bool parseWiFiCredential(JsonObjectConst obj, WiFiCredential& outCredential) {
   return true;
 }
 
+/**
+ * @brief Parses top-level Wi-Fi config section.
+ * @details Expects `backupAccessNetwork`, `userConfiguredNetwork`,
+ * `retryDelaySec`, and `staOnly` when `wifi` section exists.
+ * @param systemObj Root/system JSON object.
+ * @param outWiFi Parsed Wi-Fi config destination.
+ * @retval true Wi-Fi section absent or valid.
+ * @retval false Wi-Fi section present but invalid.
+ * @par Used By
+ * decodeSystemConfig().
+ */
 bool parseWiFiConfig(JsonObjectConst systemObj, WiFiConfig& outWiFi) {
   JsonObjectConst wifiObj = systemObj["wifi"].as<JsonObjectConst>();
   if (wifiObj.isNull()) {
@@ -213,6 +289,17 @@ bool parseWiFiConfig(JsonObjectConst systemObj, WiFiConfig& outWiFi) {
   return true;
 }
 
+/**
+ * @brief Parses optional bounded string field.
+ * @param obj Source JSON object.
+ * @param key Field key.
+ * @param out Destination buffer.
+ * @param outSize Destination buffer size.
+ * @retval true Field present and copied.
+ * @retval false Field missing/null/too long.
+ * @par Used By
+ * parseClockConfig().
+ */
 bool parseOptionalStringField(JsonObjectConst obj, const char* key, char* out,
                               size_t outSize) {
   if (!obj[key].is<const char*>()) return false;
@@ -225,6 +312,15 @@ bool parseOptionalStringField(JsonObjectConst obj, const char* key, char* out,
   return true;
 }
 
+/**
+ * @brief Parses top-level time-sync config section.
+ * @param systemObj Root/system JSON object.
+ * @param outClock Parsed time config destination.
+ * @retval true Time section absent or valid.
+ * @retval false Time section present but invalid.
+ * @par Used By
+ * decodeSystemConfig().
+ */
 bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
   JsonObjectConst clockObj = systemObj["time"].as<JsonObjectConst>();
   if (clockObj.isNull()) {
@@ -262,6 +358,15 @@ bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
   return true;
 }
 
+/**
+ * @brief Parses card family token.
+ * @param family Family token string.
+ * @param outFamily Parsed family enum.
+ * @retval true Token recognized.
+ * @retval false Token invalid.
+ * @par Used By
+ * parseCommonCard().
+ */
 bool parseFamily(const char* family, CardFamily& outFamily) {
   if (family == nullptr) return false;
   if (strcmp(family, "DI") == 0) {
@@ -291,6 +396,17 @@ bool parseFamily(const char* family, CardFamily& outFamily) {
   return false;
 }
 
+/**
+ * @brief Parses family-agnostic common card fields.
+ * @param cardObj Card JSON object.
+ * @param outCard Card destination.
+ * @param outError Decode error sink.
+ * @param cardIndex Index used in error context.
+ * @retval true Common fields parsed.
+ * @retval false Invalid shape/family; error populated.
+ * @par Used By
+ * decodeSystemConfig().
+ */
 bool parseCommonCard(JsonObjectConst cardObj, CardConfig& outCard,
                      ConfigValidationError& outError, uint8_t cardIndex) {
   if (!cardObj["id"].is<uint8_t>() || !cardObj["enabled"].is<bool>() ||
@@ -311,6 +427,19 @@ bool parseCommonCard(JsonObjectConst cardObj, CardConfig& outCard,
   return true;
 }
 
+/**
+ * @brief Parses family-specific `params` payload for one card.
+ * @details Applies defaults for optional fields and validates required ones
+ * per family contract.
+ * @param cardObj Card JSON object.
+ * @param outCard Card destination.
+ * @param outError Decode error sink.
+ * @param cardIndex Index used in error context.
+ * @retval true Params parsed for card family.
+ * @retval false Params invalid; error populated.
+ * @par Used By
+ * decodeSystemConfig().
+ */
 bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
                        ConfigValidationError& outError, uint8_t cardIndex) {
   JsonObjectConst params = cardObj["params"].as<JsonObjectConst>();
@@ -529,6 +658,15 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
 
 }  // namespace
 
+/**
+ * @brief Decodes external config JSON into strongly typed SystemConfig.
+ * @details Accepts both wrapped (`root.system`) and direct system shapes,
+ * then parses core system fields and every card entry.
+ * @param root Root JSON object from payload/file.
+ * @return Decode result with `ok`, parsed payload, and error context.
+ * @par Used By
+ * StorageService::begin().
+ */
 ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
   ConfigDecodeResult result = {};
   result.ok = false;

@@ -20,6 +20,11 @@ Notes:
 
 namespace v3::control {
 
+/**
+ * @brief Resets control queue state and diagnostics counters.
+ * @par Used By
+ * main startup initialization.
+ */
 void ControlService::begin() {
   lastTickMs_ = 0;
   desiredMode_ = RUN_NORMAL;
@@ -30,8 +35,24 @@ void ControlService::begin() {
   diagnostics_.lastRejectReason = CommandRejectReason::None;
 }
 
+/**
+ * @brief Advances control service heartbeat timestamp.
+ * @param nowMs Current monotonic tick time in milliseconds.
+ * @par Used By
+ * Main loop tick.
+ */
 void ControlService::tick(uint32_t nowMs) { lastTickMs_ = nowMs; }
 
+/**
+ * @brief Enqueues a run-mode transition request.
+ * @param mode Requested engine run mode.
+ * @param nowUs Enqueue timestamp in microseconds.
+ * @param requestId Correlation id supplied by portal.
+ * @retval true Request accepted and queued.
+ * @retval false Request rejected due to validation/queue capacity.
+ * @par Used By
+ * Portal command dispatch.
+ */
 bool ControlService::requestSetRunMode(engineMode mode, uint32_t nowUs,
                                        uint32_t requestId) {
   diagnostics_.requestedCount += 1;
@@ -60,6 +81,15 @@ bool ControlService::requestSetRunMode(engineMode mode, uint32_t nowUs,
   return true;
 }
 
+/**
+ * @brief Enqueues one step command when run mode allows stepping.
+ * @param nowUs Enqueue timestamp in microseconds.
+ * @param requestId Correlation id supplied by portal.
+ * @retval true Request accepted and queued.
+ * @retval false Request rejected (wrong mode or queue full).
+ * @par Used By
+ * Portal command dispatch.
+ */
 bool ControlService::requestStepOnce(uint32_t nowUs, uint32_t requestId) {
   diagnostics_.requestedCount += 1;
 
@@ -85,6 +115,18 @@ bool ControlService::requestStepOnce(uint32_t nowUs, uint32_t requestId) {
   return true;
 }
 
+/**
+ * @brief Enqueues DI/AI input force command for one card.
+ * @param cardId Target card id.
+ * @param inputMode Requested input source mode.
+ * @param nowUs Enqueue timestamp in microseconds.
+ * @param requestId Correlation id supplied by portal.
+ * @param forcedValue Optional forced numeric value for AI force mode.
+ * @retval true Request accepted and queued.
+ * @retval false Request rejected due to invalid mode or queue full.
+ * @par Used By
+ * Portal command dispatch.
+ */
 bool ControlService::requestSetInputForce(uint8_t cardId, inputSourceMode inputMode,
                                           uint32_t nowUs, uint32_t requestId,
                                           uint32_t forcedValue) {
@@ -117,6 +159,14 @@ bool ControlService::requestSetInputForce(uint8_t cardId, inputSourceMode inputM
   return true;
 }
 
+/**
+ * @brief Pops next pending command for kernel dispatch.
+ * @param out Destination command.
+ * @retval true Command dequeued.
+ * @retval false Queue empty.
+ * @par Used By
+ * Main loop command forwarding.
+ */
 bool ControlService::dequeueCommand(KernelCommand& out) {
   if (depth_ == 0) return false;
 
@@ -127,10 +177,22 @@ bool ControlService::dequeueCommand(KernelCommand& out) {
   return true;
 }
 
+/**
+ * @brief Returns current control diagnostics counters.
+ * @return Immutable diagnostics view.
+ */
 const ControlDiagnostics& ControlService::diagnostics() const {
   return diagnostics_;
 }
 
+/**
+ * @brief Pushes command into bounded pending queue.
+ * @param command Command to store.
+ * @retval true Command queued.
+ * @retval false Queue full.
+ * @par Used By
+ * requestSetRunMode(), requestStepOnce(), requestSetInputForce().
+ */
 bool ControlService::enqueueCommand(const KernelCommand& command) {
   if (depth_ >= kPendingCapacity) return false;
 
@@ -144,6 +206,14 @@ bool ControlService::enqueueCommand(const KernelCommand& command) {
   return true;
 }
 
+/**
+ * @brief Validates run-mode enum value.
+ * @param mode Requested mode.
+ * @retval true Mode is one of supported run modes.
+ * @retval false Mode value unsupported.
+ * @par Used By
+ * requestSetRunMode().
+ */
 bool ControlService::isValidRunMode(engineMode mode) {
   switch (mode) {
     case RUN_NORMAL:

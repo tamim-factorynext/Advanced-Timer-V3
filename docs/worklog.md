@@ -3534,3 +3534,39 @@ Finalized RTC scheduler contract direction, expanded live snapshot exposure for 
   - RAM: `35.3%` (`115732 / 327680`)
   - Flash: `69.4%` (`909057 / 1310720`)
 
+## 2026-03-03
+
+### Session Summary
+
+Completed the documentation saga stop-point with focused symbol-level Doxygen coverage (important gaps only), avoiding full-project comment bloat.
+
+### Completed
+
+- Phase 3 symbol-level comments (parser/rules internals):
+  - `src/kernel/v3_typed_card_parser.cpp`
+  - `src/kernel/v3_typed_config_rules.cpp`
+
+- Phase 4 focused gaps (core execution path):
+  - `src/control/control_service.cpp`
+  - `src/runtime/runtime_service.cpp`
+  - `src/storage/storage_service.cpp`
+  - `src/storage/v3_config_decoder.cpp`
+  - `src/portal/transport_command_stub.cpp`
+  - `src/portal/transport_runtime.cpp`
+
+- Comment style kept aligned with `docs/doxygen-comment-style.md`:
+  - `@brief` for all documented symbols
+  - selective `@details` for complex behavior
+  - `@par Used By` where high-value for flow tracing
+  - minimal required tags to reduce maintenance burden
+
+### Evidence
+
+- Firmware build:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:25.276`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`911381 / 1310720`)
+

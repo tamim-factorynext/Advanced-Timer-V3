@@ -19,8 +19,22 @@ Notes:
 
 namespace v3::runtime {
 
+/**
+ * @brief Resets runtime snapshot contract to default state.
+ * @par Used By
+ * Main startup initialization.
+ */
 void RuntimeService::begin() { snapshot_ = {}; }
 
+/**
+ * @brief Refreshes runtime snapshot from latest kernel/storage/control state.
+ * @param nowMs Current monotonic time in milliseconds.
+ * @param kernelMetrics Kernel execution and family counters.
+ * @param storageDiagnostics Storage bootstrap and config-health status.
+ * @param queueTelemetry Command-path queue telemetry.
+ * @par Used By
+ * Main loop runtime observability refresh.
+ */
 void RuntimeService::tick(uint32_t nowMs,
                           const v3::kernel::KernelMetrics& kernelMetrics,
                           const v3::storage::BootstrapDiagnostics&
@@ -55,6 +69,12 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.queueTelemetry = queueTelemetry;
 }
 
+/**
+ * @brief Returns current runtime snapshot.
+ * @return Immutable runtime snapshot reference.
+ * @par Used By
+ * Portal JSON cache builders and transport surfaces.
+ */
 const RuntimeSnapshot& RuntimeService::snapshot() const { return snapshot_; }
 
 }  // namespace v3::runtime

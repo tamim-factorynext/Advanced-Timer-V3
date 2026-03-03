@@ -28,6 +28,17 @@ namespace {
 
 constexpr const char* kActiveConfigPath = "/config_v3.json";
 
+/**
+ * @brief Attempts to load and decode candidate config from persistent file.
+ * @details Returns `false` when file path is absent/unreadable. Returns `true`
+ * when a load attempt occurred, even if decode failed (error is populated).
+ * @param outCandidate Decoded candidate config on success.
+ * @param outError Decode error details when payload is invalid.
+ * @retval true Config file existed and was processed.
+ * @retval false Config file unavailable or unreadable.
+ * @par Used By
+ * StorageService::begin().
+ */
 bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
                               ConfigValidationError& outError) {
   if (!LittleFS.begin()) return false;
@@ -56,6 +67,13 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
 
 }  // namespace
 
+/**
+ * @brief Bootstraps active config from file or default template, then validates.
+ * @details Establishes storage diagnostics state for runtime telemetry and
+ * decides whether an active config is present.
+ * @par Used By
+ * Main startup initialization.
+ */
 void StorageService::begin() {
   SystemConfig candidate = makeDefaultSystemConfig();
   ConfigValidationError bootstrapError = {ConfigErrorCode::None, 0};
@@ -84,16 +102,34 @@ void StorageService::begin() {
   activeConfigPresent_ = true;
 }
 
+/**
+ * @brief Indicates whether validated active config is available.
+ * @return `true` when active config exists.
+ */
 bool StorageService::hasActiveConfig() const { return activeConfigPresent_; }
 
+/**
+ * @brief Returns validated active config payload.
+ * @return Active config reference.
+ */
 const ValidatedConfig& StorageService::activeConfig() const {
   return activeConfig_;
 }
 
+/**
+ * @brief Returns last bootstrap/decode/validation error.
+ * @return Error structure.
+ */
 const ConfigValidationError& StorageService::lastError() const {
   return lastError_;
 }
 
+/**
+ * @brief Builds storage bootstrap diagnostics snapshot.
+ * @return Current diagnostics values.
+ * @par Used By
+ * RuntimeService::tick().
+ */
 BootstrapDiagnostics StorageService::diagnostics() const {
   BootstrapDiagnostics diagnostics = {};
   diagnostics.source = source_;

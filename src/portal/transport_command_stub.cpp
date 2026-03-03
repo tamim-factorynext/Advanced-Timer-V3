@@ -30,6 +30,11 @@ namespace {
 // - 400: malformed payload shape/json
 // - 422: semantically invalid command content
 
+/**
+ * @brief Maps transport source enum to response-friendly string.
+ * @param source Command ingress source.
+ * @return Source label for API payloads.
+ */
 const char* sourceToString(TransportCommandSource source) {
   switch (source) {
     case TransportCommandSource::Http:
@@ -41,6 +46,11 @@ const char* sourceToString(TransportCommandSource source) {
   }
 }
 
+/**
+ * @brief Maps control reject reason enum to stable error token.
+ * @param reason Control command rejection reason.
+ * @return Canonical snake_case reason token.
+ */
 const char* rejectReasonToString(v3::control::CommandRejectReason reason) {
   switch (reason) {
     case v3::control::CommandRejectReason::None:
@@ -58,6 +68,11 @@ const char* rejectReasonToString(v3::control::CommandRejectReason reason) {
   }
 }
 
+/**
+ * @brief Expands short error code into user-facing message text.
+ * @param errorCode Canonical error token.
+ * @return Human-readable message.
+ */
 const char* errorCodeToMessage(const char* errorCode) {
   if (errorCode == nullptr) return "Unknown error.";
   if (strcmp(errorCode, "none") == 0) return "No error.";
@@ -81,6 +96,13 @@ const char* errorCodeToMessage(const char* errorCode) {
   return "Command request failed.";
 }
 
+/**
+ * @brief Parses run-mode token from transport payload.
+ * @param rawMode Incoming mode token.
+ * @param outMode Parsed run mode.
+ * @retval true Token valid.
+ * @retval false Token invalid.
+ */
 bool parseRunMode(const char* rawMode, engineMode& outMode) {
   if (rawMode == nullptr) return false;
   if (strcmp(rawMode, "RUN_NORMAL") == 0) {
@@ -98,6 +120,13 @@ bool parseRunMode(const char* rawMode, engineMode& outMode) {
   return false;
 }
 
+/**
+ * @brief Parses input-force mode token from transport payload.
+ * @param rawMode Incoming input mode token.
+ * @param outMode Parsed input mode.
+ * @retval true Token valid.
+ * @retval false Token invalid.
+ */
 bool parseInputMode(const char* rawMode, inputSourceMode& outMode) {
   if (rawMode == nullptr) return false;
   if (strcmp(rawMode, "REAL") == 0) {
@@ -115,6 +144,13 @@ bool parseInputMode(const char* rawMode, inputSourceMode& outMode) {
   return false;
 }
 
+/**
+ * @brief Builds standardized JSON error response.
+ * @param statusCode HTTP-like status code.
+ * @param source Transport source label.
+ * @param errorCode Canonical error token.
+ * @return Structured command response.
+ */
 TransportCommandResponse buildError(uint16_t statusCode, const char* source,
                                     const char* errorCode) {
   JsonDocument doc;
@@ -131,6 +167,13 @@ TransportCommandResponse buildError(uint16_t statusCode, const char* source,
   return {statusCode, body};
 }
 
+/**
+ * @brief Builds standardized command submission result response.
+ * @param statusCode HTTP-like status code.
+ * @param source Transport source label.
+ * @param r Portal submission result.
+ * @return Structured command response.
+ */
 TransportCommandResponse buildSubmitResult(uint16_t statusCode, const char* source,
                                            const PortalCommandSubmitResult& r) {
   JsonDocument doc;
@@ -150,6 +193,16 @@ TransportCommandResponse buildSubmitResult(uint16_t statusCode, const char* sour
 
 }  // namespace
 
+/**
+ * @brief Parses and routes one portal command payload from transport layer.
+ * @details Performs JSON validation, command-specific argument checks, and
+ * delegates to `PortalService` submit methods.
+ * @param portal Portal service command ingress owner.
+ * @param payloadJson Raw JSON payload string.
+ * @param source Command source (HTTP/WebSocket).
+ * @param nowUs Command timestamp in microseconds.
+ * @return Structured command response with status and JSON body.
+ */
 TransportCommandResponse handleTransportCommandStub(
     PortalService& portal, const char* payloadJson, TransportCommandSource source,
     uint32_t nowUs) {

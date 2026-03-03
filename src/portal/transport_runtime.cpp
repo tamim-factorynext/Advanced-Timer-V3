@@ -30,6 +30,13 @@ WebSocketsServer gWsServer(81);
 PortalService* gPortal = nullptr;
 bool gTransportInitialized = false;
 
+/**
+ * @brief Handles HTTP command submit endpoint.
+ * @details Delegates payload parsing/execution to transport command stub and
+ * writes JSON response.
+ * @par Used By
+ * `POST /api/v3/command`.
+ */
 void handleHttpCommandSubmit() {
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
@@ -43,6 +50,11 @@ void handleHttpCommandSubmit() {
   gHttpServer.send(response.statusCode, "application/json", response.body);
 }
 
+/**
+ * @brief Handles HTTP runtime snapshot endpoint.
+ * @par Used By
+ * `GET /api/v3/snapshot` and `GET /api/snapshot`.
+ */
 void handleHttpSnapshotGet() {
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
@@ -58,6 +70,15 @@ void handleHttpSnapshotGet() {
   gHttpServer.send(200, "application/json", state.json);
 }
 
+/**
+ * @brief Handles inbound WebSocket command messages.
+ * @details Accepts text frames only and responds directly to originating
+ * client with command result JSON.
+ * @param clientNum WebSocket client id.
+ * @param type Event type.
+ * @param payload Raw payload bytes.
+ * @param length Payload length.
+ */
 void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
                       size_t length) {
   if (gPortal == nullptr) return;
@@ -77,6 +98,12 @@ void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
 
 }  // namespace
 
+/**
+ * @brief Initializes portal HTTP/WebSocket transport routes and listeners.
+ * @param portal Portal service instance backing request handling.
+ * @par Used By
+ * Main startup initialization.
+ */
 void initTransportRuntime(PortalService& portal) {
   if (gTransportInitialized) return;
   gPortal = &portal;
@@ -107,6 +134,11 @@ void initTransportRuntime(PortalService& portal) {
   gTransportInitialized = true;
 }
 
+/**
+ * @brief Services HTTP and WebSocket event loops.
+ * @par Used By
+ * Main loop.
+ */
 void serviceTransportRuntime() {
   if (!gTransportInitialized) return;
   gHttpServer.handleClient();
