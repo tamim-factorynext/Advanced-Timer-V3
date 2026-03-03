@@ -45,17 +45,39 @@ bool isValidConditionCombiner(v3::storage::ConditionCombiner combiner) {
          combiner == v3::storage::ConditionCombiner::Or;
 }
 
-bool validateConditionBlock(const v3::storage::ConditionBlock& block, uint8_t cardCount) {
+bool isNumericConditionOperator(v3::storage::ConditionOperator op) {
+  return op == v3::storage::ConditionOperator::GT ||
+         op == v3::storage::ConditionOperator::LT ||
+         op == v3::storage::ConditionOperator::EQ ||
+         op == v3::storage::ConditionOperator::NEQ ||
+         op == v3::storage::ConditionOperator::GTE ||
+         op == v3::storage::ConditionOperator::LTE;
+}
+
+bool familyHasNumericLiveValue(v3::storage::CardFamily family) {
+  return family != v3::storage::CardFamily::RTC;
+}
+
+bool validateConditionClause(const v3::storage::ConditionClause& clause,
+                             const v3::storage::SystemConfig& cfg,
+                             uint8_t cardCount) {
+  if (clause.sourceCardId >= cardCount) return false;
+  if (!isValidConditionOperator(clause.op)) return false;
+  if (!clause.useThresholdCard) return true;
+
+  if (!isNumericConditionOperator(clause.op)) return false;
+  if (clause.thresholdCardId >= cardCount) return false;
+  if (clause.sourceCardId == clause.thresholdCardId) return false;
+  const v3::storage::CardConfig& thresholdCard = cfg.cards[clause.thresholdCardId];
+  return familyHasNumericLiveValue(thresholdCard.family);
+}
+
+bool validateConditionBlock(const v3::storage::ConditionBlock& block,
+                            const v3::storage::SystemConfig& cfg,
+                            uint8_t cardCount) {
   if (!isValidConditionCombiner(block.combiner)) return false;
-  if (block.clauseA.sourceCardId >= cardCount ||
-      block.clauseB.sourceCardId >= cardCount) {
-    return false;
-  }
-  if (!isValidConditionOperator(block.clauseA.op) ||
-      !isValidConditionOperator(block.clauseB.op)) {
-    return false;
-  }
-  return true;
+  if (!validateConditionClause(block.clauseA, cfg, cardCount)) return false;
+  return validateConditionClause(block.clauseB, cfg, cardCount);
 }
 
 }  // namespace
@@ -135,29 +157,29 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       return result;
     }
     if (card.family == CardFamily::DI &&
-        (!validateConditionBlock(card.di.turnOnCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.di.turnOffCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.di.turnOnCondition, candidate, candidate.cardCount) ||
+         !validateConditionBlock(card.di.turnOffCondition, candidate, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::DO &&
-        (!validateConditionBlock(card.dout.turnOnCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.dout.turnOffCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.dout.turnOnCondition, candidate, candidate.cardCount) ||
+         !validateConditionBlock(card.dout.turnOffCondition, candidate, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::SIO &&
-        (!validateConditionBlock(card.sio.turnOnCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.sio.turnOffCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.sio.turnOnCondition, candidate, candidate.cardCount) ||
+         !validateConditionBlock(card.sio.turnOffCondition, candidate, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;
     }
     if (card.family == CardFamily::MATH &&
-        (!validateConditionBlock(card.math.turnOnCondition, candidate.cardCount) ||
-         !validateConditionBlock(card.math.turnOffCondition, candidate.cardCount))) {
+        (!validateConditionBlock(card.math.turnOnCondition, candidate, candidate.cardCount) ||
+         !validateConditionBlock(card.math.turnOffCondition, candidate, candidate.cardCount))) {
       result.error.code = ConfigErrorCode::InvalidConditionBlock;
       result.error.cardIndex = i;
       return result;

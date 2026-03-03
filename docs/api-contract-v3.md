@@ -362,6 +362,10 @@ Rules:
 - `errorCode` values are stable for automation.
 - `message` is operator-facing and may evolve.
 - `field` is optional and should be set for validation/form errors.
+- For condition-clause validation, field paths should target canonical keys:
+  - `thresholdValue`
+  - `thresholdCardId`
+  - `useThresholdCard`
 
 ## 8. Compatibility Rules
 

@@ -121,7 +121,7 @@ sequenceDiagram
   Boot->>R: begin()
   Boot->>C: begin()
   Boot->>Portal: begin()
-  Boot->>W: begin(activeConfig.wifi)
+  Boot->>W: begin(activeConfig.wifi, activeConfig.time)
   Boot->>T: initTransportRuntime(portal)
   Boot->>Q: create gKernelSnapshotQueue / gKernelCommandQueue
   Boot->>Q: enqueue initial snapshot
@@ -154,6 +154,11 @@ sequenceDiagram
   C0->>K: exportRuntimeSnapshotCards(...)
   C0->>SQ: xQueueSend(KernelSnapshotMessage)
 ```
+
+Condition-evaluation timing note:
+
+- Clause comparisons that use `useThresholdCard=true` intentionally read referenced `liveValue` in current scan loop order.
+- Within-scan order jitter is accepted by design and treated as continuous rotating-loop behavior.
 
 ### 5.2 Storage bootstrap
 

@@ -40,6 +40,25 @@ Many cards use `set` and `reset` condition blocks.
 
 This keeps cards inactive until intentionally configured.
 
+Naming note:
+
+- Portal/API use `turnOnCondition` and `turnOffCondition` as canonical names.
+- `set`/`reset` remain shorthand in this guide for readability.
+
+## 2.5 Numeric Compare Value Source
+
+For numeric condition operators (`GT`, `GTE`, `LT`, `LTE`, `EQ`, `NEQ`), each clause can choose compare value source:
+
+- Constant numeric value (`thresholdValue`)
+- Another card's `liveValue` (`useThresholdCard=true`, `thresholdCardId=<card>`)
+
+Rules:
+
+- Only one source is active at a time (`useThresholdCard` selects mode).
+- Card-reference compare source is allowed only for numeric operators.
+- Referenced threshold card must expose numeric `liveValue` (RTC is not allowed).
+- Self-reference in the same clause is rejected.
+
 ## 2.4 Counter Range and Overflow
 
 Integrated counters use unsigned 32-bit range (`0 ... 4,294,967,295`).
@@ -67,6 +86,7 @@ A DI card exposes:
 - `debounceMs` (10 ms step rule: `0, 10, 20, ...`)
 - `set` condition block
 - `reset` condition block
+- per numeric clause: `thresholdValue`, `thresholdCardId`, `useThresholdCard`
 
 ## 3.3 DI Per-Scan Order
 
@@ -162,6 +182,7 @@ DO executes a timed mission and drives hardware output.
 - `activeDurationMs`
 - `repeatCount`
 - `set`, `reset` condition blocks
+- per numeric clause: `thresholdValue`, `thresholdCardId`, `useThresholdCard`
 
 ## 5.3 DO Mission Behavior
 
@@ -208,6 +229,7 @@ SIO follows DO mission/timing behavior but does not drive hardware pins.
 - `activeDurationMs`
 - `repeatCount`
 - `set`, `reset` condition blocks
+- per numeric clause: `thresholdValue`, `thresholdCardId`, `useThresholdCard`
 
 ## 6.3 SIO Runtime Behavior
 
@@ -243,6 +265,11 @@ MATH does not expose or use:
 - `commandState`
 - mission timer phases
 - integrated timing counters like DO/SIO
+
+Condition blocks on MATH (when configured) follow the same numeric compare-source rules:
+
+- `thresholdValue` (constant compare value) or
+- `thresholdCardId` + `useThresholdCard=true` (compare against another card `liveValue`)
 
 ## 7.3 Units and Display
 

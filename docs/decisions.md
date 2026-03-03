@@ -581,5 +581,15 @@ Use one short entry per decision with this structure:
 - Impact: Adds lightweight maintenance overhead that should be handled in review when dependencies/behavior change.
 - References: `src/` file header rollout, `docs/worklog.md`, `docs/naming-glossary-v3.md`.
 
+## DEC-0056: Condition Clauses Support Selectable Numeric Compare Source
+- Date: 2026-03-03
+- Status: Accepted
+- Context: Condition clauses previously compared source signals only against constant thresholds, limiting adaptive cross-card logic and diverging from planned variable-reference capabilities.
+- Decision: Extend clause contract to include `thresholdValue`, `thresholdCardId`, and `useThresholdCard`, allowing numeric operators to compare against either a constant or another card's `liveValue`.
+- Impact: Enables cross-card numeric comparisons without adding new card families.
+- Impact: Keeps validation strict (`numeric operator only`, `no self-reference`, `threshold card in range`, `RTC not allowed as numeric threshold source`).
+- Impact: Preserves scan behavior intent where within-scan order effects are explicitly accepted by design.
+- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_typed_card_parser.cpp`, `src/kernel/v3_typed_config_rules.cpp`, `docs/schema-v3.md`, `docs/ARCHITECTURE.md`, `docs/user-guide-v3-draft.md`.
+
 
 

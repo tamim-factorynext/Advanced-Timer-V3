@@ -53,7 +53,9 @@ Define one user-first naming vocabulary for portal, API, config, and diagnostics
 | `clauseB` | `rule2` | Avoid letter-only semantics. |
 | `combiner` | `ruleJoin` | Explicit join/logic purpose. |
 | `sourceCardId` | `sourceId` | Cleaner key for UI/API. |
-| `threshold` | `compareValue` | Works for all compare operators. |
+| `thresholdValue` | `compareValue` | Constant numeric compare value for clause RHS. |
+| `thresholdCardId` | `compareFromCardId` | Card reference used when compare source is card `liveValue`. |
+| `useThresholdCard` | `useCardCompareValue` | Boolean mode switch between constant and card-reference RHS. |
 | `missionState` | `phase` | Simpler user-facing wording for DO/SIO phase state. |
 
 ## 6. AI/MATH Naming

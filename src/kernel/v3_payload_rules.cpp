@@ -47,6 +47,8 @@ bool validateClause(JsonObjectConst clause, const logicCardType* sourceTypeById,
   }
   const char* field = source["field"] | "";
   const char* op = clause["operator"] | "";
+  const bool useThresholdCard = clause["useThresholdCard"] | false;
+  const uint8_t thresholdCardId = clause["thresholdCardId"] | sourceId;
   if (!isV3FieldAllowedForSourceType(sourceTypeById[sourceId], field)) {
     reason = std::string(clauseName) + ".source.field not allowed for source type";
     return false;
@@ -55,8 +57,31 @@ bool validateClause(JsonObjectConst clause, const logicCardType* sourceTypeById,
     reason = std::string(clauseName) + ".operator not allowed for field";
     return false;
   }
+  if (useThresholdCard) {
+    const bool numericOp = (std::strcmp(op, "GT") == 0 || std::strcmp(op, "GTE") == 0 ||
+                            std::strcmp(op, "LT") == 0 || std::strcmp(op, "LTE") == 0 ||
+                            std::strcmp(op, "EQ") == 0 || std::strcmp(op, "NEQ") == 0);
+    if (!numericOp) {
+      reason = std::string(clauseName) +
+               ".useThresholdCard requires numeric operator";
+      return false;
+    }
+    if (thresholdCardId >= totalCards) {
+      reason = std::string(clauseName) + ".thresholdCardId out of range";
+      return false;
+    }
+    if (thresholdCardId == sourceId) {
+      reason = std::string(clauseName) + ".thresholdCardId self-reference";
+      return false;
+    }
+    if (sourceTypeById[thresholdCardId] == RtcCard) {
+      reason = std::string(clauseName) +
+               ".thresholdCardId source has no numeric liveValue";
+      return false;
+    }
+  }
   if (std::strcmp(field, "missionState") == 0) {
-    const char* threshold = clause["threshold"] | "";
+    const char* threshold = clause["thresholdValue"] | "";
     if (!(std::strcmp(threshold, "IDLE") == 0 ||
           std::strcmp(threshold, "ACTIVE") == 0 ||
           std::strcmp(threshold, "FINISHED") == 0)) {

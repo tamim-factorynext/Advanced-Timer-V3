@@ -68,9 +68,13 @@ struct V3ConditionBlock {
   uint8_t clauseAId;
   logicOperator clauseAOperator;
   uint32_t clauseAThreshold;
+  uint8_t clauseAThresholdCardId;
+  bool clauseAUseThresholdCard;
   uint8_t clauseBId;
   logicOperator clauseBOperator;
   uint32_t clauseBThreshold;
+  uint8_t clauseBThresholdCardId;
+  bool clauseBUseThresholdCard;
   combineMode combiner;
 };
 

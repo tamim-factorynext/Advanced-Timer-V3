@@ -80,17 +80,22 @@ enum class ConditionOperator : uint8_t {
 enum class ConditionCombiner : uint8_t { None, And, Or };
 
 /**
- * @brief One source/operator/threshold condition clause.
- * @details Evaluated against one runtime signal selected by `sourceCardId`.
+ * @brief One source/operator condition clause with selectable RHS source.
+ * @details RHS compare value can be fixed (`thresholdValue`) or card-derived
+ * (`thresholdCardId`) based on `useThresholdCard`.
  * @par Used By
  * - src/storage/v3_config_decoder.cpp
  * - src/kernel/kernel_service.cpp
  */
 struct ConditionClause {
+  uint32_t thresholdValue;
   uint8_t sourceCardId;
   ConditionOperator op;
-  uint32_t threshold;
+  uint8_t thresholdCardId;
+  bool useThresholdCard;
 };
+static_assert(sizeof(ConditionClause) == 8,
+              "ConditionClause size regression increases SRAM footprint");
 
 /**
  * @brief Two-clause condition with combiner policy.

@@ -884,6 +884,13 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
                                         uint8_t signalCount) const {
   if (signals == nullptr || clause.sourceCardId >= signalCount) return false;
   const V3RuntimeSignal& s = signals[clause.sourceCardId];
+  const uint32_t threshold =
+      (clause.useThresholdCard && clause.thresholdCardId < signalCount)
+          ? signals[clause.thresholdCardId].liveValue
+          : clause.thresholdValue;
+  if (clause.useThresholdCard && clause.thresholdCardId >= signalCount) {
+    return false;
+  }
   switch (clause.op) {
     case v3::storage::ConditionOperator::AlwaysTrue:
       return true;
@@ -902,17 +909,17 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
     case v3::storage::ConditionOperator::TriggerCleared:
       return !s.edgePulse;
     case v3::storage::ConditionOperator::GT:
-      return s.liveValue > clause.threshold;
+      return s.liveValue > threshold;
     case v3::storage::ConditionOperator::LT:
-      return s.liveValue < clause.threshold;
+      return s.liveValue < threshold;
     case v3::storage::ConditionOperator::EQ:
-      return s.liveValue == clause.threshold;
+      return s.liveValue == threshold;
     case v3::storage::ConditionOperator::NEQ:
-      return s.liveValue != clause.threshold;
+      return s.liveValue != threshold;
     case v3::storage::ConditionOperator::GTE:
-      return s.liveValue >= clause.threshold;
+      return s.liveValue >= threshold;
     case v3::storage::ConditionOperator::LTE:
-      return s.liveValue <= clause.threshold;
+      return s.liveValue <= threshold;
     case v3::storage::ConditionOperator::Running:
       return isMissionRunning(s.type, s.state);
     case v3::storage::ConditionOperator::Finished:

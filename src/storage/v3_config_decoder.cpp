@@ -36,10 +36,14 @@ void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfC
   block.combiner = v3::storage::ConditionCombiner::None;
   block.clauseA.sourceCardId = selfCardId;
   block.clauseA.op = v3::storage::ConditionOperator::AlwaysFalse;
-  block.clauseA.threshold = 0;
+  block.clauseA.thresholdValue = 0;
+  block.clauseA.thresholdCardId = selfCardId;
+  block.clauseA.useThresholdCard = false;
   block.clauseB.sourceCardId = selfCardId;
   block.clauseB.op = v3::storage::ConditionOperator::AlwaysFalse;
-  block.clauseB.threshold = 0;
+  block.clauseB.thresholdValue = 0;
+  block.clauseB.thresholdCardId = selfCardId;
+  block.clauseB.useThresholdCard = false;
 }
 
 /**
@@ -162,13 +166,17 @@ bool parseConditionCombiner(const char* token, v3::storage::ConditionCombiner& o
  */
 bool parseConditionClause(JsonObjectConst obj, v3::storage::ConditionClause& outClause) {
   if (!obj["sourceCardId"].is<uint8_t>()) return false;
-  if (!obj["threshold"].is<uint32_t>()) return false;
+  if (!obj["thresholdValue"].is<uint32_t>()) return false;
+  if (!obj["thresholdCardId"].is<uint8_t>()) return false;
+  if (!obj["useThresholdCard"].is<bool>()) return false;
   const char* opToken = obj["operator"].as<const char*>();
   v3::storage::ConditionOperator op = v3::storage::ConditionOperator::AlwaysFalse;
   if (!parseConditionOperator(opToken, op)) return false;
   outClause.sourceCardId = obj["sourceCardId"].as<uint8_t>();
   outClause.op = op;
-  outClause.threshold = obj["threshold"].as<uint32_t>();
+  outClause.thresholdValue = obj["thresholdValue"].as<uint32_t>();
+  outClause.thresholdCardId = obj["thresholdCardId"].as<uint8_t>();
+  outClause.useThresholdCard = obj["useThresholdCard"].as<bool>();
   return true;
 }
 
@@ -196,7 +204,9 @@ bool parseConditionBlockOptional(JsonObjectConst obj, v3::storage::ConditionBloc
   if (combiner == v3::storage::ConditionCombiner::None) {
     outBlock.clauseB = outBlock.clauseA;
     outBlock.clauseB.op = v3::storage::ConditionOperator::AlwaysFalse;
-    outBlock.clauseB.threshold = 0;
+    outBlock.clauseB.thresholdValue = 0;
+    outBlock.clauseB.thresholdCardId = outBlock.clauseA.sourceCardId;
+    outBlock.clauseB.useThresholdCard = false;
     return true;
   }
 

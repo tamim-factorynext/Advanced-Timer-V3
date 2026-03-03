@@ -55,6 +55,10 @@ bool isNumericOp(logicOperator op) {
          op == Op_EQ || op == Op_NEQ;
 }
 
+bool familyHasNumericLiveValue(V3CardFamily family) {
+  return family != V3CardFamily::RTC;
+}
+
 /**
  * @brief Checks whether an operator is a logical/physical state operator.
  * @par Used By
@@ -166,6 +170,26 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
                " clauseA operator not allowed for source family";
       return false;
     }
+    if (block.clauseAUseThresholdCard) {
+      if (!isNumericOp(block.clauseAOperator)) {
+        reason = std::string(label) +
+                 " clauseA threshold card requires numeric operator";
+        return false;
+      }
+      if (block.clauseAThresholdCardId >= count) {
+        reason = std::string(label) + " clauseA threshold card id out of range";
+        return false;
+      }
+      if (block.clauseAThresholdCardId == block.clauseAId) {
+        reason = std::string(label) + " clauseA threshold card self-reference";
+        return false;
+      }
+      if (!familyHasNumericLiveValue(cards[block.clauseAThresholdCardId].family)) {
+        reason = std::string(label) +
+                 " clauseA threshold card has no numeric liveValue";
+        return false;
+      }
+    }
     if (block.combiner != Combine_None && block.combiner != Combine_AND &&
         block.combiner != Combine_OR) {
       reason = std::string(label) + " combiner invalid";
@@ -177,6 +201,26 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
       reason = std::string(label) +
                " clauseB operator not allowed for source family";
       return false;
+    }
+    if (block.clauseBUseThresholdCard) {
+      if (!isNumericOp(block.clauseBOperator)) {
+        reason = std::string(label) +
+                 " clauseB threshold card requires numeric operator";
+        return false;
+      }
+      if (block.clauseBThresholdCardId >= count) {
+        reason = std::string(label) + " clauseB threshold card id out of range";
+        return false;
+      }
+      if (block.clauseBThresholdCardId == block.clauseBId) {
+        reason = std::string(label) + " clauseB threshold card self-reference";
+        return false;
+      }
+      if (!familyHasNumericLiveValue(cards[block.clauseBThresholdCardId].family)) {
+        reason = std::string(label) +
+                 " clauseB threshold card has no numeric liveValue";
+        return false;
+      }
     }
     return true;
   };

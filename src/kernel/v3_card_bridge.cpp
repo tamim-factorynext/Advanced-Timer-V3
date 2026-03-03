@@ -42,17 +42,25 @@ void copyCondition(const LogicCard& in, V3ConditionBlock& setOut,
   setOut.clauseAId = in.setA_ID;
   setOut.clauseAOperator = in.setA_Operator;
   setOut.clauseAThreshold = in.setA_Threshold;
+  setOut.clauseAThresholdCardId = in.setA_ID;
+  setOut.clauseAUseThresholdCard = false;
   setOut.clauseBId = in.setB_ID;
   setOut.clauseBOperator = in.setB_Operator;
   setOut.clauseBThreshold = in.setB_Threshold;
+  setOut.clauseBThresholdCardId = in.setB_ID;
+  setOut.clauseBUseThresholdCard = false;
   setOut.combiner = in.setCombine;
 
   resetOut.clauseAId = in.resetA_ID;
   resetOut.clauseAOperator = in.resetA_Operator;
   resetOut.clauseAThreshold = in.resetA_Threshold;
+  resetOut.clauseAThresholdCardId = in.resetA_ID;
+  resetOut.clauseAUseThresholdCard = false;
   resetOut.clauseBId = in.resetB_ID;
   resetOut.clauseBOperator = in.resetB_Operator;
   resetOut.clauseBThreshold = in.resetB_Threshold;
+  resetOut.clauseBThresholdCardId = in.resetB_ID;
+  resetOut.clauseBUseThresholdCard = false;
   resetOut.combiner = in.resetCombine;
 }
 }  // namespace

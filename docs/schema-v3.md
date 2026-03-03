@@ -114,12 +114,16 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
   "clauseA": {
     "source": { "cardId": 5, "field": "liveValue", "type": "NUMBER" },
     "operator": "GT",
-    "threshold": 200
+    "thresholdValue": 200,
+    "thresholdCardId": 6,
+    "useThresholdCard": false
   },
   "clauseB": {
     "source": { "cardId": 6, "field": "commandState", "type": "BOOL" },
     "operator": "EQ",
-    "threshold": 1
+    "thresholdValue": 1,
+    "thresholdCardId": 6,
+    "useThresholdCard": false
   },
   "combiner": "AND"
 }
@@ -129,10 +133,14 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 - `clauseA`: required.
 - `clauseB`: required only when `combiner != NONE`.
 - Clause `operator` enum: `GT|GTE|LT|LTE|EQ|NEQ`.
+- Clause RHS source fields:
+  - `thresholdValue`: required `uint32` literal compare value.
+  - `thresholdCardId`: required `uint32` card id used when card-threshold mode is enabled.
+  - `useThresholdCard`: required bool. `false` uses `thresholdValue`; `true` compares against referenced card `liveValue`.
 - Clause value typing:
-  - `NUMBER`: uses numeric `threshold`.
-  - `BOOL`: uses boolean-as-int `threshold` (`0|1`) with `EQ|NEQ`.
-  - `STATE`: valid only for `DO`/`SIO` `missionState`, value enum `IDLE|ACTIVE|FINISHED`, operator `EQ` only. Non-matching value evaluates to `false`.
+  - `NUMBER`: can use literal (`thresholdValue`) or referenced card (`useThresholdCard=true`).
+  - `BOOL`: uses boolean-as-int `thresholdValue` (`0|1`) with `EQ|NEQ` and `useThresholdCard=false`.
+  - `STATE`: valid only for `DO`/`SIO` `missionState`, value enum `IDLE|ACTIVE|FINISHED`, operator `EQ` only, and `useThresholdCard=false`.
 
 ## 7. Card-Type Schemas
 
@@ -357,6 +365,9 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-016: reject `STATE` source type unless source card type is `DO` or `SIO` and source field is `missionState`.
 - V-CFG-017: reject `STATE` comparison values outside `IDLE|ACTIVE|FINISHED`.
 - V-CFG-018: reject `STATE` comparisons using operators other than `EQ`.
+- V-CFG-024: reject `useThresholdCard=true` for non-numeric operators.
+- V-CFG-025: reject `useThresholdCard=true` when `thresholdCardId` is missing/out of range/self-reference.
+- V-CFG-026: reject `useThresholdCard=true` when threshold source card does not expose numeric `liveValue`.
 - V-CFG-019: reject card types disabled by active build hardware profile gates.
 - V-CFG-020: reject card channel/index bindings outside active hardware profile channel arrays.
 - V-CFG-021: reject `RTC` card payload when active build profile does not support RTC.

@@ -3693,3 +3693,36 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
 - Final scan note:
   - Remaining `legacy_*` references are confined to dedicated legacy files (`src/*/legacy_*.h`) and archived docs/frontend snapshots.
 
+## 2026-03-03 (Condition Compare Source Contract + Docs Parity)
+
+### Completed
+
+- Extended condition clause contract for selectable compare RHS source:
+  - `thresholdValue`
+  - `thresholdCardId`
+  - `useThresholdCard`
+- Implemented firmware support across both active storage path and typed/normalizer path:
+  - storage decode/validate/runtime evaluation updated
+  - typed parser/rules/payload validation updated
+- Added validation guardrails:
+  - `useThresholdCard=true` allowed only for numeric operators
+  - reject self-reference and out-of-range threshold card IDs
+  - reject RTC as threshold source card (no numeric `liveValue`)
+- Updated documentation set:
+  - `docs/schema-v3.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/user-guide-v3-draft.md`
+  - `docs/api-contract-v3.md`
+  - `docs/acceptance-matrix-v3.md`
+  - `docs/naming-glossary-v3.md`
+  - `docs/decisions.md` (`DEC-0056`)
+
+### Verification
+
+- Firmware build:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Environment: `esp32doit-devkit-v1`
+  - RAM: `35.4%` (`116036 / 327680`)
+  - Flash: `69.7%` (`913805 / 1310720`)
+
