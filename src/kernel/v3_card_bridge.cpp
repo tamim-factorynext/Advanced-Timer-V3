@@ -7,9 +7,7 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src/kernel/v3_card_bridge.cpp
 - src/kernel/v3_card_bridge.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

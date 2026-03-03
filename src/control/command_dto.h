@@ -7,12 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/control/command_dto.h
 - src/control/control_service.h
 - src/kernel/enum_codec.h
 - src/kernel/kernel_service.h
 - (+ more call sites)
-
 Flow Hook:
 - Control command orchestration and system-level actions.
 

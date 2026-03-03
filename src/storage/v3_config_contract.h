@@ -11,7 +11,6 @@ Used By:
 - src/platform/wifi_runtime.h
 - src/storage/v3_config_decoder.h
 - src/storage/v3_config_validator.h
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

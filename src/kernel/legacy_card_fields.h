@@ -7,10 +7,8 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/kernel/legacy_card_fields.h
 - src/kernel/v3_card_bridge.cpp
 - src/kernel/v3_runtime_adapters.cpp
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

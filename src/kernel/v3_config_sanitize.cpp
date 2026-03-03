@@ -8,9 +8,7 @@ Responsibilities:
 
 Used By:
 - src/kernel/legacy_card_profile.cpp
-- src/kernel/v3_config_sanitize.cpp
 - src/kernel/v3_config_sanitize.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

@@ -7,12 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/kernel/card_model.h
 - src/kernel/enum_codec.h
 - src/kernel/legacy_card_fields.h
 - src/kernel/legacy_card_profile.h
 - (+ more call sites)
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

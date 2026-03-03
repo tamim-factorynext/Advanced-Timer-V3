@@ -10,7 +10,6 @@ Used By:
 - src/kernel/kernel_service.h
 - src/kernel/v3_runtime_adapters.h
 - src/kernel/v3_runtime_store.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

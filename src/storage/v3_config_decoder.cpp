@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/storage/storage_service.cpp
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

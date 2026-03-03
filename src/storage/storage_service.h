@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/main.cpp
 - src/runtime/runtime_service.h
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

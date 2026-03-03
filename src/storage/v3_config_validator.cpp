@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/storage/storage_service.cpp
 - src/storage/v3_config_decoder.cpp
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

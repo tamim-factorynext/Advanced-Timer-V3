@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - firmware build target
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

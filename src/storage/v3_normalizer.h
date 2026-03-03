@@ -9,8 +9,6 @@ Responsibilities:
 Used By:
 - src/storage/v3_config_service.h
 - src/storage/v3_normalizer.cpp
-- src/storage/v3_normalizer.h
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

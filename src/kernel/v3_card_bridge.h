@@ -8,8 +8,6 @@ Responsibilities:
 
 Used By:
 - src/kernel/v3_card_bridge.cpp
-- src/kernel/v3_card_bridge.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

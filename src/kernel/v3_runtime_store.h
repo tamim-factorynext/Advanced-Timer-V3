@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/kernel/v3_runtime_signals.h
 - src/runtime/snapshot_card_builder.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

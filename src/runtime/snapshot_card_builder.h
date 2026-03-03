@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/runtime/runtime_card_meta.h
-
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

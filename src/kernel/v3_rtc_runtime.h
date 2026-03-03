@@ -9,10 +9,8 @@ Responsibilities:
 Used By:
 - src/kernel/kernel_service.h
 - src/kernel/v3_rtc_runtime.cpp
-- src/kernel/v3_rtc_runtime.h
 - src/kernel/v3_runtime_adapters.h
 - (+ more call sites)
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

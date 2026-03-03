@@ -7,8 +7,7 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/storage/config_lifecycle.h
-
+- firmware build target
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 

@@ -8,8 +8,6 @@ Responsibilities:
 
 Used By:
 - src/kernel/legacy_config_validator.cpp
-- src/kernel/legacy_config_validator.h
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

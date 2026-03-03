@@ -7,8 +7,7 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/runtime/snapshot_json.h
-
+- firmware build target
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

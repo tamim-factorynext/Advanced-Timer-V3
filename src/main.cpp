@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - firmware build target
-
 Flow Hook:
 - Firmware entrypoint and service wiring.
 

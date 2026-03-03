@@ -10,9 +10,7 @@ Used By:
 - src/kernel/kernel_service.h
 - src/main.cpp
 - src/portal/portal_service.h
-- src/runtime/runtime_snapshot_card.h
 - (+ more call sites)
-
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

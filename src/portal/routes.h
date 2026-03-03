@@ -7,8 +7,7 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/portal/routes.h
-
+- firmware build target
 Flow Hook:
 - Portal request handling and runtime snapshot transport.
 

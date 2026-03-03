@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/main.cpp
 - src/portal/portal_service.h
-
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

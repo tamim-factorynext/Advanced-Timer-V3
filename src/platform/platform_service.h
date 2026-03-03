@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/main.cpp
 - src/kernel/kernel_service.h
-
 Flow Hook:
 - Board/platform integration and connectivity runtime.
 

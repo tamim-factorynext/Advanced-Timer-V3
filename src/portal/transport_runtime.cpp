@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/main.cpp
-
 Flow Hook:
 - Portal request handling and runtime snapshot transport.
 

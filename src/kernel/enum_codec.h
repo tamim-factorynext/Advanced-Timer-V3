@@ -10,7 +10,6 @@ Used By:
 - src/kernel/legacy_card_profile.cpp
 - src/kernel/legacy_config_validator.cpp
 - src/portal/portal_service.cpp
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

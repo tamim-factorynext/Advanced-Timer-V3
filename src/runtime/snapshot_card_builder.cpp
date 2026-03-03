@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/runtime/runtime_card_meta.cpp
 - src/kernel/v3_runtime_store.cpp
-
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

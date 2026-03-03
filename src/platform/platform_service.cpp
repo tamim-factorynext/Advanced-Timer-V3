@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/main.cpp
-
 Flow Hook:
 - Board/platform integration and connectivity runtime.
 

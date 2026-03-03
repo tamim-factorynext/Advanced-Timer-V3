@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/runtime/runtime_service.cpp
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

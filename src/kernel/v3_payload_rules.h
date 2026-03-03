@@ -8,7 +8,6 @@ Responsibilities:
 
 Used By:
 - src/storage/v3_normalizer.cpp
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

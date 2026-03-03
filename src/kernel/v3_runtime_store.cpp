@@ -9,7 +9,6 @@ Responsibilities:
 Used By:
 - src/kernel/kernel_service.cpp
 - src/runtime/snapshot_card_builder.cpp
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

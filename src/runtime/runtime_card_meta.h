@@ -9,9 +9,7 @@ Responsibilities:
 Used By:
 - src/kernel/v3_runtime_signals.h
 - src/runtime/runtime_card_meta.cpp
-- src/runtime/runtime_card_meta.h
 - src/runtime/snapshot_card_builder.h
-
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 

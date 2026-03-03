@@ -8,11 +8,9 @@ Responsibilities:
 
 Used By:
 - src/kernel/legacy_config_validator.h
-- src/kernel/string_compat.h
 - src/kernel/v3_typed_card_parser.h
 - src/storage/config_lifecycle.h
 - (+ more call sites)
-
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 

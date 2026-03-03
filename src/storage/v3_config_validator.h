@@ -10,7 +10,6 @@ Used By:
 - src/kernel/kernel_service.h
 - src/storage/storage_service.h
 - src/storage/v3_config_decoder.h
-
 Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 
