@@ -18,6 +18,7 @@ Notes:
 
 #include <WiFi.h>
 #include <cstdio>
+#include <time.h>
 
 namespace v3::platform {
 
@@ -29,12 +30,16 @@ void formatIp(const IPAddress& ip, char out[16]) {
 
 }  // namespace
 
-void WiFiRuntime::begin(const v3::storage::WiFiConfig& config) {
+void WiFiRuntime::begin(const v3::storage::WiFiConfig& config,
+                        const v3::storage::ClockConfig& clockConfig) {
   config_ = config;
+  clockConfig_ = clockConfig;
   status_ = {};
   status_.state = WiFiState::Offline;
   status_.phase = WiFiConnectPhase::None;
   status_.online = false;
+  timeSyncConfigured_ = false;
+  lastTimeSyncMs_ = 0;
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true, true);
   startBackupAccessNetworkAttempt(0);
@@ -42,12 +47,24 @@ void WiFiRuntime::begin(const v3::storage::WiFiConfig& config) {
 
 void WiFiRuntime::tick(uint32_t nowMs) {
   if (WiFi.status() == WL_CONNECTED) {
+    const bool becameConnected = (status_.state != WiFiState::StaConnected);
     status_.state = WiFiState::StaConnected;
     status_.phase = WiFiConnectPhase::None;
     status_.staConnected = true;
     status_.online = true;
     status_.offlineSinceMs = 0;
     refreshStaIp();
+
+    if (clockConfig_.timeSync.enabled) {
+      if (becameConnected || !timeSyncConfigured_) {
+        configureTimeSync();
+        lastTimeSyncMs_ = nowMs;
+      } else if ((nowMs - lastTimeSyncMs_) >=
+                 (clockConfig_.timeSync.syncIntervalSec * 1000UL)) {
+        configureTimeSync();
+        lastTimeSyncMs_ = nowMs;
+      }
+    }
     return;
   }
 
@@ -92,6 +109,14 @@ void WiFiRuntime::startBackupAccessNetworkAttempt(uint32_t nowMs) {
   WiFi.mode(WIFI_STA);
   WiFi.begin(config_.backupAccessNetwork.ssid,
              config_.backupAccessNetwork.password);
+}
+
+void WiFiRuntime::configureTimeSync() {
+  if (!clockConfig_.timeSync.enabled) return;
+  configTzTime(clockConfig_.timezone, clockConfig_.timeSync.primaryTimeServer,
+               clockConfig_.timeSync.secondaryServer,
+               clockConfig_.timeSync.tertiaryServer);
+  timeSyncConfigured_ = true;
 }
 
 void WiFiRuntime::startUserConfiguredNetworkAttempt(uint32_t nowMs) {

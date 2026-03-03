@@ -49,18 +49,23 @@ struct WiFiStatus {
 
 class WiFiRuntime {
  public:
-  void begin(const v3::storage::WiFiConfig& config);
+  void begin(const v3::storage::WiFiConfig& config,
+             const v3::storage::ClockConfig& clockConfig);
   void tick(uint32_t nowMs);
  const WiFiStatus& status() const;
 
  private:
+  void configureTimeSync();
   void startBackupAccessNetworkAttempt(uint32_t nowMs);
   void startUserConfiguredNetworkAttempt(uint32_t nowMs);
   void enterOffline(uint32_t nowMs);
   void refreshStaIp();
 
   v3::storage::WiFiConfig config_ = {};
+  v3::storage::ClockConfig clockConfig_ = {};
   WiFiStatus status_ = {};
+  bool timeSyncConfigured_ = false;
+  uint32_t lastTimeSyncMs_ = 0;
 };
 
 }  // namespace v3::platform

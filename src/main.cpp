@@ -354,7 +354,8 @@ void setup() {
   gRuntime.begin();
   gControl.begin();
   gPortal.begin();
-  gWiFi.begin(gStorage.activeConfig().system.wifi);
+  gWiFi.begin(gStorage.activeConfig().system.wifi,
+              gStorage.activeConfig().system.time);
   v3::portal::initTransportRuntime(gPortal);
 
   gKernelSnapshotQueue = xQueueCreate(kKernelSnapshotQueueCapacity,

@@ -39,7 +39,7 @@ SystemConfig makeDefaultSystemConfig() {
   cfg.wifi.retryDelaySec = 30;
   cfg.wifi.staOnly = true;
 
-  strncpy(cfg.time.timezone, "UTC", sizeof(cfg.time.timezone) - 1);
+  strncpy(cfg.time.timezone, "Asia/Dhaka", sizeof(cfg.time.timezone) - 1);
   cfg.time.timeSync.enabled = true;
   strncpy(cfg.time.timeSync.primaryTimeServer, "pool.ntp.org",
           sizeof(cfg.time.timeSync.primaryTimeServer) - 1);

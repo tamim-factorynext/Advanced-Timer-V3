@@ -3667,3 +3667,29 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - RAM: `35.3%` (`115748 / 327680`)
   - Flash: `69.5%` (`910725 / 1310720`)
 
+## 2026-03-03 (Sanity Cleanup Pass)
+
+### Completed
+
+- Active-path cleanup hardening:
+  - removed `/api/snapshot` alias from active transport route table (V3-only snapshot route remains).
+  - removed legacy `Op_*` token aliases from config decoder operator parser.
+  - removed legacy-shape helper/branch from normalizer (`hasLegacyCardsShape` path).
+  - removed unused `buildLegacyCardsFromTypedWithBaseline(...)` declaration/definition.
+  - updated active deprecation placeholder pages wording (`Legacy` -> `Deprecated`).
+
+- Archive path consistency:
+  - added `docs/archive/portal-frontend/` mirror for placeholder references.
+
+### Verification
+
+- Firmware build:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Duration: `00:00:37.039`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`910725 / 1310720`)
+
+- Final scan note:
+  - Remaining `legacy_*` references are confined to dedicated legacy files (`src/*/legacy_*.h`) and archived docs/frontend snapshots.
+
