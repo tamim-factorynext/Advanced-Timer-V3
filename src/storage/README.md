@@ -8,6 +8,6 @@ Planned scope:
 - version metadata persistence
 
 Current interfaces:
-- `config_lifecycle.h`
+- `legacy_config_lifecycle.h`
 - `v3_normalizer.h`
 - `v3_config_service.h`

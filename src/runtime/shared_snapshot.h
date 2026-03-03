@@ -27,7 +27,7 @@ Notes:
  * @details Defines fixed-size telemetry/card arrays used for runtime snapshot publication.
  * @tparam N Card-capacity compile-time bound.
  * @par Used By
- * - src/runtime/snapshot_json.h
+ * - src/runtime/legacy_snapshot_json.h
  * - runtime snapshot producer/consumer integration points
  */
 template <size_t N>

@@ -322,6 +322,11 @@
           Mode_DO_Gated: "SIO Gated"
         }
       };
+      const legacySnapshotApiPath = "/api/snapshot";
+      const legacyCommandApiPath = "/api/command";
+      const legacyWsMessageTypeRuntimeSnapshot = "runtime_snapshot";
+      const legacyWsMessageTypeCommandResult = "command_result";
+      const legacyWsEnvelopeTypeCommand = "command";
 
       function cardFriendlyName(c) {
         if (c.type === "DigitalInput") return `Digital Input ${c.index}`;
@@ -749,7 +754,7 @@
 
       async function fetchSnapshot() {
         try {
-          const res = await fetch("/api/snapshot");
+          const res = await fetch(legacySnapshotApiPath);
           if (!res.ok) return;
           const snap = await res.json();
           state.engineMode = snap.engineMode || state.engineMode;
@@ -802,12 +807,12 @@
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data);
-            if (msg.type === "runtime_snapshot") {
+            if (msg.type === legacyWsMessageTypeRuntimeSnapshot) {
               applySnapshot(msg);
               renderSafely();
               return;
             }
-            if (msg.type === "command_result") {
+            if (msg.type === legacyWsMessageTypeCommandResult) {
               const waiter = pending.get(msg.requestId);
               if (waiter) {
                 pending.delete(msg.requestId);
@@ -825,7 +830,8 @@
             pending.set(requestId, resolve);
             ws.send(
               JSON.stringify({
-                type: "command",
+                // Legacy websocket command envelope.
+                type: legacyWsEnvelopeTypeCommand,
                 schemaVersion: 1,
                 requestId,
                 name,
@@ -843,7 +849,7 @@
         }
 
         try {
-          const res = await fetch("/api/command", {
+          const res = await fetch(legacyCommandApiPath, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

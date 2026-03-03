@@ -3570,3 +3570,40 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - RAM: `35.3%` (`115748 / 327680`)
   - Flash: `69.5%` (`911381 / 1310720`)
 
+### Legacy Filename Cleanup (same session)
+
+- Completed filename-first legacy prefix pass for orphan headers:
+  - `src/portal/routes.h` -> `src/portal/legacy_routes.h`
+  - `src/runtime/snapshot_json.h` -> `src/runtime/legacy_snapshot_json.h`
+  - `src/storage/config_lifecycle.h` -> `src/storage/legacy_config_lifecycle.h`
+- Updated internal path headers and module README references to new names.
+- Follow-up scan result:
+  - no additional non-`legacy_` orphan `.h/.cpp` filenames found in `src/`.
+
+- Build verification after rename pass:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Duration: `00:00:21.575`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`911381 / 1310720`)
+
+- Legacy symbol/key prefix pass (conservative):
+  - Prefixed declarations in orphan legacy headers:
+    - `src/portal/legacy_routes.h`
+    - `src/runtime/legacy_snapshot_json.h`
+    - `src/storage/legacy_config_lifecycle.h`
+  - Tagged legacy portal HTML API/protocol tokens via explicit constants:
+    - `data/index.html`
+      - `legacySnapshotApiPath`
+      - `legacyCommandApiPath`
+      - `legacyWsMessageTypeRuntimeSnapshot`
+      - `legacyWsMessageTypeCommandResult`
+      - `legacyWsEnvelopeTypeCommand`
+
+- Build verification after legacy symbol/key pass:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Duration: `00:00:20.745`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`911381 / 1310720`)
+
