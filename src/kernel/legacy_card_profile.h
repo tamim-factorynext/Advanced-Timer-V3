@@ -7,8 +7,8 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\legacy_card_profile.cpp
-- src\kernel\legacy_card_profile.h
+- src/kernel/legacy_card_profile.cpp
+- src/kernel/legacy_card_profile.h
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

@@ -7,9 +7,9 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\v3_typed_card_parser.cpp
-- src\kernel\v3_typed_card_parser.h
-- src\storage\v3_normalizer.cpp
+- src/kernel/v3_typed_card_parser.cpp
+- src/kernel/v3_typed_card_parser.h
+- src/storage/v3_normalizer.cpp
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

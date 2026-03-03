@@ -7,11 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\kernel_service.h
-- src\kernel\v3_do_runtime.cpp
-- src\kernel\v3_do_runtime.h
-- src\kernel\v3_runtime_adapters.h
-- (+ more call sites)
+- src/kernel/kernel_service.h
+- src/kernel/v3_runtime_adapters.h
+- src/kernel/v3_runtime_store.h
+- src/kernel/v3_sio_runtime.h
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

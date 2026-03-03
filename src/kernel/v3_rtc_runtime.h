@@ -7,10 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\kernel_service.h
-- src\kernel\v3_rtc_runtime.cpp
-- src\kernel\v3_rtc_runtime.h
-- src\kernel\v3_runtime_adapters.h
+- src/kernel/kernel_service.h
+- src/kernel/v3_rtc_runtime.cpp
+- src/kernel/v3_rtc_runtime.h
+- src/kernel/v3_runtime_adapters.h
 - (+ more call sites)
 
 Flow Hook:

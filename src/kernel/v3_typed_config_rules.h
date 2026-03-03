@@ -7,9 +7,9 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\v3_typed_config_rules.cpp
-- src\kernel\v3_typed_config_rules.h
-- src\storage\v3_config_service.cpp
+- src/kernel/v3_typed_config_rules.cpp
+- src/kernel/v3_typed_config_rules.h
+- src/storage/v3_config_service.cpp
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

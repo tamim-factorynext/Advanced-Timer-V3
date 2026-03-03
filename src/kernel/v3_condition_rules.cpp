@@ -7,11 +7,9 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src\kernel\v3_condition_rules.cpp
-- src\kernel\v3_condition_rules.h
-- src\kernel\v3_payload_rules.cpp
-- src\kernel\v3_typed_card_parser.cpp
-- (+ more call sites)
+- src/kernel/v3_payload_rules.cpp
+- src/kernel/v3_typed_card_parser.cpp
+- src/storage/v3_normalizer.cpp
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

@@ -7,7 +7,7 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\portal\routes.h
+- src/portal/routes.h
 
 Flow Hook:
 - Portal request handling and runtime snapshot transport.

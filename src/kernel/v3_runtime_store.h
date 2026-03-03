@@ -7,10 +7,8 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\v3_runtime_signals.h
-- src\kernel\v3_runtime_store.cpp
-- src\kernel\v3_runtime_store.h
-- src\runtime\snapshot_card_builder.h
+- src/kernel/v3_runtime_signals.h
+- src/runtime/snapshot_card_builder.h
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

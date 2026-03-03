@@ -7,10 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\v3_card_bridge.h
-- src\kernel\v3_card_types.h
-- src\kernel\v3_runtime_store.h
-- src\kernel\v3_typed_card_parser.h
+- src/kernel/v3_card_bridge.h
+- src/kernel/v3_card_types.h
+- src/kernel/v3_runtime_store.h
+- src/kernel/v3_typed_card_parser.h
 - (+ more call sites)
 
 Flow Hook:

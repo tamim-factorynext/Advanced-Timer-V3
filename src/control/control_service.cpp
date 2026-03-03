@@ -7,10 +7,10 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src\control\control_service.cpp
-- src\control\control_service.h
-- src\main.cpp
-- src\portal\portal_service.h
+- src/control/control_service.cpp
+- src/control/control_service.h
+- src/main.cpp
+- src/portal/portal_service.h
 
 Flow Hook:
 - Control command orchestration and system-level actions.

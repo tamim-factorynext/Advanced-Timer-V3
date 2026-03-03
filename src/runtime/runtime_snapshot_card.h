@@ -7,10 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\kernel_service.h
-- src\main.cpp
-- src\portal\portal_service.h
-- src\runtime\runtime_snapshot_card.h
+- src/kernel/kernel_service.h
+- src/main.cpp
+- src/portal/portal_service.h
+- src/runtime/runtime_snapshot_card.h
 - (+ more call sites)
 
 Flow Hook:

@@ -7,7 +7,7 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\runtime\shared_snapshot.h
+- src/runtime/shared_snapshot.h
 
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.

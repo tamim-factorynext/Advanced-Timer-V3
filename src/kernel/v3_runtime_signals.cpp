@@ -7,9 +7,9 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src\kernel\kernel_service.h
-- src\kernel\v3_runtime_signals.cpp
-- src\kernel\v3_runtime_signals.h
+- src/kernel/kernel_service.h
+- src/kernel/v3_runtime_signals.cpp
+- src/kernel/v3_runtime_signals.h
 
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.

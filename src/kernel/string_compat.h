@@ -7,10 +7,10 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\kernel\legacy_config_validator.h
-- src\kernel\string_compat.h
-- src\kernel\v3_typed_card_parser.h
-- src\storage\config_lifecycle.h
+- src/kernel/legacy_config_validator.h
+- src/kernel/string_compat.h
+- src/kernel/v3_typed_card_parser.h
+- src/storage/config_lifecycle.h
 - (+ more call sites)
 
 Flow Hook:

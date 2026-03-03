@@ -7,9 +7,9 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src\portal\transport_command_stub.cpp
-- src\portal\transport_command_stub.h
-- src\portal\transport_runtime.cpp
+- src/portal/transport_command_stub.cpp
+- src/portal/transport_command_stub.h
+- src/portal/transport_runtime.cpp
 
 Flow Hook:
 - Portal request handling and runtime snapshot transport.

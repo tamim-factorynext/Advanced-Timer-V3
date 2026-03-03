@@ -7,10 +7,10 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src\kernel\kernel_service.h
-- src\kernel\v3_di_runtime.cpp
-- src\kernel\v3_di_runtime.h
-- src\kernel\v3_runtime_adapters.h
+- src/kernel/kernel_service.h
+- src/kernel/v3_di_runtime.cpp
+- src/kernel/v3_di_runtime.h
+- src/kernel/v3_runtime_adapters.h
 - (+ more call sites)
 
 Flow Hook:
