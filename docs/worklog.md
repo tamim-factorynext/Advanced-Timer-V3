@@ -3726,3 +3726,92 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - RAM: `35.4%` (`116036 / 327680`)
   - Flash: `69.7%` (`913805 / 1310720`)
 
+
+## 2026-03-03 (Portal Planning Foundation + Cleanup Recap)
+
+### Completed
+
+- Project hygiene and baseline cleanup:
+  - removed legacy native/unit test suite from active repository path (`test/` tree removed).
+  - removed obsolete native test env block from `platformio.ini`.
+  - fixed WiFi status log newline formatting bug in runtime loop:
+    - `ip=%s/n` -> `ip=%s\n`
+    - file: `src/main.cpp`
+
+- Portal planning document restructured for coherence and early-stage maturity:
+  - rewrote `docs/portal-v3-plan.md` into continuous working-draft format.
+  - clarified current maturity state: planning/contract foundation, not final scope.
+  - aligned screen model to 4-page baseline:
+    - `Live Runtime`
+    - `Config Studio`
+    - `Settings`
+    - `Introduction & Tutorial`
+
+- Scope and sequencing decisions captured:
+  - role-based access control deferred for current phase.
+  - live debugging suite moved into `Live Runtime` page (not separate maintenance page).
+  - implementation roadmap converted to page-first phased flow:
+    1) Foundation Shell
+    2) Live Runtime (Basic)
+    3) Settings
+    4) Config Studio
+    5) Introduction & Tutorial
+    6) Live Runtime (Advanced Debug + Simulation)
+  - added vertical-slice delivery rule per phase (`UI + API wiring + loading/error states`).
+
+- Frontend stack strategy formalized:
+  - incremental adoption order:
+    - `Bootstrap 5`
+    - `Bootstrap Icons`
+    - `Alpine.js`
+    - `HTMX`
+    - `Chart.js` (optional)
+  - trial policy:
+    - start from CDN for quick validation,
+    - introduce one stack at a time,
+    - measure UX and size impact,
+    - pin and migrate approved assets to local ESP32 LittleFS before release.
+
+### Evidence
+
+- Firmware build confirmation shared by user after cleanup:
+  - Result: `SUCCESS`
+  - RAM: `35.4%` (`116036 / 327680`)
+  - Flash: `69.7%` (`913805 / 1310720`)
+
+### Notes
+
+- Portal plan remains intentionally iterative; further brainstorming sessions will continue refining UX and contract scope before full implementation lock.
+
+## 2026-03-03 (Tomorrow Start Plan + Open Questions Seed)
+
+### Tomorrow Start Priority (Planned)
+
+1. Phase 1 kickoff (`Foundation Shell`):
+  - confirm nav/page skeleton for all 4 pages.
+  - lock shared loading/error state pattern.
+  - lock minimal typed API client surface for startup flow.
+
+2. Phase 2 prep (`Live Runtime Basic`) contract checklist:
+  - freeze minimum status-dot card field set.
+  - freeze health-summary field list (firmware-provided only for first pass).
+  - freeze basic clock/status header behavior.
+
+3. Frontend stack rollout first step:
+  - start with `Bootstrap 5` + `Bootstrap Icons` from CDN in dev.
+  - capture baseline UX + responsiveness + network/asset-size metrics.
+
+4. Documentation discipline:
+  - keep `docs/portal-v3-plan.md` as source-of-truth for scope/order.
+  - append decisions and outcomes to worklog at end of day.
+
+### Open Questions Seeded
+
+- Added an `Open Questions (Working Backlog)` section to `docs/portal-v3-plan.md` to guide next brainstorming sessions.
+- Topics include:
+  - Live Runtime minimum data set
+  - Config Studio first-pass scope
+  - Settings boundary
+  - Tutorial flow strategy
+  - Debug/simulation guardrails
+  - Asset-size and stack rollout thresholds

@@ -112,60 +112,91 @@ Current baseline is 4 pages:
 - Role-based access control is deferred in this phase.
 - Even without RBAC, dangerous actions must remain explicit and auditable.
 
-## 6. Implementation Roadmap (Progressive)
+## 6. Implementation Roadmap (Progressive, Page-First)
 
-### Phase 1: Foundation
+Execution rule:
+- Build pages in the agreed order with minimal viable behavior first.
+- End every phase with one demoable vertical slice (UI + API wiring + loading/error handling).
+
+### Phase 1: Foundation Shell
 
 Build:
 - Bootstrap-first MPA scaffold with progressive enhancement.
-- Typed HTTP/WebSocket client and shared DTO validation layer.
-- Global app state split: `runtime`, `stagedConfig`, `session`, `ui`.
-- Shared loading/refresh UX primitives.
-- Connectivity state model: `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`.
+- Top navigation and page routing skeleton for all 4 pages.
+- Shared status bar shell, loading/refresh primitives, and error state patterns.
+- Typed HTTP/WebSocket client baseline and DTO guards.
+- Connectivity model: `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`.
 - Telemetry baseline events:
 - lifecycle (`app_loaded`, `route_opened`)
 - transport (`ws_connected`, `ws_disconnected`, `ws_reconnect_attempt`, `api_timeout`)
 - actions (`command_submitted`, `command_acked`, `validate_started`, `validate_failed`, `commit_started`, `commit_result`)
 
 Exit gate:
+- All pages are reachable from nav with consistent shell behavior.
 - Core app boots against firmware endpoint and mock endpoint.
 - No hard-stall loading behavior.
-- Offline/reconnect states are visible and deterministic in forced simulations.
-- Baseline telemetry is visible in developer diagnostics.
 
-### Phase 2: Runtime + Config Studio
+### Phase 2: Live Runtime (Basic)
 
 Build:
-- Live Runtime header + snapshot-driven panels.
-- Config Studio full path: active load -> staged edit -> validate -> commit/restore.
-- Stale-data indicators and offline mutation safeguards.
+- Basic homepage with placeholders for upcoming live modules.
+- Card physical status strip with simple green/red indicator where applicable.
+- Running clock and basic device health summary.
+- Navigation actions to all other pages.
+
+Exit gate:
+- Snapshot-driven status indicators render reliably.
+- Live page shows deterministic loading, empty, and error states.
+- No ambiguous stale-data presentation during disconnect.
+
+### Phase 3: Settings (Easy-Win Delivery)
+
+Build:
+- WiFi user settings and basic operator preferences.
+- Branding/theming baseline controls within readability limits.
+- Save/apply feedback with clear success/failure reason messaging.
+
+Exit gate:
+- Settings round-trip is reliable with validation feedback.
+- Rejections and failures are visible and auditable in telemetry.
+
+### Phase 4: Config Studio
+
+Build:
+- Unified flow: active load -> staged edit -> validate -> commit/restore.
+- Clear staged vs active separation throughout UI.
+- Offline mutation safeguards and reconnect recovery behavior.
+- Family editor progression for `DI`, `AI`, `SIO`, `DO`, `MATH`, `RTC`.
+- Binding support (`CONSTANT`, `VARIABLE_REF`) with compatibility guards.
 
 Exit gate:
 - Pass target acceptance anchors: `AT-UI-002`, `AT-UI-003`, `AT-UI-004`, `AT-API-001`, `AT-API-002`, `AT-API-003`.
-- No ambiguous state or silent command loss during disconnect scenarios.
+- Pass target acceptance anchors: `AT-DATA-001`, `AT-DATA-003`, `AT-BIND-001..006`.
+- No silent command/config loss across reconnect events.
 
-### Phase 3: Card Editors + Settings
-
-Build:
-- Editors for `DI`, `AI`, `SIO`, `DO`, `MATH`, `RTC`.
-- Binding support (`CONSTANT`, `VARIABLE_REF`) with compatibility guards.
-- WiFi user settings.
-- Telemetry enrichment for settings and mutating outcomes.
-
-Exit gate:
-- Pass target acceptance anchors: `AT-DATA-001`, `AT-DATA-003`, `AT-BIND-001..006`, `AT-WIFI-001..004`.
-- Rejections and failures include auditable reason codes.
-
-### Phase 4: Self-Explanatory + Polish
+### Phase 5: Introduction & Tutorial
 
 Build:
-- Context help across core flows.
-- Tutorial/introduction flow connected from first-run and help/settings entry.
-- Live Runtime debug suite polish (transport health, queue metrics, timing context).
-- Branding/theming controls within readability constraints.
+- Separate interactive tutorial page connected from first-run and settings/help entry.
+- Guided path for runtime basics, staged vs active model, validate, and commit.
+- Context help linking from tutorial into real pages.
 
 Exit gate:
 - First-run user can complete commissioning flow without external documentation.
+- Tutorial completion path is measurable and stable on mobile.
+
+### Phase 6: Live Runtime (Advanced Debug + Simulation)
+
+Build:
+- Full live debugging suite on the Live Runtime page:
+- transport status
+- queue depth/high-water/drop
+- timing context and latest diagnostics
+- Simulation/force interactions polished as final-stage features.
+- Telemetry and diagnostics correlation for incident replay.
+
+Exit gate:
+- Advanced debug/simulation tools operate without degrading core runtime UX.
 - Mobile smoke tests pass for core workflows.
 - At least one disconnect/reconnect incident can be explained end-to-end through telemetry traces.
 
@@ -233,3 +264,31 @@ Start large-scale implementation only when:
 2. Runtime/config/command payload contracts are stable enough for typed client work.
 3. Baseline stack rollout strategy is agreed for first two dependencies.
 4. Acceptance anchors for current phase are mapped and review-approved.
+
+## 12. Open Questions (Working Backlog)
+
+These questions are intentionally unresolved and should be reviewed in upcoming brainstorming sessions before implementation lock.
+
+1. Live Runtime basics:
+- Which exact card fields must appear in Phase 2 basic status rows (minimum useful set)?
+- Should health summary show only firmware-provided fields or include portal-derived convenience indicators?
+
+2. Config Studio scope boundary:
+- In first Config Studio pass, should all card families ship together or in two waves (for example `DI/DO` first, then others)?
+- How much inline validation help text is needed in-v1 versus deferred tooltip/help expansion?
+
+3. Settings boundary:
+- Which preferences are strictly in-scope for first pass beyond WiFi (timezone, refresh interval, theme preset)?
+- What settings should remain hidden until after tutorial completion?
+
+4. Tutorial strategy:
+- Is tutorial strictly linear or can users jump sections while still preserving completion tracking?
+- Should tutorial progress persist locally in browser only, or sync to device profile later?
+
+5. Debug + simulation final stage:
+- Which simulation controls are mandatory for first release (force input, run mode control, mask)?
+- What guardrails/confirmations are mandatory before exposing simulation actions in Live Runtime?
+
+6. Asset and stack rollout:
+- What exact per-phase asset-size budget should be enforced to protect LittleFS headroom?
+- At what threshold should `Chart.js` be rejected or deferred in favor of simpler visuals?
