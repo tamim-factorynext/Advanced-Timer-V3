@@ -24,6 +24,14 @@ Notes:
 
 namespace v3::runtime {
 
+/**
+ * @brief Consolidated queue and command-path telemetry snapshot.
+ * @details Captures cross-core queue pressure and command lifecycle parity counters.
+ * @par Used By
+ * - src/main.cpp
+ * - src/runtime/runtime_service.cpp
+ * - src/portal/portal_service.cpp
+ */
 struct QueueTelemetry {
   uint16_t snapshotQueueDepth;
   uint16_t snapshotQueueHighWater;
@@ -58,6 +66,13 @@ struct QueueTelemetry {
   bool parityKernelAppliedExceedsControlAccepted;
 };
 
+/**
+ * @brief Runtime observability snapshot consumed by portal and diagnostics.
+ * @details Projects kernel metrics, storage bootstrap status, and queue telemetry into one payload contract.
+ * @par Used By
+ * - src/runtime/runtime_service.cpp
+ * - src/portal/portal_service.cpp
+ */
 struct RuntimeSnapshot {
   uint32_t nowMs;
   uint32_t completedScans;
@@ -87,12 +102,43 @@ struct RuntimeSnapshot {
   QueueTelemetry queueTelemetry;
 };
 
+/**
+ * @brief Owns construction of runtime snapshot contract from service inputs.
+ * @details Stateless projection layer between kernel/storage/control telemetry and transport surfaces.
+ * @par Used By
+ * - src/main.cpp
+ * - src/portal/portal_service.h
+ */
 class RuntimeService {
  public:
+  /**
+   * @brief Resets runtime snapshot state to defaults.
+   * @details Called once at startup before runtime ticks begin.
+   * @par Used By
+   * - src/main.cpp
+   */
   void begin();
+  /**
+   * @brief Updates runtime snapshot using latest kernel/storage/queue signals.
+   * @details Should be called from service task after newest kernel snapshot is drained.
+   * @param nowMs Current wall-clock milliseconds.
+   * @param kernelMetrics Latest deterministic kernel metrics.
+   * @param storageDiagnostics Storage bootstrap status snapshot.
+   * @param queueTelemetry Current queue/command telemetry aggregate.
+   * @par Used By
+   * - src/main.cpp
+   */
   void tick(uint32_t nowMs, const v3::kernel::KernelMetrics& kernelMetrics,
             const v3::storage::BootstrapDiagnostics& storageDiagnostics,
             const QueueTelemetry& queueTelemetry);
+  /**
+   * @brief Returns current runtime snapshot view.
+   * @details Returned reference remains valid for service/portal read-only usage.
+   * @return Immutable runtime snapshot.
+   * @par Used By
+   * - src/main.cpp
+   * - src/portal/portal_service.cpp
+   */
   const RuntimeSnapshot& snapshot() const;
 
  private:

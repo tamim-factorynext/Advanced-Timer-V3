@@ -23,6 +23,7 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief DO runtime configuration contract for one card slot. */
 struct V3DoRuntimeConfig {
   cardMode mode;
   bool invert;
@@ -31,6 +32,7 @@ struct V3DoRuntimeConfig {
   uint32_t repeatCount;
 };
 
+/** @brief Mutable DO runtime state projected into snapshots/signals. */
 struct V3DoRuntimeState {
   bool commandState;
   bool actualState;
@@ -42,12 +44,14 @@ struct V3DoRuntimeState {
   cardState state;
 };
 
+/** @brief DO step input bundle for one scan pass. */
 struct V3DoStepInput {
   uint32_t nowMs;
   bool turnOnCondition;
   bool turnOffCondition;
 };
 
+/** @brief DO step output bundle including condition outcomes and effective output. */
 struct V3DoStepOutput {
   bool turnOnConditionMet;
   bool turnOffConditionMet;
@@ -55,6 +59,13 @@ struct V3DoStepOutput {
   bool effectiveOutput;
 };
 
+/**
+ * @brief Executes one DO runtime step.
+ * @details Applies mode/timing state machine with turn-on/turn-off condition gating.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ * - src/kernel/v3_sio_runtime.cpp
+ */
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out);
 

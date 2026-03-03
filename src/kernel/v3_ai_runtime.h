@@ -22,6 +22,7 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief AI runtime configuration contract for one card slot. */
 struct V3AiRuntimeConfig {
   uint32_t inputMin;
   uint32_t inputMax;
@@ -30,16 +31,24 @@ struct V3AiRuntimeConfig {
   uint32_t smoothingFactorPct;
 };
 
+/** @brief Mutable AI runtime state projected into snapshots/signals. */
 struct V3AiRuntimeState {
   uint32_t liveValue;
   cardMode mode;
   cardState state;
 };
 
+/** @brief Input sample payload for one AI step evaluation. */
 struct V3AiStepInput {
   uint32_t rawSample;
 };
 
+/**
+ * @brief Executes one AI runtime step.
+ * @details Applies input/output scaling and smoothing to produce updated `liveValue`.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3AiStep(const V3AiRuntimeConfig& cfg, V3AiRuntimeState& runtime,
                  const V3AiStepInput& in);
 

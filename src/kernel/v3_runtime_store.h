@@ -28,6 +28,14 @@ Notes:
 #include "kernel/v3_rtc_runtime.h"
 #include "kernel/v3_sio_runtime.h"
 
+/**
+ * @brief Mutable view over per-family V3 runtime state arrays.
+ * @details Provides one consolidated store pointer set used by signal/snapshot helpers.
+ * @par Used By
+ * - src/kernel/v3_runtime_store.cpp
+ * - src/kernel/v3_runtime_signals.cpp
+ * - src/runtime/snapshot_card_builder.cpp
+ */
 struct V3RuntimeStoreView {
   V3DiRuntimeState* di;
   uint8_t diCount;
@@ -43,23 +51,41 @@ struct V3RuntimeStoreView {
   uint8_t rtcCount;
 };
 
+/**
+ * @brief Synchronizes runtime store state from typed card config + legacy card array.
+ * @details Initializes runtime state arrays before scan execution begins.
+ * @par Used By
+ * - src/kernel/v3_runtime_store.cpp
+ */
 void syncRuntimeStoreFromTypedCards(const LogicCard* cards,
                                     const V3CardConfig* typedCards,
                                     uint8_t cardCount,
                                     const V3RuntimeStoreView& store);
+/**
+ * @brief Mirrors one runtime store card state back to legacy card representation.
+ * @details Maintains compatibility surfaces that still consume `LogicCard` state.
+ * @par Used By
+ * - src/runtime/snapshot_card_builder.cpp
+ */
 void mirrorRuntimeStoreCardToLegacyByTyped(LogicCard& card,
                                            const V3CardConfig& typedCard,
                                            const V3RuntimeStoreView& store);
 
+/** @brief Returns DI runtime-state pointer by index or null when out-of-range. */
 V3DiRuntimeState* runtimeDiStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
+/** @brief Returns DO runtime-state pointer by index or null when out-of-range. */
 V3DoRuntimeState* runtimeDoStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
+/** @brief Returns AI runtime-state pointer by index or null when out-of-range. */
 V3AiRuntimeState* runtimeAiStateAt(uint8_t index,
                                    const V3RuntimeStoreView& store);
+/** @brief Returns SIO runtime-state pointer by index or null when out-of-range. */
 V3SioRuntimeState* runtimeSioStateAt(uint8_t index,
                                      const V3RuntimeStoreView& store);
+/** @brief Returns MATH runtime-state pointer by index or null when out-of-range. */
 V3MathRuntimeState* runtimeMathStateAt(uint8_t index,
                                        const V3RuntimeStoreView& store);
+/** @brief Returns RTC runtime-state pointer by index or null when out-of-range. */
 V3RtcRuntimeState* runtimeRtcStateAt(uint8_t index,
                                      const V3RuntimeStoreView& store);

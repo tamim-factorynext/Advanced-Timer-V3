@@ -23,6 +23,7 @@ Notes:
 #include "kernel/card_model.h"
 #include "kernel/v3_card_types.h"
 
+/** @brief Lightweight per-card metadata used for runtime snapshot projection. */
 struct RuntimeCardMeta {
   uint8_t id;
   logicCardType type;
@@ -30,6 +31,13 @@ struct RuntimeCardMeta {
   cardMode mode;
 };
 
+/**
+ * @brief Rebuilds runtime-card metadata array from typed card config.
+ * @details Produces stable identity/mode/index mapping used by snapshot/signal builders.
+ * @par Used By
+ * - src/runtime/runtime_card_meta.cpp
+ * - src/runtime/snapshot_card_builder.cpp
+ */
 void refreshRuntimeCardMetaFromTypedCards(
     const V3CardConfig* cards, uint8_t count, uint8_t doStart, uint8_t aiStart,
     uint8_t sioStart, uint8_t mathStart, uint8_t rtcStart, RuntimeCardMeta* out);

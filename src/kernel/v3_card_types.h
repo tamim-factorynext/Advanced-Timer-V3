@@ -23,10 +23,13 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief Fixed V3 card-family identity used by typed config/runtime paths. */
 enum class V3CardFamily : uint8_t { DI, DO, AI, SIO, MATH, RTC };
 
+/** @brief Fault severity policy associated with typed card configuration. */
 enum class V3FaultPolicy : uint8_t { INFO, WARN, CRITICAL };
 
+/** @brief Declares supported signal channels for a family. */
 struct V3SignalSupport {
   bool hasLogicalState;
   bool hasPhysicalState;
@@ -35,6 +38,12 @@ struct V3SignalSupport {
   bool hasMissionState;
 };
 
+/**
+ * @brief Returns signal-support profile for given V3 card family.
+ * @details Used to constrain condition/source capabilities across families.
+ * @par Used By
+ * - src/kernel/v3_typed_card_parser.cpp
+ */
 inline V3SignalSupport signalSupportForFamily(V3CardFamily family) {
   switch (family) {
     case V3CardFamily::DI:
@@ -54,6 +63,7 @@ inline V3SignalSupport signalSupportForFamily(V3CardFamily family) {
   }
 }
 
+/** @brief Typed condition block contract used by typed card families. */
 struct V3ConditionBlock {
   uint8_t clauseAId;
   logicOperator clauseAOperator;
@@ -64,6 +74,7 @@ struct V3ConditionBlock {
   combineMode combiner;
 };
 
+/** @brief Typed DI configuration block. */
 struct V3DiConfig {
   uint8_t channel;
   bool invert;
@@ -73,6 +84,7 @@ struct V3DiConfig {
   V3ConditionBlock turnOffCondition;
 };
 
+/** @brief Typed DO configuration block. */
 struct V3DoConfig {
   uint8_t channel;
   bool invert;
@@ -84,6 +96,7 @@ struct V3DoConfig {
   V3ConditionBlock turnOffCondition;
 };
 
+/** @brief Typed AI configuration block. */
 struct V3AiConfig {
   uint8_t channel;
   uint32_t inputMin;
@@ -93,6 +106,7 @@ struct V3AiConfig {
   uint32_t smoothingFactorPct;
 };
 
+/** @brief Typed SIO configuration block. */
 struct V3SioConfig {
   bool invert;
   cardMode mode;
@@ -103,6 +117,7 @@ struct V3SioConfig {
   V3ConditionBlock turnOffCondition;
 };
 
+/** @brief Typed MATH configuration block. */
 struct V3MathConfig {
   uint8_t operation;
   uint32_t fallbackValue;
@@ -117,6 +132,7 @@ struct V3MathConfig {
   V3ConditionBlock turnOffCondition;
 };
 
+/** @brief Typed RTC schedule configuration block. */
 struct V3RtcConfig {
   uint16_t year;
   uint8_t month;
@@ -132,6 +148,14 @@ struct V3RtcConfig {
   uint32_t triggerDurationMs;
 };
 
+/**
+ * @brief Typed per-card configuration envelope.
+ * @details One row contains shared card metadata and family-specific parameter blocks.
+ * @par Used By
+ * - src/kernel/v3_typed_card_parser.cpp
+ * - src/kernel/v3_runtime_store.cpp
+ * - src/kernel/v3_card_bridge.cpp
+ */
 struct V3CardConfig {
   uint8_t cardId;
   V3CardFamily family;

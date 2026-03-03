@@ -32,8 +32,24 @@ constexpr uint8_t kMaxWiFiPasswordLen = 64;
 constexpr uint8_t kMaxNtpServerLen = 63;
 constexpr uint8_t kMaxTimezoneLen = 47;
 
+/**
+ * @brief Enumerates fixed card families supported by V3 config model.
+ * @details Determines which parameter block in `CardConfig` is meaningful.
+ * @par Used By
+ * - src/storage/v3_config_decoder.cpp
+ * - src/storage/v3_config_validator.cpp
+ * - src/kernel/kernel_service.cpp
+ */
 enum class CardFamily : uint8_t { DI, DO, AI, SIO, MATH, RTC };
 
+/**
+ * @brief Supported operators for condition-clause evaluation.
+ * @details Operators map to runtime signal semantics across logic/value/mission domains.
+ * @par Used By
+ * - src/storage/v3_config_decoder.cpp
+ * - src/storage/v3_config_validator.cpp
+ * - src/kernel/kernel_service.cpp
+ */
 enum class ConditionOperator : uint8_t {
   AlwaysTrue,
   AlwaysFalse,
@@ -54,20 +70,43 @@ enum class ConditionOperator : uint8_t {
   Stopped,
 };
 
+/**
+ * @brief Combines two condition clauses into one condition block result.
+ * @details `None` means clauseA-only semantics.
+ * @par Used By
+ * - src/storage/v3_config_decoder.cpp
+ * - src/kernel/kernel_service.cpp
+ */
 enum class ConditionCombiner : uint8_t { None, And, Or };
 
+/**
+ * @brief One source/operator/threshold condition clause.
+ * @details Evaluated against one runtime signal selected by `sourceCardId`.
+ * @par Used By
+ * - src/storage/v3_config_decoder.cpp
+ * - src/kernel/kernel_service.cpp
+ */
 struct ConditionClause {
   uint8_t sourceCardId;
   ConditionOperator op;
   uint32_t threshold;
 };
 
+/**
+ * @brief Two-clause condition with combiner policy.
+ * @details Forms reusable turn-on/turn-off condition contract for multiple families.
+ * @par Used By
+ * - src/storage/v3_config_decoder.cpp
+ * - src/storage/v3_config_validator.cpp
+ * - src/kernel/kernel_service.cpp
+ */
 struct ConditionBlock {
   ConditionClause clauseA;
   ConditionClause clauseB;
   ConditionCombiner combiner;
 };
 
+/** @brief DI-specific config parameters and conditions. */
 struct DiParams {
   uint8_t channel;
   bool invert;
@@ -79,6 +118,7 @@ struct DiParams {
   ConditionBlock turnOffCondition;
 };
 
+/** @brief DO-specific config parameters and conditions. */
 struct DoParams {
   uint8_t channel;
   bool invert;
@@ -90,6 +130,7 @@ struct DoParams {
   ConditionBlock turnOffCondition;
 };
 
+/** @brief AI-specific scaling and smoothing config parameters. */
 struct AiParams {
   uint8_t channel;
   uint32_t inputMin;
@@ -99,6 +140,7 @@ struct AiParams {
   uint32_t smoothingFactorPct;
 };
 
+/** @brief SIO-specific config parameters and conditions. */
 struct SioParams {
   bool invert;
   uint8_t mode;
@@ -109,6 +151,7 @@ struct SioParams {
   ConditionBlock turnOffCondition;
 };
 
+/** @brief MATH-specific operation, scaling, and condition parameters. */
 struct MathParams {
   uint8_t operation;
   uint32_t inputA;
@@ -123,6 +166,7 @@ struct MathParams {
   ConditionBlock turnOffCondition;
 };
 
+/** @brief RTC schedule/alarm parameter contract. */
 struct RtcParams {
   bool hasYear;
   uint16_t year;
@@ -138,6 +182,7 @@ struct RtcParams {
   uint32_t triggerDurationMs;
 };
 
+/** @brief Time-sync server and staleness policy config. */
 struct NtpConfig {
   bool enabled;
   char primaryTimeServer[kMaxNtpServerLen + 1];
@@ -148,11 +193,13 @@ struct NtpConfig {
   uint32_t maxTimeAgeSec;
 };
 
+/** @brief Global time configuration container. */
 struct ClockConfig {
   char timezone[kMaxTimezoneLen + 1];
   NtpConfig timeSync;
 };
 
+/** @brief One WiFi credential policy slot. */
 struct WiFiCredential {
   char ssid[kMaxWiFiSsidLen + 1];
   char password[kMaxWiFiPasswordLen + 1];
@@ -160,6 +207,7 @@ struct WiFiCredential {
   bool editable;
 };
 
+/** @brief Global WiFi behavior and credential policy config. */
 struct WiFiConfig {
   WiFiCredential backupAccessNetwork;
   WiFiCredential userConfiguredNetwork;
@@ -167,6 +215,7 @@ struct WiFiConfig {
   bool staOnly;
 };
 
+/** @brief One configured card row including family-specific parameter blocks. */
 struct CardConfig {
   uint8_t id;
   CardFamily family;
@@ -179,6 +228,14 @@ struct CardConfig {
   RtcParams rtc;
 };
 
+/**
+ * @brief Top-level V3 system configuration contract.
+ * @details Single source used by decode/validate/bootstrap and kernel begin.
+ * @par Used By
+ * - src/storage/storage_service.cpp
+ * - src/kernel/kernel_service.cpp
+ * - src/platform/wifi_runtime.cpp
+ */
 struct SystemConfig {
   uint32_t schemaVersion;
   uint32_t scanPeriodMs;
@@ -188,6 +245,13 @@ struct SystemConfig {
   CardConfig cards[kMaxCards];
 };
 
+/**
+ * @brief Builds default system config contract values.
+ * @details Provides deterministic fallback baseline when no valid file config is available.
+ * @return Default-initialized system config.
+ * @par Used By
+ * - src/storage/storage_service.cpp
+ */
 SystemConfig makeDefaultSystemConfig();
 
 }  // namespace v3::storage

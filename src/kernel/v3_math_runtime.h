@@ -23,6 +23,7 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief MATH runtime configuration contract for one card slot. */
 struct V3MathRuntimeConfig {
   uint8_t operation;
   uint32_t inputA;
@@ -35,6 +36,7 @@ struct V3MathRuntimeConfig {
   uint32_t fallbackValue;
 };
 
+/** @brief Mutable MATH runtime state projected into snapshots/signals. */
 struct V3MathRuntimeState {
   bool commandState;
   bool actualState;
@@ -43,17 +45,25 @@ struct V3MathRuntimeState {
   cardState state;
 };
 
+/** @brief MATH step input bundle for one scan pass. */
 struct V3MathStepInput {
   bool turnOnCondition;
   bool turnOffCondition;
 };
 
+/** @brief MATH step output bundle including condition outcomes and reset override. */
 struct V3MathStepOutput {
   bool turnOnConditionMet;
   bool turnOffConditionMet;
   bool resetOverride;
 };
 
+/**
+ * @brief Executes one MATH runtime step.
+ * @details Applies selected math operation plus gating/override semantics.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out);
 

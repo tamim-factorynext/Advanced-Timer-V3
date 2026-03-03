@@ -22,8 +22,21 @@ Notes:
 #include "runtime/runtime_card_meta.h"
 #include "runtime/runtime_snapshot_card.h"
 
+/**
+ * @brief Builds one runtime snapshot card row from metadata and runtime store.
+ * @details Converts family-specific runtime state into transport-friendly snapshot schema.
+ * @par Used By
+ * - src/main.cpp
+ * - src/runtime/snapshot_card_builder.cpp
+ */
 RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
                                              const V3RuntimeStoreView& store);
+/**
+ * @brief Builds full runtime snapshot card array.
+ * @details Iterates metadata rows and calls per-card builder helper.
+ * @par Used By
+ * - src/runtime/snapshot_card_builder.cpp
+ */
 void buildRuntimeSnapshotCards(const RuntimeCardMeta* meta, uint8_t count,
                                const V3RuntimeStoreView& store,
                                RuntimeSnapshotCard* outCards);

@@ -23,6 +23,7 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief RTC schedule matcher view consumed by runtime evaluator. */
 struct V3RtcScheduleView {
   bool enabled;
   bool hasYear;
@@ -39,6 +40,7 @@ struct V3RtcScheduleView {
   uint8_t rtcCardId;
 };
 
+/** @brief One minute-resolution wall-clock stamp for schedule matching. */
 struct V3RtcMinuteStamp {
   uint16_t year;
   uint8_t month;
@@ -48,10 +50,12 @@ struct V3RtcMinuteStamp {
   uint8_t minute;
 };
 
+/** @brief RTC runtime configuration contract for one scheduler card. */
 struct V3RtcRuntimeConfig {
   uint32_t triggerDurationMs;
 };
 
+/** @brief Mutable RTC runtime state projected into snapshots/signals. */
 struct V3RtcRuntimeState {
   bool commandState;
   bool actualState;
@@ -62,15 +66,40 @@ struct V3RtcRuntimeState {
   cardState state;
 };
 
+/** @brief RTC step input bundle for one scan pass. */
 struct V3RtcStepInput {
   uint32_t nowMs;
 };
 
+/**
+ * @brief Executes one RTC runtime step.
+ * @details Maintains trigger-window output state after schedule-match activation.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
                   const V3RtcStepInput& in);
 
+/**
+ * @brief Checks one schedule field with wildcard-friendly matching.
+ * @details Helper for minute-level schedule comparison logic.
+ * @par Used By
+ * - src/kernel/v3_rtc_runtime.cpp
+ */
 bool v3RtcFieldMatches(int fieldValue, int scheduleValue);
+/**
+ * @brief Evaluates whether schedule view matches provided minute stamp.
+ * @details Applies all enabled schedule fields (`year/month/day/weekday/hour/minute`).
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
                                const V3RtcMinuteStamp& stamp);
+/**
+ * @brief Builds stable integer key for minute-level deduplication.
+ * @details Used to avoid repeated trigger activation within same minute bucket.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp);
 

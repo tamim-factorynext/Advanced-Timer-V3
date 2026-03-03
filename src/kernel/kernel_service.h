@@ -34,6 +34,14 @@ Notes:
 
 namespace v3::kernel {
 
+/**
+ * @brief Deterministic scan-loop metrics exported by kernel runtime.
+ * @details Aggregates family counts, run-mode state, scan counters, and card-family activity telemetry.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ * - src/runtime/runtime_service.cpp
+ * - src/main.cpp
+ */
 struct KernelMetrics {
   uint32_t scanPeriodMs;
   uint8_t configuredCardCount;
@@ -58,16 +66,82 @@ struct KernelMetrics {
   uint8_t sioActiveCount;
 };
 
+/**
+ * @brief Owns deterministic card runtime execution on kernel core.
+ * @details Applies queued commands, executes family scan passes, and exports per-card runtime snapshots.
+ * @par Used By
+ * - src/main.cpp
+ * - src/runtime/runtime_service.h
+ */
 class KernelService {
  public:
+  /**
+   * @brief Initializes kernel runtime using validated config and platform boundary.
+   * @details Binds card-family slots and resets scan/telemetry state.
+   * @param config Validated storage config contract.
+   * @param platform Platform service used for deterministic hardware interactions.
+   * @par Used By
+   * - src/main.cpp
+   */
   void begin(const v3::storage::ValidatedConfig& config,
              v3::platform::PlatformService& platform);
+  /**
+   * @brief Executes one deterministic scan opportunity.
+   * @details Honors run mode and scan-period gating before running family passes.
+   * @param nowMs Current deterministic loop timestamp in milliseconds.
+   * @par Used By
+   * - src/main.cpp
+   */
   void tick(uint32_t nowMs);
+  /**
+   * @brief Updates kernel run mode.
+   * @details Affects scan gating semantics (`RUN_NORMAL`, `RUN_STEP`, `RUN_BREAKPOINT`).
+   * @param mode Desired engine mode.
+   * @par Used By
+   * - src/main.cpp
+   */
   void setRunMode(engineMode mode);
+  /**
+   * @brief Requests one step execution when in step mode.
+   * @details Marks one pending step token consumed by next eligible tick.
+   * @par Used By
+   * - src/main.cpp
+   */
   void requestStepOnce();
+  /**
+   * @brief Sets DI forcing policy for target card.
+   * @details Enables/disables forced sample path for one DI card slot.
+   * @return `true` when target DI card exists and force state is applied.
+   * @par Used By
+   * - src/main.cpp
+   */
   bool setDiForce(uint8_t cardId, bool forceActive, bool forcedSample);
+  /**
+   * @brief Sets AI forcing policy for target card.
+   * @details Enables/disables forced numeric value path for one AI card slot.
+   * @return `true` when target AI card exists and force state is applied.
+   * @par Used By
+   * - src/main.cpp
+   */
   bool setAiForce(uint8_t cardId, bool forceActive, uint32_t forcedValue);
+  /**
+   * @brief Returns current kernel metrics snapshot.
+   * @details Read-only telemetry view used by runtime snapshot projection.
+   * @par Used By
+   * - src/main.cpp
+   * - src/runtime/runtime_service.cpp
+   */
   const KernelMetrics& metrics() const;
+  /**
+   * @brief Exports per-card runtime snapshot rows.
+   * @details Projects active card-family states into transport-ready snapshot DTOs.
+   * @param outCards Output array receiving snapshot entries.
+   * @param capacity Max writable entries in `outCards`.
+   * @return Number of cards written to output.
+   * @par Used By
+   * - src/main.cpp
+   * - src/runtime/snapshot_card_builder.cpp
+   */
   uint8_t exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
                                      uint8_t capacity) const;
 

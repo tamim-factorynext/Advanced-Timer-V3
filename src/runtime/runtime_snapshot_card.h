@@ -23,6 +23,21 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/**
+ * @brief Per-card runtime snapshot row exported from kernel scan loop.
+ * @details Represents transport-friendly state projection for one configured card.
+ * @par Field Semantics
+ * - `id/type/index`: card identity and family-local index.
+ * - `commandState/actualState/edgePulse`: boolean runtime state channels.
+ * - `state/mode`: card runtime state-machine and configured mode value.
+ * - `liveValue`: current numeric value channel.
+ * - `startOnMs/startOffMs/repeatCounter`: timing/cycle telemetry for timed families.
+ * - `turnOnConditionMet/turnOffConditionMet`: latest condition evaluation outcomes.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ * - src/main.cpp
+ * - src/portal/portal_service.cpp
+ */
 struct RuntimeSnapshotCard {
   uint8_t id;
   logicCardType type;

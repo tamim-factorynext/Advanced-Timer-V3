@@ -24,6 +24,7 @@ Notes:
 
 #include "kernel/v3_do_runtime.h"
 
+/** @brief SIO runtime configuration contract for one virtual I/O slot. */
 struct V3SioRuntimeConfig {
   cardMode mode;
   bool invert;
@@ -32,6 +33,7 @@ struct V3SioRuntimeConfig {
   uint32_t repeatCount;
 };
 
+/** @brief Mutable SIO runtime state projected into snapshots/signals. */
 struct V3SioRuntimeState {
   bool commandState;
   bool actualState;
@@ -43,12 +45,14 @@ struct V3SioRuntimeState {
   cardState state;
 };
 
+/** @brief SIO step input bundle for one scan pass. */
 struct V3SioStepInput {
   uint32_t nowMs;
   bool turnOnCondition;
   bool turnOffCondition;
 };
 
+/** @brief SIO step output bundle including condition outcomes and effective output. */
 struct V3SioStepOutput {
   bool turnOnConditionMet;
   bool turnOffConditionMet;
@@ -56,6 +60,12 @@ struct V3SioStepOutput {
   bool effectiveOutput;
 };
 
+/**
+ * @brief Executes one SIO runtime step.
+ * @details Reuses DO timing semantics for software/virtual output behavior.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
                   const V3SioStepInput& in, V3SioStepOutput& out);
 

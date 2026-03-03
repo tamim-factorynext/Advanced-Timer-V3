@@ -23,12 +23,14 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/** @brief DI runtime configuration contract for one card slot. */
 struct V3DiRuntimeConfig {
   uint32_t debounceTimeMs;
   cardMode edgeMode;
   bool invert;
 };
 
+/** @brief Mutable DI runtime state projected into snapshots/signals. */
 struct V3DiRuntimeState {
   bool commandState;
   bool actualState;
@@ -40,6 +42,7 @@ struct V3DiRuntimeState {
   cardState state;
 };
 
+/** @brief DI step input bundle for one scan pass. */
 struct V3DiStepInput {
   uint32_t nowMs;
   bool sample;
@@ -51,6 +54,7 @@ struct V3DiStepInput {
   bool prevSampleValid;
 };
 
+/** @brief DI step output bundle including edge/condition outcomes. */
 struct V3DiStepOutput {
   bool nextPrevSample;
   bool nextPrevSampleValid;
@@ -59,6 +63,12 @@ struct V3DiStepOutput {
   bool resetOverride;
 };
 
+/**
+ * @brief Executes one DI runtime step.
+ * @details Applies debounce, edge mode, and turn-on/turn-off condition gating.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
                  const V3DiStepInput& in, V3DiStepOutput& out);
 

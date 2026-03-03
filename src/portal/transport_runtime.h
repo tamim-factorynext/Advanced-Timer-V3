@@ -20,7 +20,20 @@ Notes:
 
 namespace v3::portal {
 
+/**
+ * @brief Initializes HTTP/WebSocket transport endpoints for portal APIs.
+ * @details Binds route handlers and websocket callbacks to the provided portal service.
+ * @param portal Portal service instance used for command/snapshot/diagnostics operations.
+ * @par Used By
+ * - src/main.cpp
+ */
 void initTransportRuntime(PortalService& portal);
+/**
+ * @brief Services transport event loops for HTTP and WebSocket stacks.
+ * @details Must be called from service loop to process ingress/egress traffic.
+ * @par Used By
+ * - src/main.cpp
+ */
 void serviceTransportRuntime();
 
 }  // namespace v3::portal

@@ -19,7 +19,25 @@ Notes:
 
 #include "kernel/card_model.h"
 
+/**
+ * @brief Reports whether a card state indicates mission-in-progress.
+ * @details Meaning depends on card family state-machine semantics.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 bool isMissionRunning(logicCardType type, cardState state);
+/**
+ * @brief Reports whether a card state indicates mission-finished condition.
+ * @details Used for condition-evaluation operators mapped to mission lifecycle.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 bool isMissionFinished(logicCardType type, cardState state);
+/**
+ * @brief Reports whether a card state indicates mission-stopped condition.
+ * @details Used for condition-evaluation operators mapped to mission lifecycle.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 bool isMissionStopped(logicCardType type, cardState state);
 

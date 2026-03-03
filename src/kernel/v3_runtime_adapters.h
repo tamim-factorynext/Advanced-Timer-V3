@@ -25,6 +25,12 @@ Notes:
 #include "kernel/v3_rtc_runtime.h"
 #include "kernel/v3_sio_runtime.h"
 
+/**
+ * @brief Adapter helpers between legacy `LogicCard` model and V3 runtime state/config structs.
+ * @details These functions isolate conversion logic to keep runtime modules model-agnostic.
+ * @par Used By
+ * - src/kernel/v3_runtime_store.cpp
+ */
 V3DiRuntimeConfig makeDiRuntimeConfig(const LogicCard& card);
 V3DiRuntimeState makeDiRuntimeState(const LogicCard& card);
 void applyDiRuntimeState(LogicCard& card, const V3DiRuntimeState& runtime);
