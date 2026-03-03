@@ -80,6 +80,12 @@ The portal is considered vision-compatible only if all invariants below hold:
    - Touch-safe controls, high-contrast status, and reduced typing burden.
 5. **Role clarity by default**
    - Users see only controls appropriate to role; unavailable actions are explained, not silently hidden.
+6. **Loading must feel alive**
+   - Every blocking fetch/refresh path shows visible progress animation/skeleton state so users never interpret loading as a frozen portal.
+7. **Offline and reconnect behavior is explicit**
+   - Users must always see connection state, last-sync context, and reconnect progress without ambiguous stale-data presentation.
+8. **Operational telemetry is built-in**
+   - Frontend must emit structured telemetry for key user flows and API/transport reliability events to support field diagnostics and release hardening.
 
 ---
 
@@ -95,6 +101,8 @@ The portal is considered vision-compatible only if all invariants below hold:
    - Device health, network diagnostics, firmware management, recovery actions.
 5. **Settings & Access**
    - User SSID config, role/session controls, theming/branding options.
+6. **Introduction & Tutorial**
+   - Separate interactive first-use experience that explains core concepts, navigation, and safe commissioning flow.
 
 ---
 
@@ -107,10 +115,22 @@ Build:
 - Bootstrap-based UI system, icon system, theme tokens.
 - Typed HTTP/WebSocket client and shared DTO validation layer.
 - Global app state with explicit separation: `runtime`, `stagedConfig`, `session`, `ui`.
+- Shared loading/refresh UX primitives (skeletons/spinners/progress states) used by all major data views.
+- Connectivity state model and transport policy:
+  - `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`
+  - heartbeat timeout detection
+  - reconnect backoff with capped retry interval
+- Telemetry hook baseline:
+  - app lifecycle (`app_loaded`, `route_opened`)
+  - transport reliability (`ws_connected`, `ws_disconnected`, `ws_reconnect_attempt`, `api_timeout`)
+  - command/config actions (`command_submitted`, `command_acked`, `validate_started`, `validate_failed`, `commit_started`, `commit_result`)
 
 Exit gate:
 - Core app boots from firmware API mocks and real device endpoint.
 - No runtime derivation logic outside API payload interpretation.
+- No page-level hard-stall during data fetch; loading animation is visible on startup and manual refresh flows.
+- Offline/reconnect UX states are visible and deterministic under forced disconnect/reconnect simulation.
+- Telemetry events are emitted in dev tooling for all baseline lifecycle, transport, and command/config flows.
 
 ### Phase 2: Runtime + Config Lifecycle
 
@@ -118,9 +138,13 @@ Build:
 - Fixed runtime header and live snapshot view.
 - Active config load, staged edit flow, validate, commit UI.
 - Clear staged/active visual model with irreversible ambiguity removed.
+- Stale-data and reconnect safety rules:
+  - stale runtime data is visibly marked
+  - mutating actions are guarded/blocked while offline unless explicitly allowed by contract.
 
 Exit gate (must pass):
 - `AT-UI-002`, `AT-UI-003`, `AT-UI-004`, `AT-API-001`, `AT-API-002`, `AT-API-003`.
+- Disconnect during runtime view and config workflow does not produce ambiguous state or silent command loss.
 
 ### Phase 3: Card Editors + Roles + Settings
 
@@ -129,21 +153,28 @@ Build:
 - Variable assignment (`CONSTANT`, `VARIABLE_REF`) UI with compatibility guards.
 - Login/session and role-based action gating.
 - WiFi User SSID settings.
+- Role-aware telemetry enrichment:
+  - event payload includes role and action outcome (success/reject/error) for protected operations.
 
 Exit gate (must pass):
 - `AT-DATA-001`, `AT-DATA-003`, `AT-BIND-001..006`, `AT-SEC-001..003`, `AT-WIFI-001..004`.
+- Role-gated operations produce auditable telemetry entries with reason codes for rejected actions.
 
 ### Phase 4: Self-Explanatory + Maintenance + Polish
 
 Build:
 - Context help for all parameters and runtime commands.
 - Guided onboarding flow for first-time users.
+- Separate interactive tutorial/introduction page reachable from first-run and settings/help entrypoints.
 - Dedicated maintenance panel with operational diagnostics.
 - Brand/theming controls constrained by readability and safety contrast rules.
+- Maintenance diagnostics include frontend transport/telemetry health summary for field troubleshooting.
 
 Exit gate:
 - First-run user can complete core commissioning without external docs.
 - Mobile usability smoke and role-based workflows validated on hardware.
+- Tutorial page walkthrough is complete for runtime basics, staged-vs-active model, and validate/commit flow.
+- Field replay evidence exists for at least one disconnect/reconnect incident using telemetry and diagnostics traces.
 
 ---
 
@@ -157,6 +188,8 @@ Exit gate:
 | Safe command acknowledgement | Sec 15.1, 15.2 | `AT-API-001`, `AT-API-005` |
 | Numeric correctness at UI boundary | Sec 4.1, 4.2 | `AT-DATA-001`, `AT-DATA-003` |
 | Role-safe operations | Sec 16 | `AT-SEC-001..003` |
+| Offline/reconnect clarity | Sec 14.2, Sec 15.2 | `AT-API-004`, `AT-UI-003` |
+| Portal observability and diagnostics | Sec 15.2, Sec 16.3 | `AT-API-008`, `AT-SEC-002`, `AT-SEC-003` |
 | Fresh V3 UI baseline | `DEC-0019` | Delivery review checkpoint |
 
 ---
@@ -181,3 +214,67 @@ Portal V3 is done only when:
 2. Hardware smoke confirms stable operation under runtime and command load.
 3. Self-explanatory onboarding and help coverage are complete for all card families.
 4. Role and safety behaviors are auditable and predictable in failure paths.
+
+---
+
+## 10. Experience Direction (Draft Baseline)
+
+This section is a working product-direction baseline and will be refined iteratively.
+
+### 10.1 Core Product Experience
+
+- Dual-mode portal:
+  - `Operate` mode for live status/control with minimal cognitive load.
+  - `Craft` mode for staged edits, validation, and commit workflow.
+- Confidence UX for all mutating actions:
+  - explicit state progression: `Submitted -> Acknowledged -> Applied`.
+- Living runtime surfaces:
+  - event/state-change animation cues (brief pulse/highlight) instead of constant motion noise.
+- Separate guided introduction page:
+  - interactive first-run path focused on runtime basics, staged vs active, validate, and commit.
+
+### 10.2 Differentiation Principles
+
+- Determinism-first rendering:
+  - card order is always firmware scan order.
+- Truth labels on mutable surfaces:
+  - every relevant value is visibly marked as `Live`, `Staged`, or `Stale`.
+- Risk-aware operations:
+  - force/mask/commit/restore paths require explicit target scope and confirmation.
+- Recovery-native UX:
+  - reconnect status, last sync timestamp, and pending action/result visibility are first-class.
+
+### 10.3 ESP32 Feasibility Envelope (Hard Guardrails)
+
+- Transport split:
+  - WebSocket for runtime stream, HTTP for config/validate/commit actions.
+- Rendering budget:
+  - live-card UI update throttle target `4-8 FPS`.
+- Payload budget:
+  - typical runtime snapshot payload target `<= ~12 KB`.
+- Asset budget:
+  - compressed portal static bundle target `<= ~300-400 KB` gzip.
+- Logic ownership:
+  - portal performs presentation and UX state only; authoritative runtime logic remains firmware-owned.
+- Reconnect discipline:
+  - explicit timeout/retry/backoff policy with visible user-facing state.
+
+### 10.4 Delivery Sequence
+
+1. Freeze UX contract (screen map, mode boundaries, confirmation model, stale-data rules).
+2. Freeze transport contract (snapshot/command/error envelopes and reconnect semantics).
+3. Build architecture baseline (typed API client, state slices, role gates, telemetry hooks).
+4. Implement `Operate` mode first.
+5. Implement `Craft` mode and staged lifecycle tooling.
+6. Implement introduction/tutorial flow.
+7. Polish, HIL verification, and acceptance gate closure.
+
+### 10.5 Brainstorming Cadence
+
+- Run focused brainstorming sessions twice per week, each with one topic only:
+  - Session A: UX flow and operator clarity.
+  - Session B: technical feasibility and contract fit.
+- For each session:
+  - collect candidate ideas,
+  - score against safety/clarity/ESP32 cost,
+  - promote only top items into this plan as explicit scope or backlog.
