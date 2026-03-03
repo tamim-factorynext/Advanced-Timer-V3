@@ -27,6 +27,7 @@ constexpr uint8_t kMathOpSubSat = 1;
 constexpr uint8_t kMathOpMul = 2;
 constexpr uint8_t kMathOpDivSafe = 3;
 
+/** @brief Clamps value to inclusive range. */
 uint32_t clampToRange(uint32_t value, uint32_t lo, uint32_t hi) {
   if (value < lo) return lo;
   if (value > hi) return hi;
@@ -45,6 +46,7 @@ uint32_t saturatingMul(uint32_t a, uint32_t b) {
                                                     : static_cast<uint32_t>(raw);
 }
 
+/** @brief Computes operation raw result with saturating arithmetic where needed. */
 uint32_t computeRawValue(const V3MathRuntimeConfig& cfg) {
   switch (cfg.operation) {
     case kMathOpAdd:
@@ -61,6 +63,7 @@ uint32_t computeRawValue(const V3MathRuntimeConfig& cfg) {
   }
 }
 
+/** @brief Maps one value from input range to output range (supports descending output range). */
 uint32_t mapRange(uint32_t value, uint32_t inMin, uint32_t inMax, uint32_t outMin,
                   uint32_t outMax) {
   const uint32_t spanIn = inMax - inMin;
@@ -82,6 +85,7 @@ uint32_t mapRange(uint32_t value, uint32_t inMin, uint32_t inMax, uint32_t outMi
   return static_cast<uint32_t>(mapped);
 }
 
+/** @brief Applies fixed-point EMA with alpha in percent (0..100). */
 uint32_t applyEma(uint32_t previous, uint32_t sample, uint32_t alphaX100) {
   const uint32_t alpha = (alphaX100 > 100U) ? 100U : alphaX100;
   const uint64_t weighted =
@@ -91,6 +95,12 @@ uint32_t applyEma(uint32_t previous, uint32_t sample, uint32_t alphaX100) {
 }
 }  // namespace
 
+/**
+ * @brief Executes one MATH card step.
+ * @details Handles turn-on/turn-off gating, operation evaluation, clamp/scale, and EMA smoothing.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
                    const V3MathStepInput& in, V3MathStepOutput& out) {
   out.turnOnConditionMet = in.turnOnCondition;

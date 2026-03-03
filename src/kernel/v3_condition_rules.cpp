@@ -20,6 +20,13 @@ Notes:
 
 #include <cstring>
 
+/**
+ * @brief Parses V3 family token to legacy `logicCardType`.
+ * @details Shared helper used by payload and typed-card parser validation paths.
+ * @par Used By
+ * - src/kernel/v3_payload_rules.cpp
+ * - src/kernel/v3_typed_card_parser.cpp
+ */
 bool parseV3CardTypeToken(const char* cardType, logicCardType& outType) {
   if (cardType == nullptr) return false;
   if (std::strcmp(cardType, "DI") == 0) return (outType = DigitalInput), true;
@@ -31,6 +38,13 @@ bool parseV3CardTypeToken(const char* cardType, logicCardType& outType) {
   return false;
 }
 
+/**
+ * @brief Validates condition field token against source family capabilities.
+ * @details Prevents invalid field usage before operator mapping/conversion.
+ * @par Used By
+ * - src/kernel/v3_payload_rules.cpp
+ * - src/kernel/v3_typed_card_parser.cpp
+ */
 bool isV3FieldAllowedForSourceType(logicCardType sourceType, const char* field) {
   if (field == nullptr) return false;
   if (std::strcmp(field, "liveValue") == 0) return sourceType != RtcCard;
@@ -55,6 +69,13 @@ bool isV3FieldAllowedForSourceType(logicCardType sourceType, const char* field) 
   return false;
 }
 
+/**
+ * @brief Validates operator token against selected condition field type.
+ * @details Enforces boolean/mission/numeric operator compatibility.
+ * @par Used By
+ * - src/kernel/v3_payload_rules.cpp
+ * - src/kernel/v3_typed_card_parser.cpp
+ */
 bool isV3OperatorAllowedForField(const char* field, const char* op) {
   if (field == nullptr || op == nullptr) return false;
   if (std::strcmp(field, "commandState") == 0 ||

@@ -20,10 +20,22 @@ Notes:
 #include "kernel/v3_do_runtime.h"
 
 namespace {
+/**
+ * @brief Checks whether DO runtime state is in an active mission phase.
+ * @details Running phases are `OnDelay` and `Active`.
+ * @par Used By
+ * - src/kernel/v3_do_runtime.cpp
+ */
 bool isDoRunningState(cardState state) {
   return state == State_DO_OnDelay || state == State_DO_Active;
 }
 
+/**
+ * @brief Forces DO runtime into idle state.
+ * @details Clears timing and edge fields; optionally clears output counter value.
+ * @par Used By
+ * - src/kernel/v3_do_runtime.cpp
+ */
 void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
   runtime.commandState = false;
   runtime.edgePulse = false;
@@ -37,6 +49,13 @@ void forceDoIdle(V3DoRuntimeState& runtime, bool clearCounter) {
 }
 }  // namespace
 
+/**
+ * @brief Executes one DO card state-machine step.
+ * @details Handles reset override, retrigger behavior, timing windows, and inversion mapping.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ * - src/kernel/v3_sio_runtime.cpp
+ */
 void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
                  const V3DoStepInput& in, V3DoStepOutput& out) {
   out.turnOnConditionMet = in.turnOnCondition;

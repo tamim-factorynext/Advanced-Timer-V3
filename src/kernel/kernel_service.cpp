@@ -24,6 +24,7 @@ namespace v3::kernel {
 
 namespace {
 
+/** @brief Clears per-family count fields before recomputing typed summary metrics. */
 void resetFamilyCounts(KernelMetrics& metrics) {
   metrics.enabledCardCount = 0;
   metrics.diCardCount = 0;
@@ -36,6 +37,10 @@ void resetFamilyCounts(KernelMetrics& metrics) {
   metrics.bindingConsistent = false;
 }
 
+/**
+ * @brief Derives family-count summary metrics from validated typed config.
+ * @details Computes enabled/family totals and consistency flags used by runtime snapshot projection.
+ */
 void bindTypedConfigSummary(const v3::storage::ValidatedConfig& config,
                             KernelMetrics& metrics) {
   resetFamilyCounts(metrics);
@@ -75,6 +80,7 @@ void bindTypedConfigSummary(const v3::storage::ValidatedConfig& config,
       (metrics.enabledCardCount <= metrics.configuredCardCount);
 }
 
+/** @brief Maps storage family enum to legacy logic card type token. */
 logicCardType logicTypeFromFamily(v3::storage::CardFamily family) {
   switch (family) {
     case v3::storage::CardFamily::DI:
@@ -94,6 +100,7 @@ logicCardType logicTypeFromFamily(v3::storage::CardFamily family) {
   }
 }
 
+/** @brief Resolves runtime snapshot mode value for one storage card row. */
 cardMode modeFromCardConfig(const v3::storage::CardConfig& card) {
   switch (card.family) {
     case v3::storage::CardFamily::DI:
@@ -114,6 +121,7 @@ cardMode modeFromCardConfig(const v3::storage::CardConfig& card) {
   }
 }
 
+/** @brief Returns family-local index of card among enabled cards of same family. */
 uint8_t familyLocalIndex(const v3::storage::SystemConfig& system,
                          uint8_t cardPos, v3::storage::CardFamily family) {
   uint8_t idx = 0;
@@ -128,6 +136,10 @@ uint8_t familyLocalIndex(const v3::storage::SystemConfig& system,
 
 }  // namespace
 
+/**
+ * @brief Initializes kernel runtime using validated storage config.
+ * @details Binds all family slots, resets scan counters, and captures platform dependency.
+ */
 void KernelService::begin(const v3::storage::ValidatedConfig& config,
                           v3::platform::PlatformService& platform) {
   config_ = config;
@@ -155,6 +167,10 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
   stepPending_ = false;
 }
 
+/**
+ * @brief Executes one deterministic scan opportunity.
+ * @details Applies run-mode/period gating, runs family scan passes, and updates scan metrics.
+ */
 void KernelService::tick(uint32_t nowMs) {
   if (metrics_.scanPeriodMs == 0) return;
 
@@ -176,11 +192,13 @@ void KernelService::tick(uint32_t nowMs) {
   nextScanDueMs_ = nowMs + metrics_.scanPeriodMs;
 }
 
+/** @brief Updates active run mode and clears step token when leaving step mode. */
 void KernelService::setRunMode(engineMode mode) {
   metrics_.mode = mode;
   if (mode != RUN_STEP) stepPending_ = false;
 }
 
+/** @brief Requests one step token for next eligible step-mode scan. */
 void KernelService::requestStepOnce() { stepPending_ = true; }
 
 bool KernelService::setDiForce(uint8_t cardId, bool forceActive, bool forcedSample) {
@@ -206,8 +224,13 @@ bool KernelService::setAiForce(uint8_t cardId, bool forceActive,
   return false;
 }
 
+/** @brief Returns latest kernel metrics snapshot. */
 const KernelMetrics& KernelService::metrics() const { return metrics_; }
 
+/**
+ * @brief Exports runtime snapshot rows for enabled configured cards.
+ * @details Projects per-family slot state into unified `RuntimeSnapshotCard` transport rows.
+ */
 uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
                                                   uint8_t capacity) const {
   if (outCards == nullptr || capacity == 0) return 0;
@@ -332,6 +355,7 @@ uint8_t KernelService::exportRuntimeSnapshotCards(RuntimeSnapshotCard* outCards,
   return written;
 }
 
+/** @brief Binds AI runtime slots from validated config. */
 void KernelService::bindAiSlotsFromConfig() {
   aiSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -365,6 +389,7 @@ void KernelService::bindAiSlotsFromConfig() {
   }
 }
 
+/** @brief Executes AI family scan pass and updates force counters. */
 void KernelService::runAiScan() {
   uint8_t forced = 0;
   for (uint8_t i = 0; i < aiSlotCount_; ++i) {
@@ -381,6 +406,7 @@ void KernelService::runAiScan() {
   metrics_.aiForcedCount = forced;
 }
 
+/** @brief Binds DI runtime slots from validated config. */
 void KernelService::bindDiSlotsFromConfig() {
   diSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -427,6 +453,7 @@ void KernelService::bindDiSlotsFromConfig() {
   }
 }
 
+/** @brief Binds DO runtime slots from validated config. */
 void KernelService::bindDoSlotsFromConfig() {
   doSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -463,6 +490,7 @@ void KernelService::bindDoSlotsFromConfig() {
   }
 }
 
+/** @brief Binds SIO runtime slots from validated config. */
 void KernelService::bindSioSlotsFromConfig() {
   sioSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -492,6 +520,7 @@ void KernelService::bindSioSlotsFromConfig() {
   }
 }
 
+/** @brief Binds MATH runtime slots from validated config. */
 void KernelService::bindMathSlotsFromConfig() {
   mathSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -530,6 +559,7 @@ void KernelService::bindMathSlotsFromConfig() {
   }
 }
 
+/** @brief Binds RTC runtime slots from validated config. */
 void KernelService::bindRtcSlotsFromConfig() {
   rtcSlotCount_ = 0;
   for (uint8_t i = 0; i < v3::storage::kMaxCards; ++i) {
@@ -566,6 +596,10 @@ void KernelService::bindRtcSlotsFromConfig() {
   }
 }
 
+/**
+ * @brief Builds transient runtime signal array used by condition evaluators.
+ * @details Merges all active family slot states into card-id indexed signal rows.
+ */
 void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
                                         uint8_t signalCount) const {
   if (signals == nullptr) return;
@@ -637,6 +671,10 @@ void KernelService::buildSignalSnapshot(V3RuntimeSignal* signals,
   }
 }
 
+/**
+ * @brief Executes DI family pass including condition evaluation and edge qualification.
+ * @details Updates DI counters/inhibition/force telemetry and slot state.
+ */
 void KernelService::runDiScan(uint32_t nowMs) {
   uint32_t totalEdges = 0;
   uint8_t inhibited = 0;
@@ -696,6 +734,7 @@ void KernelService::runDiScan(uint32_t nowMs) {
   metrics_.diForcedCount = forced;
 }
 
+/** @brief Executes DO family pass including condition evaluation and output writes. */
 void KernelService::runDoScan(uint32_t nowMs) {
   uint8_t activeCount = 0;
   V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
@@ -729,6 +768,7 @@ void KernelService::runDoScan(uint32_t nowMs) {
   metrics_.doActiveCount = activeCount;
 }
 
+/** @brief Executes SIO family pass including condition evaluation. */
 void KernelService::runSioScan(uint32_t nowMs) {
   uint8_t activeCount = 0;
   V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
@@ -759,6 +799,7 @@ void KernelService::runSioScan(uint32_t nowMs) {
   metrics_.sioActiveCount = activeCount;
 }
 
+/** @brief Executes MATH family pass including condition evaluation. */
 void KernelService::runMathScan() {
   V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
 
@@ -782,6 +823,10 @@ void KernelService::runMathScan() {
   }
 }
 
+/**
+ * @brief Executes RTC family pass using minute-stamp schedule matching.
+ * @details Applies minute-key deduplication to prevent repeated trigger within same minute.
+ */
 void KernelService::runRtcScan(uint32_t nowMs) {
   v3::platform::LocalMinuteStamp stamp = {};
   const bool hasValidTime =
@@ -818,6 +863,7 @@ void KernelService::runRtcScan(uint32_t nowMs) {
   }
 }
 
+/** @brief Evaluates one condition block against runtime signal snapshot. */
 bool KernelService::evalConditionBlock(const v3::storage::ConditionBlock& block,
                                        const V3RuntimeSignal* signals,
                                        uint8_t signalCount) const {
@@ -829,6 +875,10 @@ bool KernelService::evalConditionBlock(const v3::storage::ConditionBlock& block,
   return false;
 }
 
+/**
+ * @brief Evaluates one condition clause against runtime signal snapshot.
+ * @details Supports state, trigger, numeric threshold, and mission-lifecycle operators.
+ */
 bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clause,
                                         const V3RuntimeSignal* signals,
                                         uint8_t signalCount) const {

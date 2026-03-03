@@ -22,6 +22,20 @@ Notes:
 #include "kernel/v3_condition_rules.h"
 
 namespace {
+/**
+ * @brief Resolves the expected legacy card type for a fixed card-id slot.
+ * @details Slot boundaries are supplied by config and define a contiguous id
+ * mapping for DI/DO/AI/SIO/MATH/RTC families.
+ * @param id Card id being parsed.
+ * @param doStart First DO card id.
+ * @param aiStart First AI card id.
+ * @param sioStart First SIO card id.
+ * @param mathStart First MATH card id.
+ * @param rtcStart First RTC card id.
+ * @return The expected legacy card type for this id.
+ * @par Used By
+ * parseV3CardToTyped().
+ */
 logicCardType expectedTypeForCardId(uint8_t id, uint8_t doStart, uint8_t aiStart,
                                     uint8_t sioStart, uint8_t mathStart,
                                     uint8_t rtcStart) {
@@ -33,6 +47,18 @@ logicCardType expectedTypeForCardId(uint8_t id, uint8_t doStart, uint8_t aiStart
   return RtcCard;
 }
 
+/**
+ * @brief Maps v3 mode token text into legacy runtime mode enum.
+ * @details Conversion is type-aware so only valid mode tokens per family are
+ * accepted.
+ * @param type Parsed card type.
+ * @param mode Mode token from JSON.
+ * @param outMode Destination legacy mode.
+ * @retval true Mode token is valid for the card type and was converted.
+ * @retval false Mode token is invalid for the card type.
+ * @par Used By
+ * parseV3CardToTyped().
+ */
 bool mapV3ModeToLegacy(logicCardType type, const char* mode, cardMode& outMode) {
   if (type == DigitalInput) {
     if (std::strcmp(mode, "RISING") == 0) return (outMode = Mode_DI_Rising), true;
@@ -52,6 +78,15 @@ bool mapV3ModeToLegacy(logicCardType type, const char* mode, cardMode& outMode) 
   return (outMode = Mode_None), true;
 }
 
+/**
+ * @brief Parses math operation token into compact operator code.
+ * @param op Operation token string (ADD/SUB_SAT/MUL/DIV_SAFE).
+ * @param outOp Destination operation id.
+ * @retval true Operation token recognized.
+ * @retval false Operation token invalid.
+ * @par Used By
+ * parseV3CardToTyped().
+ */
 bool parseMathOperator(const char* op, uint8_t& outOp) {
   if (op == nullptr) return false;
   if (std::strcmp(op, "ADD") == 0) return (outOp = 0U), true;
@@ -61,6 +96,17 @@ bool parseMathOperator(const char* op, uint8_t& outOp) {
   return false;
 }
 
+/**
+ * @brief Normalizes condition threshold JSON into uint32.
+ * @details Accepts integer and bool forms and rejects negative or overflowing
+ * values.
+ * @param threshold JSON threshold value.
+ * @param out Parsed numeric threshold.
+ * @retval true Threshold converted successfully.
+ * @retval false Threshold type/range unsupported.
+ * @par Used By
+ * mapV3ClauseToLegacyOperator().
+ */
 bool parseThresholdAsUInt(JsonVariantConst threshold, uint32_t& out) {
   if (threshold.is<uint64_t>()) {
     uint64_t v = threshold.as<uint64_t>();
@@ -81,6 +127,20 @@ bool parseThresholdAsUInt(JsonVariantConst threshold, uint32_t& out) {
   return false;
 }
 
+/**
+ * @brief Converts a v3 clause triplet (field/operator/threshold) to legacy op.
+ * @details Applies source-family field/operator compatibility rules first, then
+ * maps state/edge/numeric forms into legacy logicOperator values.
+ * @param sourceType Source card legacy type.
+ * @param field Source field token.
+ * @param op Operator token.
+ * @param threshold Threshold JSON value.
+ * @param ioThreshold Parsed numeric threshold output.
+ * @param ok Conversion success flag.
+ * @return Legacy operator for runtime condition evaluation.
+ * @par Used By
+ * mapV3ConditionBlock().
+ */
 logicOperator mapV3ClauseToLegacyOperator(logicCardType sourceType,
                                           const char* field, const char* op,
                                           JsonVariantConst threshold,
@@ -148,6 +208,26 @@ logicOperator mapV3ClauseToLegacyOperator(logicCardType sourceType,
   return Op_AlwaysFalse;
 }
 
+/**
+ * @brief Parses and maps a v3 condition block into legacy condition fields.
+ * @details Supports `NONE`, `AND`, `OR` combiner and validates clause source
+ * ids and clause compatibility with source card families.
+ * @param block Condition block JSON object.
+ * @param totalCards Total number of cards in config.
+ * @param outAId Clause A source id.
+ * @param outAOp Clause A operator.
+ * @param outAThreshold Clause A threshold.
+ * @param outBId Clause B source id.
+ * @param outBOp Clause B operator.
+ * @param outBThreshold Clause B threshold.
+ * @param outCombine Clause combiner.
+ * @param reason Human-readable parse error.
+ * @param sourceTypeById Type lookup table by card id.
+ * @retval true Block is valid and mapped.
+ * @retval false Block invalid; `reason` set.
+ * @par Used By
+ * parseV3CardToTyped().
+ */
 bool mapV3ConditionBlock(JsonObjectConst block, uint8_t totalCards,
                          uint8_t& outAId, logicOperator& outAOp,
                          uint32_t& outAThreshold, uint8_t& outBId,
@@ -223,6 +303,13 @@ bool mapV3ConditionBlock(JsonObjectConst block, uint8_t totalCards,
   return true;
 }
 
+/**
+ * @brief Converts legacy card type to typed-config family enum.
+ * @param type Legacy card type.
+ * @return Corresponding typed-card family.
+ * @par Used By
+ * parseV3CardToTyped().
+ */
 V3CardFamily v3FamilyFromLogicType(logicCardType type) {
   switch (type) {
     case DigitalInput:
@@ -243,6 +330,26 @@ V3CardFamily v3FamilyFromLogicType(logicCardType type) {
 }
 }  // namespace
 
+/**
+ * @brief Parses one v3 card JSON object into strongly typed runtime config.
+ * @details Performs slot/type consistency checks, mode mapping, per-family
+ * field extraction, and condition mapping for family types that use logic
+ * blocks.
+ * @param v3Card Source card JSON object.
+ * @param sourceTypeById Type lookup table by card id.
+ * @param totalCards Total card count.
+ * @param doStart First DO card id.
+ * @param aiStart First AI card id.
+ * @param sioStart First SIO card id.
+ * @param mathStart First MATH card id.
+ * @param rtcStart First RTC card id.
+ * @param out Destination typed card config.
+ * @param reason Human-readable parse error.
+ * @retval true Card parsed successfully.
+ * @retval false Card invalid; `reason` set.
+ * @par Used By
+ * normalizeConfigV3().
+ */
 bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeById,
                         uint8_t totalCards, uint8_t doStart, uint8_t aiStart,
                         uint8_t sioStart, uint8_t mathStart, uint8_t rtcStart,

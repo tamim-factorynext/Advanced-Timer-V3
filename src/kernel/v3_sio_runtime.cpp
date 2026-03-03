@@ -19,6 +19,12 @@ Notes:
 */
 #include "kernel/v3_sio_runtime.h"
 
+/**
+ * @brief Executes one SIO card step by delegating to DO runtime semantics.
+ * @details Adapts SIO config/state/input to DO step contract, then mirrors outputs back.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3SioStep(const V3SioRuntimeConfig& cfg, V3SioRuntimeState& runtime,
                   const V3SioStepInput& in, V3SioStepOutput& out) {
   V3DoRuntimeConfig doCfg = {};

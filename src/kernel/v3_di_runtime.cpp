@@ -20,6 +20,12 @@ Notes:
 #include "kernel/v3_di_runtime.h"
 
 namespace {
+/**
+ * @brief Clears DI pulse/timing/counter fields used for qualified-edge tracking.
+ * @details Called on reset/inhibit transitions.
+ * @par Used By
+ * - src/kernel/v3_di_runtime.cpp
+ */
 void resetDiCounter(V3DiRuntimeState& runtime) {
   runtime.edgePulse = false;
   runtime.liveValue = 0;
@@ -28,6 +34,12 @@ void resetDiCounter(V3DiRuntimeState& runtime) {
 }
 }  // namespace
 
+/**
+ * @brief Executes one DI card step including edge qualification path.
+ * @details Applies force sampling, polarity inversion, set/reset gating, debounce filter, and edge-mode policy.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
                  const V3DiStepInput& in, V3DiStepOutput& out) {
   const bool rawSample = in.forceActive ? in.forcedSample : in.sample;

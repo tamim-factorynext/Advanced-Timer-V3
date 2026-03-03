@@ -20,6 +20,20 @@ Notes:
 #include <string>
 
 namespace {
+/**
+ * @brief Resolves expected card family for a fixed card-id slot.
+ * @details Uses configured family start offsets to classify each contiguous id
+ * range.
+ * @param id Card id.
+ * @param doStart First DO id.
+ * @param aiStart First AI id.
+ * @param sioStart First SIO id.
+ * @param mathStart First MATH id.
+ * @param rtcStart First RTC id.
+ * @return Expected typed-card family for the slot.
+ * @par Used By
+ * validateTypedCardConfigs().
+ */
 V3CardFamily familyForId(uint8_t id, uint8_t doStart, uint8_t aiStart,
                          uint8_t sioStart, uint8_t mathStart,
                          uint8_t rtcStart) {
@@ -31,28 +45,64 @@ V3CardFamily familyForId(uint8_t id, uint8_t doStart, uint8_t aiStart,
   return V3CardFamily::RTC;
 }
 
+/**
+ * @brief Checks whether an operator is a numeric comparison operator.
+ * @par Used By
+ * isOperatorAllowedForFamily().
+ */
 bool isNumericOp(logicOperator op) {
   return op == Op_GT || op == Op_GTE || op == Op_LT || op == Op_LTE ||
          op == Op_EQ || op == Op_NEQ;
 }
 
+/**
+ * @brief Checks whether an operator is a logical/physical state operator.
+ * @par Used By
+ * isOperatorAllowedForFamily().
+ */
 bool isStateOp(logicOperator op) {
   return op == Op_LogicalTrue || op == Op_LogicalFalse ||
          op == Op_PhysicalOn || op == Op_PhysicalOff;
 }
 
+/**
+ * @brief Checks whether an operator is a trigger-edge operator.
+ * @par Used By
+ * isOperatorAllowedForFamily().
+ */
 bool isTriggerOp(logicOperator op) {
   return op == Op_Triggered || op == Op_TriggerCleared;
 }
 
+/**
+ * @brief Checks whether an operator is a process-state operator.
+ * @par Used By
+ * isOperatorAllowedForFamily().
+ */
 bool isProcessOp(logicOperator op) {
   return op == Op_Running || op == Op_Finished || op == Op_Stopped;
 }
 
+/**
+ * @brief Checks whether an operator is an unconditional always operator.
+ * @par Used By
+ * isOperatorAllowedForFamily().
+ */
 bool isAlwaysOp(logicOperator op) {
   return op == Op_AlwaysTrue || op == Op_AlwaysFalse;
 }
 
+/**
+ * @brief Validates operator compatibility with a source card family.
+ * @details Enforces family-specific rule set so condition clauses only use
+ * operators that runtime semantics support for that source family.
+ * @param sourceFamily Clause source family.
+ * @param op Clause operator.
+ * @retval true Operator is allowed for this source family.
+ * @retval false Operator is not allowed.
+ * @par Used By
+ * validateTypedCardConfigs().
+ */
 bool isOperatorAllowedForFamily(V3CardFamily sourceFamily, logicOperator op) {
   if (isAlwaysOp(op)) return true;
   if (sourceFamily == V3CardFamily::AI) {
@@ -72,6 +122,23 @@ bool isOperatorAllowedForFamily(V3CardFamily sourceFamily, logicOperator op) {
 }
 }  // namespace
 
+/**
+ * @brief Validates normalized typed-card configuration for runtime safety.
+ * @details Confirms card ordering, slot-family alignment, family-specific field
+ * ranges, mode values, and condition operator compatibility.
+ * @param cards Typed card config array.
+ * @param count Number of cards.
+ * @param doStart First DO id.
+ * @param aiStart First AI id.
+ * @param sioStart First SIO id.
+ * @param mathStart First MATH id.
+ * @param rtcStart First RTC id.
+ * @param reason Human-readable validation error on failure.
+ * @retval true Configuration is valid.
+ * @retval false Configuration invalid; `reason` set.
+ * @par Used By
+ * parseAndValidateConfigV3().
+ */
 bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
                               uint8_t doStart, uint8_t aiStart,
                               uint8_t sioStart, uint8_t mathStart,

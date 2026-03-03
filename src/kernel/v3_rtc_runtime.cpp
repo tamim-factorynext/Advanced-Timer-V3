@@ -19,6 +19,12 @@ Notes:
 */
 #include "kernel/v3_rtc_runtime.h"
 
+/**
+ * @brief Executes one RTC runtime step.
+ * @details Maintains active trigger window and clears command state when duration expires.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
                   const V3RtcStepInput& in) {
   runtime.mode = Mode_None;
@@ -38,10 +44,17 @@ void runV3RtcStep(const V3RtcRuntimeConfig& cfg, V3RtcRuntimeState& runtime,
   }
 }
 
+/** @brief Compares one time field against configured schedule value. */
 bool v3RtcFieldMatches(int fieldValue, int scheduleValue) {
   return fieldValue == scheduleValue;
 }
 
+/**
+ * @brief Evaluates minute-stamp match against one RTC schedule view.
+ * @details Applies enabled-field matching on year/month/day/weekday/hour plus required minute.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
                                const V3RtcMinuteStamp& stamp) {
   if (!channel.enabled) return false;
@@ -54,6 +67,12 @@ bool v3RtcChannelMatchesMinute(const V3RtcScheduleView& channel,
   return true;
 }
 
+/**
+ * @brief Builds monotonic minute key for deduplication within one minute bucket.
+ * @details Used to prevent repeated trigger activation for same channel+minute.
+ * @par Used By
+ * - src/kernel/kernel_service.cpp
+ */
 uint32_t v3RtcMinuteKey(const V3RtcMinuteStamp& stamp) {
   return ((((static_cast<uint32_t>(stamp.year) * 13U) + stamp.month) * 32U +
            stamp.day) *
