@@ -67,7 +67,6 @@ constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
 constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
-constexpr uint32_t kCommandHeartbeatIntervalMs = 250;
 constexpr uint32_t kTaskWatchdogTimeoutSeconds = 8;
 constexpr uint32_t kWiFiStatusLogIntervalMs = 10000;
 
@@ -250,8 +249,6 @@ void core1ServiceTask(void*) {
     return;
   }
 
-  uint32_t lastHeartbeatMs = 0;
-
   while (true) {
     const uint32_t nowMs = gPlatform.nowMs();
     gWiFi.tick(nowMs);
@@ -268,11 +265,6 @@ void core1ServiceTask(void*) {
 
     const KernelSnapshotMessage snapshot = latestKernelSnapshotFromQueue();
     gControl.tick(nowMs);
-
-    if ((nowMs - lastHeartbeatMs) >= kCommandHeartbeatIntervalMs) {
-      gPortal.submitSetRunMode(RUN_NORMAL, micros());
-      lastHeartbeatMs = nowMs;
-    }
 
     dispatchPortalRequestsToControl();
     dispatchControlCommandsToKernelQueue();

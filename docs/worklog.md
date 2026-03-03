@@ -3607,3 +3607,34 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - RAM: `35.3%` (`115748 / 327680`)
   - Flash: `69.5%` (`911381 / 1310720`)
 
+## 2026-03-03 (Backend Readiness + Frontend Deprecation)
+
+### Completed
+
+- Removed automatic run-mode override from service loop:
+  - deleted periodic `gPortal.submitSetRunMode(RUN_NORMAL, micros())` heartbeat
+  - file: `src/main.cpp`
+  - rationale: prevent backend from overriding new frontend run-mode intent.
+
+- Deprecated active frontend pages and preserved legacy reference snapshots:
+  - archived copies:
+    - `docs/legacy/portal-frontend/index.html`
+    - `docs/legacy/portal-frontend/config.html`
+    - `docs/legacy/portal-frontend/settings.html`
+  - added deprecation note:
+    - `docs/legacy/portal-frontend/README.md`
+  - replaced active served pages with explicit deprecated placeholders:
+    - `data/index.html`
+    - `data/config.html`
+    - `data/settings.html`
+
+### Evidence
+
+- Firmware build:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Environment: `esp32doit-devkit-v1`
+  - Result: `SUCCESS`
+  - Duration: `00:00:37.245`
+  - RAM: `35.3%` (`115748 / 327680`)
+  - Flash: `69.5%` (`911337 / 1310720`)
+
