@@ -1,142 +1,226 @@
-# ESP32-S3 PSRAM Migration Guide (Planned)
+# ESP32-S3 V4 Rebuild Plan
 
-Date: 2026-03-03  
-Status: Planned (deferred until ESP32-S3 hardware is available)
+Date: 2026-03-04  
+Status: Active Plan (execution-ready)
 
-## 1. Purpose
+## 1. Intent
 
-Capture a concrete migration path from current ESP32 target to ESP32-S3 + PSRAM so memory-pressure fixes are intentional, testable, and reversible.
+Define a full clean rebuild path for `v4` on ESP32-S3 (N16R8-class target), optimized for:
 
-## 2. Why This Exists
+- deterministic runtime behavior
+- strong memory management discipline
+- low sustained thermal load
+- responsive/snappy portal UX
+- long-term maintainability
 
-On 2026-03-02, firmware hit an ESP32 linker DRAM overflow (`dram0_0_seg`) after runtime snapshot/diagnostics payload growth.
+This plan replaces incremental patching strategy on vanilla ESP32 as the primary direction.
 
-Root cause:
+## 2. Scope Decision (Locked)
 
-- Large fixed portal JSON buffers were allocated in static memory (`.bss`) via `char[]`.
-- Static data growth reduced internal SRAM headroom enough to fail linking.
+- `v4` is a fresh implementation, not a mass rename of legacy versions.
+- Legacy code remains as reference/comparison baseline.
+- No planned return to vanilla ESP32 for primary development.
+- Legacy compatibility is applied only where it does not harm v4 quality goals.
 
-Immediate mitigation already applied:
+## 3. Why We Are Rebuilding
 
-- Replaced fixed `char[]` buffers with heap-backed `String` in `PortalService`.
-- Build recovered, but long-term memory policy remains important.
+Observed pain points on current ESP32 bring-up:
 
-Current guardrails (added 2026-03-03):
+- stack overflows in service task under realistic portal/config traffic
+- network/socket pressure symptoms during repeated polling/transport writes
+- tight SRAM/flash/LittleFS headroom limiting safe feature growth
+- fragile behavior under combined runtime + transport + config workloads
 
-- Pre-reserve portal JSON `String` capacities at startup to reduce realloc churn.
-- Reject oversized JSON builds when `measureJson(...)` exceeds reserved capacity.
-- Return explicit fallback JSON payloads on memory pressure instead of partial payloads.
-- Expose heap-guard counters in diagnostics payload:
-  - reserve readiness
-  - serialize-failure counts
-  - capacity-reject counts
-  - current string capacities
+These indicate structural limits for forward scope, not just isolated bugs.
 
-Recent bring-up pain points (observed on 2026-03-04, DOIT ESP32 DevKit V1):
+## 4. Design Priorities (Decision Rubric)
 
-- LittleFS mount corruption occurred on boot and required auto-format recovery path (`LittleFS.begin(true)` fallback).
-- Multiple stack overflow/canary crashes occurred in `core0`/`core1` tasks during early runtime until stack-hardening changes were applied.
-- Memory headroom remains sensitive when snapshot/diagnostics/transport paths grow.
-- Current LittleFS ceiling on this target remains limited (`~1.4 MB`) for firmware + portal asset growth planning.
+Every class/struct/function decision must pass this order:
 
-## 3. What `.bss` Means (Memory Model Note)
+1. Correctness  
+2. Determinism  
+3. Safety/robustness  
+4. Resource efficiency (CPU, SRAM, PSRAM, flash, network, thermal)  
+5. Maintainability  
+6. Migration cost
 
-`.bss` is the binary section for global/static variables that are zero-initialized at startup.
+Rule: if an option fails 1-3, reject it regardless of convenience.
 
-Practical implications:
+## 5. Architecture Direction
 
-- Any large global/static arrays consume internal SRAM permanently for the full runtime.
-- This memory is reserved before tasks run; it does not scale down when idle.
-- If `.bss` + `.data` + runtime overhead exceed target DRAM limits, link fails before flashing.
+### 5.1 Memory Model
 
-## 4. PSRAM Suitability Rules
+- Keep scan-loop hot data in internal SRAM.
+- Use PSRAM for large non-real-time buffers (portal payload staging, optional history, debug datasets).
+- Avoid unbounded dynamic growth patterns in long-running paths.
+- Prefer bounded reusable buffers and explicit capacity budgets.
 
-Use PSRAM for large, non-real-time, bursty, or transport-facing buffers.
+### 5.2 Runtime and Scheduling
 
-Good candidates:
+- Keep kernel/control loops deterministic and isolated from heavy transport work.
+- Avoid overlapping request handling patterns that can pile sockets.
+- Use backpressure-aware queue policies and explicit drop telemetry.
 
-- Snapshot/diagnostics JSON assembly buffers
-- Portal/web response staging buffers
-- Optional telemetry history rings used only for UI/diagnostics
-- Large temporary parse/format work buffers
+### 5.3 Transport/Portal
 
-Keep in internal SRAM:
+- Snapshot and diagnostics contracts are explicit and versioned.
+- Polling behavior must be single-flight by default (no request overlap).
+- Define endpoint latency targets and payload-size budgets.
 
-- Deterministic scan-loop hot state
-- ISR-shared data and tight synchronization objects
-- Frequently accessed kernel runtime structures
-- Latency-sensitive queue control metadata
+### 5.4 Config Pipeline
 
-## 5. Migration Objectives
+- Contract-first config schema and validator behavior.
+- Validate/save/commit flows are measurable and debuggable.
+- Error responses are explicit and machine-parseable.
 
-- Make lower thermal output a primary migration goal (reduce sustained board heat during normal runtime).
-- Increase memory headroom for portal observability payload growth.
-- Avoid reintroducing large static `.bss` buffers.
-- Preserve deterministic kernel timing behavior.
-- Keep rollback path to current ESP32 target until S3 path is validated.
+## 6. Documentation-First Workflow
 
-## 6. Planned Migration Steps
+For every module:
 
-1. Add a new PlatformIO environment for ESP32-S3 board variant with PSRAM enabled.
-2. Keep existing ESP32 environment untouched as fallback.
-3. Introduce a small allocation policy layer for large portal buffers:
-   - prefer PSRAM allocation on S3 targets
-   - fall back safely to internal heap if PSRAM unavailable
-4. Migrate portal snapshot/diagnostics staging away from implicit `String` growth into explicit bounded buffers allocated by policy.
-5. Optionally stream JSON directly to transport where feasible to reduce peak buffering.
-6. Add runtime memory telemetry endpoints/counters:
-   - free internal heap
-   - largest internal block
-   - free PSRAM
-   - largest PSRAM block
-7. Run stress soak with sustained snapshot publish rates and verify:
-   - no watchdog resets
-   - no allocator failure
-   - stable scan timing envelopes
-   - no abnormal sustained board heating versus current ESP32 baseline under equivalent workload
-8. Make S3+PSRAM target default only after acceptance evidence is recorded.
+1. Write module contract (`.md`) first.
+2. Define acceptance criteria and measurable limits.
+3. Implement minimal vertical slice.
+4. Add Doxygen for exported symbols.
+5. Hardware-test and record findings.
+6. Only then expand feature depth.
 
-## 7. Acceptance Checklist For S3 Migration
+No large blind coding batch without hardware verification gates.
 
-- Build/link succeeds with PSRAM-enabled S3 environment.
-- Snapshot API and portal payload contracts remain unchanged.
-- Deterministic scan timing budget remains within existing thresholds.
-- No regression in command/snapshot queue behavior.
-- 24h soak test without heap fragmentation-related instability.
-- Documented fallback behavior when PSRAM allocation fails.
-- Thermal behavior is validated as a first-class criterion:
-  - board remains within acceptable touch temperature during 30-minute normal-run baseline
-  - no sustained thermal climb trend under equivalent Wi-Fi + snapshot traffic compared to current ESP32 baseline
+## 7. Rebuild Phases
 
-## 8. Risks And Mitigations
+### Phase 0: Foundation
 
-Risk: Treating PSRAM as a universal memory pool may hurt deterministic paths.  
-Mitigation: Strict rule that kernel hot state remains internal SRAM.
+- Create dedicated branch (`esp32-s3-v4-rebuild`).
+- Establish fresh project skeleton and naming conventions.
+- Define root README and architecture map.
+- Add build environments for S3 and debug variants.
 
-Risk: Fragmentation from variable-sized `String` growth under continuous updates.  
-Mitigation: Prefer bounded reusable buffers for large payload assembly.
+Exit criteria:
 
-Risk: Runtime failure is harder to triage than build-time `.bss` overflow.  
-Mitigation: Keep explicit fallback responses and publish memory guard counters for field diagnostics.
+- boots on S3 hardware
+- deterministic heartbeat/logging
+- baseline CI/build repeatable
 
-Risk: Board-to-board PSRAM differences (2MB/8MB, speed, config).  
-Mitigation: Detect capacity/features at runtime and keep conservative defaults.
+### Phase 1: Platform + Storage Core
 
-Risk: S3 migration could increase feature scope and accidentally keep CPU/wifi duty high, negating thermal gains.  
-Mitigation: Track thermal impact as a gated acceptance item and prefer runtime-efficiency changes (reduced busy-loop churn, controlled publish rates, and conservative radio activity) during migration.
+- platform abstraction (pins, clocks, watchdog, timing, heap telemetry)
+- storage layer with robust mount/recovery policy
+- config contract v4 draft + parser/validator skeleton
 
-## 9. Migration Trigger Criteria
+Exit criteria:
 
-Start ESP32-S3 migration immediately when any of these persist after one stabilization pass:
+- stable boot/reboot loops
+- storage recovery behavior verified
+- config load/validate path working with typed errors
 
-- Repeated task stack overflows/canary triggers after normal stack tuning.
-- Inability to keep runtime + portal payload features without memory-related resets/degradation.
-- Portal asset/config growth pressure that cannot be kept safely inside current ESP32 LittleFS budget.
-- Ongoing need to trade away diagnostics/usability features only to stay within SRAM/flash limits.
+### Phase 2: Kernel + Runtime Core
 
-## 10. References
+- deterministic scan engine
+- runtime snapshot model
+- queue and telemetry framework
 
-- `docs/decisions.md` (`DEC-0051`, `DEC-0052`)
-- `docs/worklog.md` (2026-03-02 DRAM overflow + recovery entry)
-- `src/portal/portal_service.h`
-- `src/portal/portal_service.cpp`
+Exit criteria:
+
+- timing envelope stable under synthetic load
+- no watchdog/canary faults in soak
+
+### Phase 3: Control + Command Path
+
+- run mode control
+- step/simulation primitives
+- command queue parity diagnostics
+
+Exit criteria:
+
+- command latency within defined target
+- consistent command accounting
+
+### Phase 4: Portal + Config Studio APIs
+
+- `/api/v4/snapshot`, diagnostics, command
+- `/api/v4/config/*` active/staged/validate/save/commit/restore
+- transport efficiency and connection handling hardening
+
+Exit criteria:
+
+- stable API under prolonged browser polling
+- no recurring socket write storms
+
+### Phase 5: Portal UI (Iterative with Backend)
+
+- live page, config studio, settings, learn placeholders
+- theme system and icon system from start
+- card-centric config UX (not raw JSON UX)
+
+Exit criteria:
+
+- essential flows usable on real hardware
+- snappy interactions under normal network conditions
+
+### Phase 6: Simulation/Debug Suite
+
+- stepping/continuous/breakpoints
+- clear runtime indicators and safe enable/disable gating
+
+Exit criteria:
+
+- simulation controls reliable and explicitly isolated from production mode
+
+## 8. Non-Functional Targets
+
+### 8.1 Snappiness
+
+- live API response: smooth at 1 Hz polling baseline
+- validate/save/commit operations: responsive with clear in-progress state
+- no overlapping frontend request storms
+
+### 8.2 Thermal
+
+- reduce unnecessary network/CPU duty during idle observation
+- validate 30-minute normal-run thermal trend against baseline
+
+### 8.3 Memory
+
+- explicit budgets for internal SRAM and PSRAM use by subsystem
+- fragmentation-aware long-run behavior checks
+- no silent fallback on allocation failures
+
+## 9. Acceptance Gates (v4 Go-Live)
+
+Required before declaring v4 production-ready:
+
+- stable boot and 24h soak without resets
+- deterministic runtime timing within target envelope
+- config API lifecycle robust under repeated edits/validation
+- portal transport stable without persistent socket/write errors
+- memory telemetry confirms headroom and bounded behavior
+- thermal profile acceptable in normal-run scenario
+
+## 10. Risk Register
+
+Risk: scope creep during clean rebuild.  
+Mitigation: phase gates + acceptance criteria before expansion.
+
+Risk: overuse of PSRAM for latency-sensitive data.  
+Mitigation: strict SRAM/PSRAM placement policy.
+
+Risk: transport regressions under real browser behavior.  
+Mitigation: single-flight poll discipline, soak tests, server-side instrumentation.
+
+Risk: docs drift from implementation.  
+Mitigation: contract-first + doxygen + phase completion checklist.
+
+## 11. Working Agreement
+
+- We code iteratively with real hardware verification.
+- We do not accept "works once" behavior; we require repeatable stability.
+- We challenge each design choice with:  
+  "Is this the best approach for correctness, determinism, efficiency, and long-term maintainability?"
+
+## 12. Immediate Next Actions
+
+1. Create and switch to `esp32-s3-v4-rebuild` branch.
+2. Freeze this plan as migration source of truth.
+3. Draft `README.md` for v4 structure and goals.
+4. Define first module contracts: platform, storage, config contract.
+5. Start Phase 0 implementation.
