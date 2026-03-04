@@ -19,6 +19,8 @@ Notes:
 
 #include <stdint.h>
 
+#include "platform/hw_profile.h"
+
 namespace v3::platform {
 
 struct LocalMinuteStamp {
@@ -35,14 +37,19 @@ class PlatformService {
   void begin();
   uint32_t nowMs() const;
   bool readLocalMinuteStamp(LocalMinuteStamp& out) const;
-  void configureInputPin(uint8_t pin) const;
-  void configureOutputPin(uint8_t pin) const;
-  bool readDigitalInput(uint8_t pin) const;
-  uint32_t readAnalogInput(uint8_t pin) const;
-  void writeDigitalOutput(uint8_t pin, bool value) const;
+  void configureDiChannel(uint8_t channel) const;
+  void configureAiChannel(uint8_t channel) const;
+  void configureDoChannel(uint8_t channel) const;
+  bool readDiChannel(uint8_t channel) const;
+  uint32_t readAiChannel(uint8_t channel) const;
+  void writeDoChannel(uint8_t channel, bool value) const;
+  const HardwareProfile& profile() const;
   bool initTaskWatchdog(uint32_t timeoutSeconds, bool panicOnTrigger);
   bool addCurrentTaskToWatchdog() const;
   bool resetTaskWatchdog() const;
+
+ private:
+  const HardwareProfile* profile_ = nullptr;
 };
 
 }  // namespace v3::platform

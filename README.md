@@ -223,6 +223,18 @@ Bring-up note:
 - Current scan interval in implementation may be relaxed for validation bring-up.
 - Production target remains 10 ms deterministic scan cadence, validated by timing contracts.
 
+Hardware profile note:
+- Active board mapping is build-time driven through `platformio.ini` flags.
+- Logical card channels are mapped by `src/platform/hw_profile.*` and consumed by `PlatformService`.
+- Runtime logic uses logical channels, not hardcoded GPIO constants.
+- Current default profile for `esp32doit-devkit-v1`:
+- `DI`: `32,33`
+- `DO`: `25,26`
+- `AI`: `34,35`
+- virtual capacities: `SIO=2`, `MATH=2`, `RTC=2`
+- RTC backend selector is also profile-driven (`AT_RTC_BACKEND`):
+- `0=RTC_MILLIS` (system local-time service path), `1=DS3231`, `2=PCF8523`, `3=DS1307`
+
 ## 8. Testing Strategy (Functional + Performance + Production)
 
 Testing is treated as a core product requirement, not a post-feature activity.

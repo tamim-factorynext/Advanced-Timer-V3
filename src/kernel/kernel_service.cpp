@@ -384,7 +384,7 @@ void KernelService::bindAiSlotsFromConfig() {
     slot.state.mode = Mode_AI_Continuous;
     slot.state.state = State_AI_Streaming;
     if (platform_ != nullptr) {
-      platform_->configureInputPin(slot.channel);
+      platform_->configureAiChannel(slot.channel);
     }
   }
 }
@@ -397,7 +397,7 @@ void KernelService::runAiScan() {
     if (!slot.active) continue;
 
     const uint32_t sampled =
-        (platform_ != nullptr) ? platform_->readAnalogInput(slot.channel) : 0U;
+        (platform_ != nullptr) ? platform_->readAiChannel(slot.channel) : 0U;
     V3AiStepInput in = {};
     in.rawSample = slot.forceActive ? slot.forcedValue : sampled;
     runV3AiStep(slot.cfg, slot.state, in);
@@ -448,7 +448,7 @@ void KernelService::bindDiSlotsFromConfig() {
     slot.state = {};
     slot.state.state = State_DI_Idle;
     if (platform_ != nullptr) {
-      platform_->configureInputPin(slot.channel);
+      platform_->configureDiChannel(slot.channel);
     }
   }
 }
@@ -484,8 +484,8 @@ void KernelService::bindDoSlotsFromConfig() {
     slot.state.state = State_DO_Idle;
     slot.state.actualState = slot.cfg.invert;
     if (platform_ != nullptr) {
-      platform_->configureOutputPin(slot.channel);
-      platform_->writeDigitalOutput(slot.channel, slot.state.actualState);
+      platform_->configureDoChannel(slot.channel);
+      platform_->writeDoChannel(slot.channel, slot.state.actualState);
     }
   }
 }
@@ -688,7 +688,7 @@ void KernelService::runDiScan(uint32_t nowMs) {
     if (!slot.active) continue;
 
     const bool sampled =
-        (platform_ != nullptr) ? platform_->readDigitalInput(slot.channel) : false;
+        (platform_ != nullptr) ? platform_->readDiChannel(slot.channel) : false;
 
     V3DiStepInput in = {};
     in.nowMs = nowMs;
@@ -758,7 +758,7 @@ void KernelService::runDoScan(uint32_t nowMs) {
     slot.lastSetResult = out.turnOnConditionMet;
     slot.lastTurnOffConditionMet = out.turnOffConditionMet;
     if (platform_ != nullptr) {
-      platform_->writeDigitalOutput(slot.channel, slot.state.actualState);
+      platform_->writeDoChannel(slot.channel, slot.state.actualState);
     }
     if (slot.state.state == State_DO_OnDelay || slot.state.state == State_DO_Active) {
       activeCount += 1;

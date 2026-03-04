@@ -102,12 +102,25 @@ A profile may be represented by build flags (or a generated header) such as:
 - `AT_ENABLE_CARD_DI|DO|AI|SIO|MATH`
 - `AT_AI_BACKEND_INTERNAL_ADC|I2C_ADC|PLUGIN`
 - `AT_DI_GPIO_LIST`, `AT_DO_GPIO_LIST`, `AT_AI_GPIO_LIST`
+- `AT_PROFILE_NAME`, `AT_PLATFORM_VARIANT`
+- `AT_SIO_CAPACITY`, `AT_MATH_CAPACITY`, `AT_RTC_CAPACITY`
+- `AT_DI_BACKEND`, `AT_DO_BACKEND`, `AT_AI_BACKEND`
+- `AT_RTC_BACKEND`
 
-Current rollout policy:
+Current implementation status:
 
-- Keep `platformio.ini` clean for now.
-- Final flag names and mapping strategy are intentionally deferred to future design decisions.
-- This contract only fixes behavior and constraints, not the final build-flag syntax.
+- Active implementation now uses build flags in `platformio.ini`.
+- Profile materialization source: `src/platform/hw_profile.cpp`.
+- Active profile accessor: `v3::platform::activeHardwareProfile()`.
+- Runtime adapter integration: `src/platform/platform_service.cpp` maps logical channels to backend channels.
+- Kernel integration: `src/kernel/kernel_service.cpp` uses logical channels through `PlatformService` channel APIs.
+- Current backend code mapping:
+- `DI/DO`: `0=GPIO`, `1=I2C_EXPANDER`, `2=PLUGIN`
+- `AI`: `0=INTERNAL_ADC`, `1=I2C_ADC`, `2=PLUGIN`
+- `RTC`: `0=RTC_MILLIS` (system local-time service path), `1=DS3231`, `2=PCF8523`, `3=DS1307`
+
+Pragmatic note:
+- Strict pin/channel/reserved-pin validation is intentionally deferred for a later hardening phase.
 
 ## 8. Product-Line Direction
 

@@ -60,6 +60,7 @@ Code entrypoints for fast cross-check:
 - `PortalService` owns command ingress queue and cached JSON for diagnostics/snapshot responses.
 - `TransportRuntime` owns HTTP/WebSocket I/O and delegates command parsing/submit to portal.
 - `ControlService` validates/queues kernel commands from portal-side requests.
+- `PlatformService` owns hardware profile channel mapping (`logical channel -> backend channel`) and hardware IO calls.
 
 ### 2.4 Dependency Direction (Allowed Calls)
 
@@ -313,6 +314,7 @@ When changing queue capacities, scan period, or transport command rate limits:
 - Non-deterministic I/O and service work stays on Core1.
 - Cross-core effects go through explicit queues, not direct mutable shared state mutation.
 - Storage validation gate must pass before kernel begin.
+- Kernel must access DI/DO/AI through `PlatformService` logical-channel APIs, not hardcoded board pin constants.
 - Portal responses are cache-backed; do not build large transport payloads directly on hot request path.
 - User-facing terms must align with `docs/naming-glossary-v3.md` for payload/UI consistency.
 

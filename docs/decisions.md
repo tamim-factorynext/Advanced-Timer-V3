@@ -591,5 +591,26 @@ Use one short entry per decision with this structure:
 - Impact: Preserves scan behavior intent where within-scan order effects are explicitly accepted by design.
 - References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_typed_card_parser.cpp`, `src/kernel/v3_typed_config_rules.cpp`, `docs/schema-v3.md`, `docs/ARCHITECTURE.md`, `docs/user-guide-v3-draft.md`.
 
+## DEC-0057: Build-Time Hardware Profile Drives Logical Channel Mapping
+- Date: 2026-03-04
+- Status: Accepted
+- Context: Runtime behavior moved to typed V3 cards with logical `channel` fields, but board pin assignment strategy was still fragmented and difficult to change per target without touching runtime code.
+- Decision: Introduce a build-time hardware profile path (`platformio.ini` flags -> `src/platform/hw_profile.*` -> `PlatformService`) so kernel runtime uses logical channels only while platform adapters map to backend channels/pins.
+- Impact: Enables fast board-specific remapping (including future ESP32-S3 variants) by editing build flags instead of kernel logic.
+- Impact: Preserves family semantics when migrating to non-GPIO backends (I2C expander, I2C ADC, plugin backends).
+- Impact: Establishes one profile source of truth for `DI/DO/AI` channel arrays and `SIO/MATH/RTC` capacities.
+- Impact: Strict pin/channel validation is intentionally deferred for a later hardening phase.
+- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/kernel/kernel_service.cpp`, `docs/hardware-profile-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
+
+## DEC-0058: RTC Backend Is Profile-Selected With Stable Numeric Codes
+- Date: 2026-03-04
+- Status: Accepted
+- Context: DI/DO/AI backends are already profile-driven; RTC hardware/source selection needed the same build-time pattern to support variants without runtime branching in kernel logic.
+- Decision: Add `AT_RTC_BACKEND` profile selector with stable numeric mapping: `0=RTC_MILLIS` (system local-time service path), `1=DS3231`, `2=PCF8523`, `3=DS1307`.
+- Impact: Keeps RTC source selection board/profile-specific and easy to change at build time.
+- Impact: Preserves kernel-side contract by keeping minute-stamp acquisition behind `PlatformService`.
+- Impact: Allows future profile expansion without changing card semantics.
+- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.cpp`, `src/main.cpp`, `docs/hardware-profile-v3.md`, `README.md`.
+
 
 

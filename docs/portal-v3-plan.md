@@ -1,6 +1,6 @@
 # V3 Portal Plan (Working Draft)
 
-Date: March 3, 2026
+Date: March 4, 2026
 Status: Foundation Stage (not final; evolving with design and contract decisions)
 
 ## 1. Intent And Maturity
@@ -60,6 +60,10 @@ Current baseline is 4 pages:
 
 4. **Introduction & Tutorial**
 - Separate interactive first-use learning flow.
+- Structure is three-part:
+- `Introduction`: interactive presentation-style core concept briefing (not a literal tutorial, minimal direct interface referencing).
+- `Tutorial`: step-by-step interaction guide for key portal elements (complements guided tour).
+- `Curated Examples`: practical example collection that helps users form mental models for custom programs/behaviors.
 
 ## 4. UX Invariants (Must Hold)
 
@@ -74,6 +78,7 @@ Current baseline is 4 pages:
 
 4. **Mobile-first usability**
 - Touch-safe controls, high contrast status, and low typing friction.
+- Bottom safe area and on-screen keyboard behavior must never obscure critical controls.
 
 5. **Action clarity by default**
 - Available actions and guardrails are explicit; no ambiguous control states.
@@ -105,6 +110,8 @@ Current baseline is 4 pages:
 - Rendering budget target: `4-8 FPS` for live-card updates.
 - Snapshot payload target: typical payload `<= ~12 KB`.
 - Asset budget target: compressed portal bundle `<= ~300-400 KB` gzip.
+- Current ESP32 LittleFS partition ceiling: `~1.4 MB` maximum.
+- If asset/storage budget pressure blocks delivery on current ESP32, immediately start migration phase to `ESP32-S3 N16R8`.
 - Reconnect behavior must follow explicit timeout/retry/backoff policy.
 
 ### 5.3 Current Security Scope
@@ -123,6 +130,7 @@ Execution rule:
 Build:
 - Bootstrap-first MPA scaffold with progressive enhancement.
 - Top navigation and page routing skeleton for all 4 pages.
+- Iconography baseline applied across all pages from initial delivery.
 - Shared status bar shell, loading/refresh primitives, and error state patterns.
 - Typed HTTP/WebSocket client baseline and DTO guards.
 - Connectivity model: `CONNECTED`, `DEGRADED`, `OFFLINE`, `RECONNECTING`.
@@ -140,8 +148,14 @@ Exit gate:
 
 Build:
 - Basic homepage with placeholders for upcoming live modules.
-- Card physical status strip with simple green/red indicator where applicable.
-- Running clock and basic device health summary.
+- Minimum basic status row includes:
+- `DI`, `DO`, `Virtual Output`: physical state.
+- `AI`: live value.
+- `MATH`: live value.
+- `RTC`: logical state.
+- Running clock and basic device health summary:
+- Use firmware-provided fields as baseline.
+- Include essential portal-derived convenience indicators.
 - Navigation actions to all other pages.
 
 Exit gate:
@@ -152,7 +166,18 @@ Exit gate:
 ### Phase 3: Settings (Easy-Win Delivery)
 
 Build:
-- WiFi user settings and basic operator preferences.
+- Full first-pass coverage of supported settings in one release wave:
+- WiFi
+- timezone
+- time server
+- stepping interval slider
+- theme presets (minimum 5 in first release):
+- 1 light theme
+- 1 dark theme
+- 1 solarized-style theme
+- 2 colorful themes
+- reboot
+- simulation-controls enable preference (browser-side only; default OFF)
 - Branding/theming baseline controls within readability limits.
 - Save/apply feedback with clear success/failure reason messaging.
 
@@ -166,8 +191,11 @@ Build:
 - Unified flow: active load -> staged edit -> validate -> commit/restore.
 - Clear staged vs active separation throughout UI.
 - Offline mutation safeguards and reconnect recovery behavior.
-- Family editor progression for `DI`, `AI`, `SIO`, `DO`, `MATH`, `RTC`.
+- All card families ship together in first pass: `DI`, `AI`, `SIO`, `DO`, `MATH`, `RTC`.
 - Binding support (`CONSTANT`, `VARIABLE_REF`) with compatibility guards.
+- Inline validation help text:
+- Ship essential help in first pass.
+- Defer non-essential guidance expansion to later refinement.
 
 Exit gate:
 - Pass target acceptance anchors: `AT-UI-002`, `AT-UI-003`, `AT-UI-004`, `AT-API-001`, `AT-API-002`, `AT-API-003`.
@@ -177,9 +205,13 @@ Exit gate:
 ### Phase 5: Introduction & Tutorial
 
 Build:
-- Separate interactive tutorial page connected from first-run and settings/help entry.
-- Guided path for runtime basics, staged vs active model, validate, and commit.
-- Context help linking from tutorial into real pages.
+- One dedicated learning area connected from first-run and settings/help entry, containing:
+- `Introduction`: interactive game-style conceptual walkthrough.
+- `Tutorial`: strict linear step-by-step flow with skip option.
+- `Curated Examples`: capability demonstrations to guide mental model formation.
+- Tutorial remains separate from (and complementary to) guided in-app tour.
+- Tutorial content should not over-reference the production UI in the Introduction segment.
+- Tutorial progress is non-persistent in first release.
 
 Exit gate:
 - First-run user can complete commissioning flow without external documentation.
@@ -192,7 +224,12 @@ Build:
 - transport status
 - queue depth/high-water/drop
 - timing context and latest diagnostics
-- Simulation/force interactions polished as final-stage features.
+- Run-mode controls included in first release of debug/simulation suite:
+- stepping
+- continuous
+- breakpoints
+- Breakpoint control and clear behavior indicators are mandatory first-pass features.
+- Simulation/force controls are hidden by default and become visible only when enabled from Settings.
 - Telemetry and diagnostics correlation for incident replay.
 
 Exit gate:
@@ -213,6 +250,7 @@ Adopt one stack at a time in this order:
 Adoption policy:
 - Start with CDN assets in development for fast trial and rollback.
 - Add only one new stack per iteration cycle.
+- `Bootstrap Icons` is required from the beginning and should not be deferred beyond initial shell delivery.
 - Measure impact after each addition:
 - UX gain
 - responsiveness
@@ -243,10 +281,8 @@ Adoption policy:
 
 ## 10. Working Method (How We Will Evolve This Plan)
 
-- Run focused brainstorming sessions twice per week:
-- Session A: UX flow and operator clarity.
-- Session B: technical feasibility and contract fit.
-- For each session:
+- Replace twice-weekly brainstorming cadence with one concentrated marathon alignment session to finish planning lock.
+- During the marathon session:
 - capture candidate ideas,
 - score by safety, clarity, and ESP32 cost,
 - promote only accepted items into this document.
@@ -267,28 +303,10 @@ Start large-scale implementation only when:
 
 ## 12. Open Questions (Working Backlog)
 
-These questions are intentionally unresolved and should be reviewed in upcoming brainstorming sessions before implementation lock.
+These questions are intentionally unresolved and should be reviewed in the marathon alignment session before implementation lock.
 
-1. Live Runtime basics:
-- Which exact card fields must appear in Phase 2 basic status rows (minimum useful set)?
-- Should health summary show only firmware-provided fields or include portal-derived convenience indicators?
-
-2. Config Studio scope boundary:
-- In first Config Studio pass, should all card families ship together or in two waves (for example `DI/DO` first, then others)?
-- How much inline validation help text is needed in-v1 versus deferred tooltip/help expansion?
-
-3. Settings boundary:
-- Which preferences are strictly in-scope for first pass beyond WiFi (timezone, refresh interval, theme preset)?
-- What settings should remain hidden until after tutorial completion?
-
-4. Tutorial strategy:
-- Is tutorial strictly linear or can users jump sections while still preserving completion tracking?
-- Should tutorial progress persist locally in browser only, or sync to device profile later?
-
-5. Debug + simulation final stage:
-- Which simulation controls are mandatory for first release (force input, run mode control, mask)?
-- What guardrails/confirmations are mandatory before exposing simulation actions in Live Runtime?
-
-6. Asset and stack rollout:
-- What exact per-phase asset-size budget should be enforced to protect LittleFS headroom?
+1. Asset and stack rollout:
+- What exact per-phase asset-size budget should be enforced to protect LittleFS headroom for current ESP32 target?
 - At what threshold should `Chart.js` be rejected or deferred in favor of simpler visuals?
+
+Decisions already accepted above were removed from this backlog to keep Section 12 strictly unresolved.

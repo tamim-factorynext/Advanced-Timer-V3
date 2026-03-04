@@ -330,6 +330,21 @@ void setup() {
   Serial.println("Advanced Timer V3 Core bootstrap");
 
   gPlatform.begin();
+  const v3::platform::HardwareProfile& hwProfile = gPlatform.profile();
+  Serial.printf(
+      "V3 hardware profile=%s variant=%s di=%u do=%u ai=%u sio=%u math=%u rtc=%u"
+      " backends(di/do/ai/rtc)=%u/%u/%u/%u\n",
+      hwProfile.profileName, hwProfile.platformVariant,
+      static_cast<unsigned>(hwProfile.diCount),
+      static_cast<unsigned>(hwProfile.doCount),
+      static_cast<unsigned>(hwProfile.aiCount),
+      static_cast<unsigned>(hwProfile.sioCapacity),
+      static_cast<unsigned>(hwProfile.mathCapacity),
+      static_cast<unsigned>(hwProfile.rtcCapacity),
+      static_cast<unsigned>(hwProfile.diBackend),
+      static_cast<unsigned>(hwProfile.doBackend),
+      static_cast<unsigned>(hwProfile.aiBackend),
+      static_cast<unsigned>(hwProfile.rtcBackend));
   if (!gPlatform.initTaskWatchdog(kTaskWatchdogTimeoutSeconds, true)) {
     Serial.println("V3 watchdog init failed");
     while (true) {

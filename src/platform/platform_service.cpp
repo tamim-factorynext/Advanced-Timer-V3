@@ -19,15 +19,86 @@ Notes:
 #include <Arduino.h>
 #include <esp_idf_version.h>
 #include <esp_task_wdt.h>
+#include <RTClib.h>
+#include <Wire.h>
 #include <time.h>
 
 namespace v3::platform {
 
-void PlatformService::begin() {}
+namespace {
+
+bool resolveChannelPin(uint8_t channel, const uint8_t* channels, uint8_t count,
+                       uint8_t& outPin) {
+  if (channels == nullptr || channel >= count) return false;
+  outPin = channels[channel];
+  return true;
+}
+
+RTC_DS3231 gRtcDs3231;
+RTC_PCF8523 gRtcPcf8523;
+RTC_DS1307 gRtcDs1307;
+bool gRtcBackendReady = false;
+
+bool mapDateTimeToMinuteStamp(const DateTime& dt, LocalMinuteStamp& out) {
+  if (!dt.isValid()) return false;
+  out.year = static_cast<uint16_t>(dt.year());
+  out.month = static_cast<uint8_t>(dt.month());
+  out.day = static_cast<uint8_t>(dt.day());
+  out.weekday = static_cast<uint8_t>(dt.dayOfTheWeek());
+  out.hour = static_cast<uint8_t>(dt.hour());
+  out.minute = static_cast<uint8_t>(dt.minute());
+  return true;
+}
+
+}  // namespace
+
+void PlatformService::begin() {
+  profile_ = &activeHardwareProfile();
+  gRtcBackendReady = false;
+  if (profile_ == nullptr) return;
+
+  if (profile_->rtcBackend == RtcBackend::RtcMillis) {
+    // Keep current behavior: RTC minute stamp source comes from system local time.
+    gRtcBackendReady = true;
+    return;
+  }
+
+  Wire.begin();
+  switch (profile_->rtcBackend) {
+    case RtcBackend::Ds3231:
+      gRtcBackendReady = gRtcDs3231.begin();
+      break;
+    case RtcBackend::Pcf8523:
+      gRtcBackendReady = gRtcPcf8523.begin();
+      break;
+    case RtcBackend::Ds1307:
+      gRtcBackendReady = gRtcDs1307.begin();
+      break;
+    case RtcBackend::RtcMillis:
+    default:
+      gRtcBackendReady = true;
+      break;
+  }
+}
 
 uint32_t PlatformService::nowMs() const { return millis(); }
 
 bool PlatformService::readLocalMinuteStamp(LocalMinuteStamp& out) const {
+  if (profile_ == nullptr) return false;
+  if (!gRtcBackendReady) return false;
+
+  switch (profile_->rtcBackend) {
+    case RtcBackend::Ds3231:
+      return mapDateTimeToMinuteStamp(gRtcDs3231.now(), out);
+    case RtcBackend::Pcf8523:
+      return mapDateTimeToMinuteStamp(gRtcPcf8523.now(), out);
+    case RtcBackend::Ds1307:
+      return mapDateTimeToMinuteStamp(gRtcDs1307.now(), out);
+    case RtcBackend::RtcMillis:
+    default:
+      break;
+  }
+
   struct tm timeinfo = {};
   if (!getLocalTime(&timeinfo, 0)) return false;
   out.year = static_cast<uint16_t>(timeinfo.tm_year + 1900);
@@ -39,22 +110,63 @@ bool PlatformService::readLocalMinuteStamp(LocalMinuteStamp& out) const {
   return true;
 }
 
-void PlatformService::configureInputPin(uint8_t pin) const { pinMode(pin, INPUT); }
+void PlatformService::configureDiChannel(uint8_t channel) const {
+  if (profile_ == nullptr) return;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->diChannels, profile_->diCount, pin)) {
+    return;
+  }
+  pinMode(pin, INPUT);
+}
 
-void PlatformService::configureOutputPin(uint8_t pin) const {
+void PlatformService::configureAiChannel(uint8_t channel) const {
+  if (profile_ == nullptr) return;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->aiChannels, profile_->aiCount, pin)) {
+    return;
+  }
+  pinMode(pin, INPUT);
+}
+
+void PlatformService::configureDoChannel(uint8_t channel) const {
+  if (profile_ == nullptr) return;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->doChannels, profile_->doCount, pin)) {
+    return;
+  }
   pinMode(pin, OUTPUT);
 }
 
-bool PlatformService::readDigitalInput(uint8_t pin) const {
+bool PlatformService::readDiChannel(uint8_t channel) const {
+  if (profile_ == nullptr) return false;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->diChannels, profile_->diCount, pin)) {
+    return false;
+  }
   return digitalRead(pin) != 0;
 }
 
-uint32_t PlatformService::readAnalogInput(uint8_t pin) const {
+uint32_t PlatformService::readAiChannel(uint8_t channel) const {
+  if (profile_ == nullptr) return 0;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->aiChannels, profile_->aiCount, pin)) {
+    return 0;
+  }
   return static_cast<uint32_t>(analogRead(pin));
 }
 
-void PlatformService::writeDigitalOutput(uint8_t pin, bool value) const {
+void PlatformService::writeDoChannel(uint8_t channel, bool value) const {
+  if (profile_ == nullptr) return;
+  uint8_t pin = 0;
+  if (!resolveChannelPin(channel, profile_->doChannels, profile_->doCount, pin)) {
+    return;
+  }
   digitalWrite(pin, value ? HIGH : LOW);
+}
+
+const HardwareProfile& PlatformService::profile() const {
+  if (profile_ != nullptr) return *profile_;
+  return activeHardwareProfile();
 }
 
 bool PlatformService::initTaskWatchdog(uint32_t timeoutSeconds,
