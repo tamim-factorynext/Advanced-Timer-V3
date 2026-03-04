@@ -136,8 +136,7 @@ void handleHttpRootGet() {
   gHttpServer.send(
       200, "application/json",
       "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
-      "snapshot\",\"/api/v3/diagnostics\",\"/api/v3/command\","
-      "\"/api/snapshot\",\"/api/diagnostics\",\"/api/command\"]}");
+      "snapshot\",\"/api/v3/diagnostics\",\"/api/v3/command\"]}");
 }
 
 /**
@@ -185,36 +184,20 @@ void initTransportRuntime(PortalService& portal) {
   gHttpServer.on("/ncsi.txt", HTTP_GET, sendNoContent);
   gHttpServer.on("/connecttest.txt", HTTP_GET, sendNoContent);
 
-  gHttpServer.on("/api/command", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/command/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/command", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/command/", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/command", HTTP_POST, handleHttpCommandSubmit);
-  gHttpServer.on("/api/command/", HTTP_POST, handleHttpCommandSubmit);
   gHttpServer.on("/api/v3/command", HTTP_POST, handleHttpCommandSubmit);
   gHttpServer.on("/api/v3/command/", HTTP_POST, handleHttpCommandSubmit);
 
-  gHttpServer.on("/api/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/diagnostics/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/diagnostics/", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
-  gHttpServer.on("/api/diagnostics/", HTTP_GET, handleHttpDiagnosticsGet);
   gHttpServer.on("/api/v3/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
   gHttpServer.on("/api/v3/diagnostics/", HTTP_GET, handleHttpDiagnosticsGet);
-  gHttpServer.on("/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
 
-  gHttpServer.on("/api/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/snapshot/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/snapshot/", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/snapshot", HTTP_GET, handleHttpSnapshotGet);
-  gHttpServer.on("/api/snapshot/", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.on("/api/v3/snapshot/", HTTP_GET, handleHttpSnapshotGet);
-  gHttpServer.on("/snapshot", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.onNotFound([]() {
     const HTTPMethod method = gHttpServer.method();
     Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),

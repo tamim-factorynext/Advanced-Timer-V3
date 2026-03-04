@@ -69,6 +69,7 @@ Keep in internal SRAM:
 
 ## 5. Migration Objectives
 
+- Make lower thermal output a primary migration goal (reduce sustained board heat during normal runtime).
 - Increase memory headroom for portal observability payload growth.
 - Avoid reintroducing large static `.bss` buffers.
 - Preserve deterministic kernel timing behavior.
@@ -92,6 +93,7 @@ Keep in internal SRAM:
    - no watchdog resets
    - no allocator failure
    - stable scan timing envelopes
+   - no abnormal sustained board heating versus current ESP32 baseline under equivalent workload
 8. Make S3+PSRAM target default only after acceptance evidence is recorded.
 
 ## 7. Acceptance Checklist For S3 Migration
@@ -102,6 +104,9 @@ Keep in internal SRAM:
 - No regression in command/snapshot queue behavior.
 - 24h soak test without heap fragmentation-related instability.
 - Documented fallback behavior when PSRAM allocation fails.
+- Thermal behavior is validated as a first-class criterion:
+  - board remains within acceptable touch temperature during 30-minute normal-run baseline
+  - no sustained thermal climb trend under equivalent Wi-Fi + snapshot traffic compared to current ESP32 baseline
 
 ## 8. Risks And Mitigations
 
@@ -116,6 +121,9 @@ Mitigation: Keep explicit fallback responses and publish memory guard counters f
 
 Risk: Board-to-board PSRAM differences (2MB/8MB, speed, config).  
 Mitigation: Detect capacity/features at runtime and keep conservative defaults.
+
+Risk: S3 migration could increase feature scope and accidentally keep CPU/wifi duty high, negating thermal gains.  
+Mitigation: Track thermal impact as a gated acceptance item and prefer runtime-efficiency changes (reduced busy-loop churn, controlled publish rates, and conservative radio activity) during migration.
 
 ## 9. Migration Trigger Criteria
 

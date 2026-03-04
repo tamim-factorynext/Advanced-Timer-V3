@@ -4,6 +4,18 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-04
+
+### Snapshot Payload Baseline (ESP32 DOIT, 12 cards)
+
+- Captured endpoint: `GET /api/v3/snapshot`
+- Capture shape: minified JSON (single-line)
+- Measured payload size: `6413` bytes (`6.26 KiB`, UTF-8)
+- Context profile: `DI=2, DO=2, AI=2, SIO=2, MATH=2, RTC=2` (12 total cards)
+- Notes:
+  - Size includes current normalized debug/test fields (`maskForced`, `debug`, `evalCounter`, etc.).
+  - Pretty-printed payloads in tooling will appear larger due to whitespace.
+
 ## 2026-02-26
 
 ### Session Summary

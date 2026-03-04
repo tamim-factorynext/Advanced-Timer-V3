@@ -186,10 +186,7 @@ Message type: `command_result`
 
 ## 6.1 Snapshot Read
 
-`GET /api/snapshot`
-
-Compatibility alias (active implementation):
-- `GET /api/v3/snapshot`
+`GET /api/v3/snapshot`
 
 Success response:
 ```json

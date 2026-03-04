@@ -237,7 +237,6 @@ void dispatchPortalRequestsToControl() {
 void latestKernelSnapshotFromQueue(KernelSnapshotMessage& latest) {
   latest.producedAtMs = gPlatform.nowMs();
   latest.metrics = gLastKernelMetrics;
-  latest.cardCount = 0;
   if (gKernelSnapshotQueue == nullptr) return;
 
   while (xQueueReceive(gKernelSnapshotQueue, &latest, 0) == pdTRUE) {
@@ -258,6 +257,8 @@ void core0KernelTask(void*) {
   Serial.flush();
 
   bool firstLoopLog = true;
+  uint32_t lastPublishedScanCount = 0;
+  bool snapshotPublishInitialized = false;
 
   while (true) {
     if (firstLoopLog) {
@@ -273,11 +274,18 @@ void core0KernelTask(void*) {
     const uint32_t nowMs = gPlatform.nowMs();
     applyKernelCommands(nowUs);
     gKernel.tick(nowMs);
-    gCore0SnapshotBuffer.producedAtMs = nowMs;
     gCore0SnapshotBuffer.metrics = gKernel.metrics();
-    gCore0SnapshotBuffer.cardCount = gKernel.exportRuntimeSnapshotCards(
-        gCore0SnapshotBuffer.cards, v3::storage::kMaxCards);
-    enqueueKernelSnapshot(gCore0SnapshotBuffer);
+    const uint32_t currentScanCount = gCore0SnapshotBuffer.metrics.completedScans;
+    const bool hasNewScan = !snapshotPublishInitialized ||
+                            (currentScanCount != lastPublishedScanCount);
+    if (hasNewScan) {
+      gCore0SnapshotBuffer.producedAtMs = nowMs;
+      gCore0SnapshotBuffer.cardCount = gKernel.exportRuntimeSnapshotCards(
+          gCore0SnapshotBuffer.cards, v3::storage::kMaxCards);
+      enqueueKernelSnapshot(gCore0SnapshotBuffer);
+      lastPublishedScanCount = currentScanCount;
+      snapshotPublishInitialized = true;
+    }
     gPlatform.resetTaskWatchdog();
     vTaskDelay(pdMS_TO_TICKS(kCore0LoopDelayMs));
   }

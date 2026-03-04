@@ -191,8 +191,9 @@ This enables safe commissioning and controlled rollback.
 Transport currently uses HTTP and WebSocket.
 
 Typical endpoints include:
-- `/api/snapshot`
-- `/api/command`
+- `/api/v3/snapshot`
+- `/api/v3/diagnostics`
+- `/api/v3/command`
 - `/api/config/active`
 - `/api/config/staged/save`
 - `/api/config/staged/validate`
