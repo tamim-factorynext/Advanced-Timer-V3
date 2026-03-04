@@ -3,54 +3,67 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1418" id="themeColorMeta" />
     <title>AT-V3 Portal | Live Runtime</title>
     <style>
       :root {
         --bg-0: #0b1418;
+        --bg-top: #1a3741;
         --bg-1: #112027;
         --bg-2: #17313a;
+        --bg-accent: #0f2a33;
         --text-0: #e8f6f8;
         --text-1: #b8d2d7;
+        --text-2: #d4e8ec;
+        --accent: #5eead4;
+        --accent-2: #7dd3fc;
         --ok: #4ade80;
         --warn: #f59e0b;
         --bad: #ef4444;
         --line: #28515e;
+        --line-strong: #224854;
         --chip: #16313a;
+        --nav-bg: rgba(0, 0, 0, 0.2);
+        --panel-bg: rgba(10, 27, 33, 0.78);
+        --node-bg: rgba(12, 31, 38, 0.9);
+        --shadow: 0 12px 28px rgba(2, 10, 14, 0.35);
       }
-      body[data-theme="light"] { --bg-0:#f4f7f8; --bg-1:#e6eef0; --bg-2:#d6e4e8; --text-0:#12242b; --text-1:#36535f; --line:#8eb0bb; --chip:#dfecef; }
-      body[data-theme="solarized"] { --bg-0:#002b36; --bg-1:#073642; --bg-2:#0e4553; --text-0:#eee8d5; --text-1:#93a1a1; --line:#2f6d7e; --chip:#083946; }
-      body[data-theme="colorful-a"] { --bg-0:#1a1231; --bg-1:#251a46; --bg-2:#32235f; --text-0:#f3ecff; --text-1:#cbb9f1; --line:#6b56a5; --chip:#2a1d50; }
-      body[data-theme="colorful-b"] { --bg-0:#13260f; --bg-1:#1f3818; --bg-2:#2b4f22; --text-0:#effbe8; --text-1:#bfd7b4; --line:#5f8a51; --chip:#223f1a; }
+      body[data-theme="light"] { --bg-0:#f4f7f8; --bg-top:#dbe9ee; --bg-1:#e6eef0; --bg-2:#d6e4e8; --bg-accent:#edf6fb; --text-0:#12242b; --text-1:#36535f; --text-2:#26424e; --accent:#0ea5e9; --accent-2:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --line:#8eb0bb; --line-strong:#7f9da7; --chip:#dfecef; --nav-bg:#eef4f6; --panel-bg:#edf4f6; --node-bg:#f6fbfd; --shadow:0 10px 24px rgba(17, 38, 49, 0.13); }
+      body[data-theme="solarized"] { --bg-0:#002b36; --bg-top:#0b3b45; --bg-1:#073642; --bg-2:#0e4553; --bg-accent:#09414e; --text-0:#eee8d5; --text-1:#93a1a1; --text-2:#a8b9b9; --accent:#b58900; --accent-2:#2aa198; --ok:#859900; --warn:#cb4b16; --bad:#dc322f; --line:#2f6d7e; --line-strong:#2b6270; --chip:#083946; --nav-bg:#07323d; --panel-bg:rgba(7, 54, 66, 0.82); --node-bg:rgba(6, 48, 58, 0.9); --shadow:0 12px 30px rgba(0, 16, 20, 0.35); }
+      body[data-theme="neon-orchid"] { --bg-0:#1a1231; --bg-top:#2b1a56; --bg-1:#251a46; --bg-2:#32235f; --bg-accent:#2d2058; --text-0:#f3ecff; --text-1:#cbb9f1; --text-2:#ded2fb; --accent:#f472b6; --accent-2:#22d3ee; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --line:#6b56a5; --line-strong:#5f4a97; --chip:#2a1d50; --nav-bg:#241844; --panel-bg:rgba(37, 26, 70, 0.84); --node-bg:rgba(31, 22, 60, 0.9); --shadow:0 14px 32px rgba(15, 9, 28, 0.45); }
+      body[data-theme="velvet-sand"] { --bg-0:#1b1412; --bg-top:#3b2a24; --bg-1:#2a1f1a; --bg-2:#3a2b24; --bg-accent:#2f221d; --text-0:#f8eee8; --text-1:#d6c1b4; --text-2:#e5d5cb; --accent:#e7a977; --accent-2:#d3b37a; --ok:#7ccf9a; --warn:#e6b55a; --bad:#e07a6f; --line:#8f6e5f; --line-strong:#7f6255; --chip:#3a2a23; --nav-bg:#2f221d; --panel-bg:rgba(58, 42, 35, 0.86); --node-bg:rgba(48, 35, 29, 0.9); --shadow:0 14px 30px rgba(24, 16, 13, 0.45); }
       * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 20% 0%, #1a3741 0%, var(--bg-0) 45%); color: var(--text-0); }
+      html, body { margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 16% 0%, var(--bg-top) 0%, transparent 35%), linear-gradient(160deg, var(--bg-accent) 0%, var(--bg-0) 42%, var(--bg-1) 100%); color: var(--text-0); }
       body { min-height: 100vh; }
       .app { max-width: 1100px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
       .topbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0 12px; flex-wrap: wrap; }
-      .brand { font-weight: 700; letter-spacing: 0.3px; }
-      .brand small { display: block; color: var(--text-1); font-weight: 500; letter-spacing: 0; }
+      .brand { font-weight: 700; letter-spacing: 0.3px; color: var(--accent); }
+      .brand small { display: block; color: var(--text-2); font-weight: 500; letter-spacing: 0; }
       .nav { display: flex; gap: 8px; }
-      .nav a { color: var(--text-1); text-decoration: none; border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.2); font-size: 14px; }
-      .nav a.active { color: var(--text-0); background: var(--bg-2); }
+      .nav a { color: var(--text-2); text-decoration: none; border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; background: var(--nav-bg); font-size: 14px; }
+      .nav a.active { color: var(--text-0); background: linear-gradient(135deg, var(--bg-2), var(--chip)); border-color: var(--accent); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
       .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--chip); color: var(--text-0); padding: 8px; font-size: 13px; }
-      .card { border: 1px solid var(--line); border-radius: 14px; background: rgba(10, 27, 33, 0.78); backdrop-filter: blur(2px); }
+      .card { border: 1px solid var(--line); border-radius: 14px; background: var(--panel-bg); backdrop-filter: blur(2px); box-shadow: var(--shadow); }
       .status { padding: 12px; display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(140px, 1fr)); }
-      .kpi { background: var(--chip); border: 1px solid #224854; border-radius: 10px; padding: 8px 10px; }
-      .kpi .k { color: var(--text-1); font-size: 12px; }
-      .kpi .v { font-size: 18px; font-weight: 700; margin-top: 2px; }
+      .kpi { background: var(--chip); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 10px; }
+      .kpi .k { color: var(--text-2); font-size: 12px; }
+      .kpi .v { font-size: 18px; font-weight: 700; margin-top: 2px; color: var(--accent-2); }
       .row { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: 1fr; }
       .pane { padding: 12px; }
-      .title { font-weight: 700; margin-bottom: 10px; }
+      .title { font-weight: 700; margin-bottom: 10px; color: var(--accent-2); }
       .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-      .chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--text-1); }
-      .chip strong { color: var(--text-0); }
+      .chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--text-2); }
+      .chip strong { color: var(--accent); }
       .ok { color: var(--ok); }
       .warn { color: var(--warn); }
       .bad { color: var(--bad); }
       .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-      .node { border: 1px solid #234b57; border-radius: 10px; background: rgba(12, 31, 38, 0.9); padding: 10px; }
-      .node h4 { margin: 0 0 7px; font-size: 14px; display: flex; justify-content: space-between; }
-      .node .meta { font-size: 12px; color: var(--text-1); display: grid; gap: 4px; }
-      .footer { margin-top: 10px; color: var(--text-1); font-size: 12px; }
+      .node { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--node-bg); padding: 10px; }
+      .node h4 { margin: 0 0 7px; font-size: 14px; display: flex; justify-content: space-between; color: var(--accent-2); }
+      .node .meta { font-size: 12px; color: var(--text-2); display: grid; gap: 4px; }
+      .footer { margin-top: 10px; color: var(--text-2); font-size: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); padding: 8px 10px; }
+      .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--text-2); font-size: 12px; }
+      .site-footer .name { margin-top: 2px; color: var(--accent-2); }
       @media (max-width: 760px) {
         .status { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
       }
@@ -69,8 +82,8 @@
             <option value="dark">Dark</option>
             <option value="light">Light</option>
             <option value="solarized">Solarized</option>
-            <option value="colorful-a">Colorful A</option>
-            <option value="colorful-b">Colorful B</option>
+            <option value="neon-orchid">Neon Orchid</option>
+            <option value="velvet-sand">Velvet Sand</option>
           </select>
         </nav>
       </header>
@@ -94,6 +107,10 @@
           <div class="cards" id="cards"></div>
         </section>
       </div>
+      <footer class="site-footer">
+        <div>&copy; Advanced Timer V3</div>
+        <div class="name">Developed by Yahya Tamim</div>
+      </footer>
     </main>
 
     <script>
@@ -114,11 +131,21 @@
       };
       const themeSelect = document.getElementById("themeSelect");
 
+      function normalizeTheme(theme) {
+        if (theme === "colorful-a") return "neon-orchid";
+        if (theme === "colorful-b") return "velvet-sand";
+        return theme;
+      }
+
       function applyTheme(theme) {
+        theme = normalizeTheme(theme);
         document.body.setAttribute("data-theme", theme);
         localStorage.setItem("atv3_theme", theme);
+        const meta = document.getElementById("themeColorMeta");
+        const bg = getComputedStyle(document.body).getPropertyValue("--bg-0").trim();
+        if (meta && bg) meta.setAttribute("content", bg);
       }
-      const savedTheme = localStorage.getItem("atv3_theme") || "dark";
+      const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
       themeSelect.value = savedTheme;
       applyTheme(savedTheme);
       themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));

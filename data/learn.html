@@ -3,41 +3,49 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0d171c" id="themeColorMeta" />
     <title>AT-V3 Portal | Learn</title>
     <style>
       :root {
         --bg: #0d171c;
+        --bg-top: #1a3741;
         --panel: #12242b;
         --line: #295261;
         --text: #e7f5f8;
         --muted: #b5d2d8;
-        --accent: #7dd3fc;
+        --muted-strong: #d4e8ec;
+        --accent: #5eead4;
+        --accent-2: #7dd3fc;
+        --surface: #17313a;
+        --shadow: 0 12px 28px rgba(2, 10, 14, 0.35);
       }
-      body[data-theme="light"] { --bg:#f4f7f8; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; --accent:#2563eb; }
-      body[data-theme="solarized"] { --bg:#002b36; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; --accent:#b58900; }
-      body[data-theme="colorful-a"] { --bg:#1a1231; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; --accent:#f472b6; }
-      body[data-theme="colorful-b"] { --bg:#13260f; --panel:#1f3818; --line:#5f8a51; --text:#effbe8; --muted:#bfd7b4; --accent:#f59e0b; }
+      body[data-theme="light"] { --bg:#f4f7f8; --bg-top:#dbe9ee; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; --muted-strong:#26424e; --accent:#0ea5e9; --accent-2:#2563eb; --surface:#dce9ed; --shadow:0 10px 24px rgba(17, 38, 49, 0.13); }
+      body[data-theme="solarized"] { --bg:#002b36; --bg-top:#0b3b45; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; --muted-strong:#a8b9b9; --accent:#b58900; --accent-2:#2aa198; --surface:#0d4d5d; --shadow:0 12px 30px rgba(0, 16, 20, 0.35); }
+      body[data-theme="neon-orchid"] { --bg:#1a1231; --bg-top:#2b1a56; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; --muted-strong:#ded2fb; --accent:#f472b6; --accent-2:#22d3ee; --surface:#34245e; --shadow:0 14px 32px rgba(15, 9, 28, 0.45); }
+      body[data-theme="velvet-sand"] { --bg:#1b1412; --bg-top:#3b2a24; --panel:#2a1f1a; --line:#8f6e5f; --text:#f8eee8; --muted:#d6c1b4; --muted-strong:#e5d5cb; --accent:#e7a977; --accent-2:#d3b37a; --surface:#3a2a23; --shadow:0 14px 30px rgba(24, 16, 13, 0.45); }
       * { box-sizing: border-box; }
-      html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+      html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 16% 0%, var(--bg-top) 0%, transparent 35%), var(--bg); color: var(--text); }
       .app { max-width: 1080px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
       .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
       .nav { display: flex; gap: 8px; }
-      .nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
-      .nav a.active { color: var(--text); background: #17313a; }
-      .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; }
-      .title { margin: 0 0 8px; }
-      .muted { color: var(--muted); }
+      .nav a { color: var(--muted-strong); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+      .nav a.active { color: var(--text); background: var(--surface); }
+      .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; box-shadow: var(--shadow); }
+      .title { margin: 0 0 8px; color: var(--accent-2); }
+      .muted { color: var(--muted-strong); }
       .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-      .tag { display: inline-block; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); padding: 4px 10px; font-size: 12px; margin-bottom: 8px; }
+      .tag { display: inline-block; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); background: var(--surface); padding: 4px 10px; font-size: 12px; margin-bottom: 8px; }
       ol { margin: 8px 0 0 18px; }
       li { margin: 6px 0; }
       .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 8px; font-size: 13px; }
+      .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--muted-strong); font-size: 12px; }
+      .site-footer .name { margin-top: 2px; color: var(--accent-2); }
     </style>
   </head>
   <body data-theme="dark">
     <main class="app">
       <header class="top">
-        <h2 style="margin: 0">&#x1F393; Learn</h2>
+        <h2 style="margin: 0; color: var(--accent)">&#x1F393; Learn</h2>
         <nav class="nav">
           <a href="/">&#x1F4CA; Live</a>
           <a href="/config">&#x2692; Config</a>
@@ -47,8 +55,8 @@
             <option value="dark">Dark</option>
             <option value="light">Light</option>
             <option value="solarized">Solarized</option>
-            <option value="colorful-a">Colorful A</option>
-            <option value="colorful-b">Colorful B</option>
+            <option value="neon-orchid">Neon Orchid</option>
+            <option value="velvet-sand">Velvet Sand</option>
           </select>
         </nav>
       </header>
@@ -95,13 +103,26 @@
           </ol>
         </article>
       </section>
+      <footer class="site-footer">
+        <div>&copy; Advanced Timer V3</div>
+        <div class="name">Developed by Yahya Tamim</div>
+      </footer>
       <script>
         const themeSelect = document.getElementById("themeSelect");
+        function normalizeTheme(theme) {
+          if (theme === "colorful-a") return "neon-orchid";
+          if (theme === "colorful-b") return "velvet-sand";
+          return theme;
+        }
         function applyTheme(theme) {
+          theme = normalizeTheme(theme);
           document.body.setAttribute("data-theme", theme);
           localStorage.setItem("atv3_theme", theme);
+          const meta = document.getElementById("themeColorMeta");
+          const bg = getComputedStyle(document.body).getPropertyValue("--bg").trim();
+          if (meta && bg) meta.setAttribute("content", bg);
         }
-        const savedTheme = localStorage.getItem("atv3_theme") || "dark";
+        const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
         themeSelect.value = savedTheme;
         applyTheme(savedTheme);
         themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
