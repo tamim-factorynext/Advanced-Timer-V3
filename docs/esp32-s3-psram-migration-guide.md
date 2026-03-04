@@ -224,3 +224,31 @@ Mitigation: contract-first + doxygen + phase completion checklist.
 3. Draft `README.md` for v4 structure and goals.
 4. Define first module contracts: platform, storage, config contract.
 5. Start Phase 0 implementation.
+
+## 13. Rebuild Watchlist (Project Scan Driven)
+
+Use this list as a standing checklist during v4 implementation reviews.
+
+1. Remove legacy bridge dependencies from runtime-critical paths.
+   - Target: typed-only end-to-end config/runtime flow in v4.
+2. Split composition root and task loops into smaller orchestrator modules.
+   - Target: cleaner boot wiring, explicit scheduler/task policies.
+3. Replace repeated JSON/String allocation patterns with bounded memory strategy.
+   - Target: explicit allocation policy (SRAM vs PSRAM), capacity budgets, no unbounded growth in service loops.
+4. Refactor transport route registration to declarative route tables/middleware.
+   - Target: less duplication, consistent error/CORS/telemetry handling.
+5. Decouple snapshot/diagnostics generation cadence from service-loop churn.
+   - Target: event-driven/rate-limited projection with stable CPU/network footprint.
+6. Harden storage lifecycle and first-boot recovery as explicit state machine.
+   - Target: deterministic mount/recovery policy with diagnostics counters.
+7. Build shared frontend runtime layer instead of duplicating per-page infra.
+   - Target: shared API client, shared theming tokens, shared status/error handling.
+8. Define transport snappiness policy as contract.
+   - Target: single-flight polling, adaptive backoff, no overlapping request storms.
+9. Establish test harness before large feature rebuild.
+   - Target: unit tests (decode/validate/rules), API contract tests, HIL smoke tests.
+10. Enforce module/file complexity limits early.
+   - Target: avoid monolithic files in kernel/transport/parser paths.
+11. Track resource telemetry continuously during implementation.
+   - Target: record Core0/Core1 CPU load, internal SRAM, PSRAM, heap, and per-task stack high-water as first-class progress metrics.
+   - Target: keep a running log/history per milestone so regressions are visible early.
