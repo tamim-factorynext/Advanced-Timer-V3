@@ -167,6 +167,7 @@ Condition-evaluation timing note:
 sequenceDiagram
   participant Main as main.cpp setup
   participant S as StorageService
+  participant HP as HardwareProfile
   participant FS as LittleFS
   participant D as v3_config_decoder
   participant V as v3_config_validator
@@ -177,7 +178,8 @@ sequenceDiagram
     S->>D: decodeSystemConfig(json)
     D-->>S: SystemConfig or decode error
   else no file
-    S->>S: makeDefaultSystemConfig()
+    S->>HP: activeHardwareProfile()
+    S->>S: makeDefaultSystemConfig() seeded from profile
   end
   S->>V: validateSystemConfig(candidate)
   V-->>S: ValidatedConfig or error

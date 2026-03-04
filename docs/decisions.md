@@ -612,5 +612,15 @@ Use one short entry per decision with this structure:
 - Impact: Allows future profile expansion without changing card semantics.
 - References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.cpp`, `src/main.cpp`, `docs/hardware-profile-v3.md`, `README.md`.
 
+## DEC-0059: First-Boot Default Config Auto-Instantiates Cards From Active Profile
+- Date: 2026-03-04
+- Status: Accepted
+- Context: Manufacturing/field workflows expect a fresh device to expose hardware-backed cards immediately after first boot when no active config file exists.
+- Decision: Change default-config generation to seed enabled cards from active hardware profile channels/capacities (`DI/DO/AI/SIO/MATH/RTC`) instead of emitting an empty card set.
+- Impact: Fresh devices now present live card inventory without requiring manual first-save config bootstrapping.
+- Impact: Profile remains single source of truth for both IO mapping and initial runtime card availability.
+- Impact: Runtime semantics remain unchanged; this affects only fallback config population when persistent file is absent.
+- References: `src/storage/v3_config_contract.cpp`, `src/storage/storage_service.cpp`, `src/platform/hw_profile.*`, `docs/hardware-profile-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
+
 
 

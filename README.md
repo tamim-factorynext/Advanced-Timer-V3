@@ -227,6 +227,7 @@ Hardware profile note:
 - Active board mapping is build-time driven through `platformio.ini` flags.
 - Logical card channels are mapped by `src/platform/hw_profile.*` and consumed by `PlatformService`.
 - Runtime logic uses logical channels, not hardcoded GPIO constants.
+- First boot default behavior (when `/config_v3.json` is missing) auto-instantiates enabled cards from active profile capacities/channels.
 - Current default profile for `esp32doit-devkit-v1`:
 - `DI`: `32,33`
 - `DO`: `25,26`

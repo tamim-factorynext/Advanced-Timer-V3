@@ -69,6 +69,7 @@ Runtime contract:
 - Unsupported families must not be instantiated.
 - API snapshots must only include cards from enabled families.
 - Family count in runtime must never exceed active profile capacity.
+- First boot (no active config file) must seed a default card set from active profile capacities/channels.
 
 ## 5. Hardware-Agnostic IO Backend Contract
 
@@ -114,6 +115,7 @@ Current implementation status:
 - Active profile accessor: `v3::platform::activeHardwareProfile()`.
 - Runtime adapter integration: `src/platform/platform_service.cpp` maps logical channels to backend channels.
 - Kernel integration: `src/kernel/kernel_service.cpp` uses logical channels through `PlatformService` channel APIs.
+- Default-config seeding integration: `src/storage/v3_config_contract.cpp` instantiates initial cards from active profile.
 - Current backend code mapping:
 - `DI/DO`: `0=GPIO`, `1=I2C_EXPANDER`, `2=PLUGIN`
 - `AI`: `0=INTERNAL_ADC`, `1=I2C_ADC`, `2=PLUGIN`
