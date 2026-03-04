@@ -44,5 +44,17 @@ struct ConfigDecodeResult {
  * - src/storage/storage_service.cpp
  */
 ConfigDecodeResult decodeSystemConfig(JsonObjectConst root);
+/**
+ * @brief Decodes JSON config payload into typed `SystemConfig` (stack-light path).
+ * @details Avoids large return envelopes in low-stack boot paths.
+ * @param root Root JSON object of the candidate config payload.
+ * @param outDecoded Receives decoded config on success.
+ * @param outError Receives decode/shape error on failure.
+ * @return `true` when decode succeeded.
+ * @par Used By
+ * - src/storage/storage_service.cpp
+ */
+bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
+                             ConfigValidationError& outError);
 
 }  // namespace v3::storage

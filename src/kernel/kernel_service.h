@@ -58,6 +58,10 @@ struct KernelMetrics {
   uint32_t stepAppliedCount;
   uint32_t completedScans;
   uint32_t lastScanMs;
+  uint32_t scanLastUs;
+  uint32_t scanMaxUs;
+  uint32_t scanOverrunCount;
+  bool scanOverrunLast;
   uint32_t diTotalQualifiedEdges;
   uint8_t diInhibitedCount;
   uint8_t diForcedCount;
@@ -250,6 +254,7 @@ class KernelService {
   uint8_t mathSlotCount_ = 0;
   RtcSlot rtcSlots_[v3::storage::kMaxCards] = {};
   uint8_t rtcSlotCount_ = 0;
+  V3RuntimeSignal signalScratch_[v3::storage::kMaxCards] = {};
   uint32_t nextScanDueMs_ = 0;
   bool stepPending_ = false;
   v3::platform::PlatformService* platform_ = nullptr;

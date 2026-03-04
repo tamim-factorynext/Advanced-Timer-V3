@@ -17,8 +17,10 @@ Notes:
 */
 #include "storage/storage_service.h"
 
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <esp_task_wdt.h>
 
 #include "storage/v3_config_decoder.h"
 
@@ -27,6 +29,11 @@ namespace v3::storage {
 namespace {
 
 constexpr const char* kActiveConfigPath = "/config_v3.json";
+
+inline void feedBootWatchdog() {
+  const esp_err_t err = esp_task_wdt_reset();
+  (void)err;
+}
 
 /**
  * @brief Attempts to load and decode candidate config from persistent file.
@@ -41,27 +48,72 @@ constexpr const char* kActiveConfigPath = "/config_v3.json";
  */
 bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
                               ConfigValidationError& outError) {
-  if (!LittleFS.begin()) return false;
-  if (!LittleFS.exists(kActiveConfigPath)) return false;
-
+  feedBootWatchdog();
+  Serial.println("[storage:file] 01 LittleFS.begin()");
+  Serial.printf("[storage:file] heap before begin=%lu\n",
+                static_cast<unsigned long>(ESP.getFreeHeap()));
+  Serial.flush();
+  feedBootWatchdog();
+  if (!LittleFS.begin()) {
+    Serial.println("[storage:file] 02 LittleFS.begin failed");
+    Serial.println("[storage:file] 02b retry LittleFS.begin(true) to format");
+    Serial.flush();
+    feedBootWatchdog();
+    if (!LittleFS.begin(true)) {
+      Serial.println("[storage:file] 02c LittleFS.begin(true) failed");
+      Serial.flush();
+      feedBootWatchdog();
+      return false;
+    }
+    Serial.println("[storage:file] 02d LittleFS formatted + mounted");
+    Serial.flush();
+    feedBootWatchdog();
+  }
+  Serial.println("[storage:file] 03 LittleFS.begin ok");
+  Serial.flush();
+  feedBootWatchdog();
+  Serial.println("[storage:file] 04 open /config_v3.json (read)");
+  Serial.flush();
+  feedBootWatchdog();
   File file = LittleFS.open(kActiveConfigPath, "r");
-  if (!file) return false;
+  if (!file) {
+    Serial.println("[storage:file] 05 config file missing");
+    Serial.flush();
+    feedBootWatchdog();
+    return false;
+  }
+  Serial.println("[storage:file] 06 open ok, deserialize");
+  Serial.flush();
+  feedBootWatchdog();
 
   JsonDocument doc;
   const DeserializationError jsonError = deserializeJson(doc, file);
+  feedBootWatchdog();
   file.close();
   if (jsonError) {
+    Serial.println("[storage:file] 07 json invalid");
+    Serial.flush();
+    feedBootWatchdog();
     outError = {ConfigErrorCode::ConfigPayloadInvalidJson, 0};
     return true;
   }
 
-  const ConfigDecodeResult decoded = decodeSystemConfig(doc.as<JsonObjectConst>());
-  if (!decoded.ok) {
-    outError = decoded.error;
+  Serial.println("[storage:file] 08 decodeSystemConfig");
+  Serial.flush();
+  feedBootWatchdog();
+  ConfigValidationError decodeError = {ConfigErrorCode::None, 0};
+  if (!decodeSystemConfigLight(doc.as<JsonObjectConst>(), outCandidate,
+                               decodeError)) {
+    Serial.println("[storage:file] 09 decode failed");
+    Serial.flush();
+    feedBootWatchdog();
+    outError = decodeError;
     return true;
   }
 
-  outCandidate = decoded.decoded;
+  Serial.println("[storage:file] 10 decode ok");
+  Serial.flush();
+  feedBootWatchdog();
   return true;
 }
 
@@ -75,31 +127,50 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
  * Main startup initialization.
  */
 void StorageService::begin() {
-  SystemConfig candidate = makeDefaultSystemConfig();
+  auto logStorageStage = [](const char* stage) {
+    Serial.print("[storage] ");
+    Serial.println(stage);
+    Serial.flush();
+    feedBootWatchdog();
+  };
+
+  logStorageStage("01 begin");
+  logStorageStage("02 build default config");
+  SystemConfig& candidate = activeConfig_.system;
+  makeDefaultSystemConfig(candidate);
+  logStorageStage("03 default config done");
   ConfigValidationError bootstrapError = {ConfigErrorCode::None, 0};
 
+  logStorageStage("04 try load from file");
   const bool attemptedFileLoad =
       tryLoadCandidateFromFile(candidate, bootstrapError);
+  logStorageStage("05 file load returned");
   source_ = attemptedFileLoad ? BootstrapSource::FileConfig
                               : BootstrapSource::DefaultConfig;
 
+  logStorageStage("06 check bootstrap error");
   if (attemptedFileLoad && bootstrapError.code != ConfigErrorCode::None) {
     activeConfigPresent_ = false;
     lastError_ = bootstrapError;
+    logStorageStage("07 bootstrap error path exit");
     return;
   }
 
-  const ConfigValidationResult validation = validateSystemConfig(candidate);
+  logStorageStage("08 validate candidate");
+  ConfigValidationError validationError = {ConfigErrorCode::None, 0};
+  const bool valid = validateSystemConfigLight(candidate, validationError);
+  logStorageStage("09 validate returned");
 
-  if (!validation.ok) {
+  if (!valid) {
     activeConfigPresent_ = false;
-    lastError_ = validation.error;
+    lastError_ = validationError;
+    logStorageStage("10 validation failed path exit");
     return;
   }
 
-  activeConfig_ = validation.validated;
   lastError_ = {ConfigErrorCode::None, 0};
   activeConfigPresent_ = true;
+  logStorageStage("11 success exit");
 }
 
 /**

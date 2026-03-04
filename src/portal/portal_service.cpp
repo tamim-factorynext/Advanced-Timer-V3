@@ -326,14 +326,33 @@ void PortalService::rebuildSnapshotJson(
   JsonDocument doc;
 
   doc["type"] = "runtime_snapshot";
+  doc["apiVersion"] = "2.0";
   doc["schemaVersion"] = 1;
   doc["snapshotSeq"] = snapshot.completedScans;
   doc["revision"] = snapshotRevision_ + 1;
   doc["tsMs"] = snapshot.nowMs;
   doc["scanPeriodMs"] = snapshot.scanPeriodMs;
+  doc["lastCompleteScanMs"] = static_cast<double>(snapshot.lastScanMs) / 1000.0;
   doc["engineMode"] = toString(snapshot.mode);
+  JsonObject testMode = doc["testMode"].to<JsonObject>();
+  testMode["active"] = false;
+  testMode["outputMaskGlobal"] = false;
+  testMode["breakpointPaused"] = false;
+  testMode["scanCursor"] = 0;
 
   JsonObject metrics = doc["metrics"].to<JsonObject>();
+  metrics["scanLastUs"] = snapshot.scanLastUs;
+  metrics["scanMaxUs"] = snapshot.scanMaxUs;
+  metrics["scanBudgetUs"] = snapshot.scanPeriodMs * 1000U;
+  metrics["scanOverrunLast"] = snapshot.scanOverrunLast;
+  metrics["scanOverrunCount"] = snapshot.scanOverrunCount;
+  metrics["queueDepth"] = snapshot.queueTelemetry.commandQueueDepth;
+  metrics["queueHighWaterMark"] = snapshot.queueTelemetry.commandQueueHighWater;
+  metrics["queueCapacity"] = snapshot.queueTelemetry.commandQueueCapacity;
+  metrics["commandLatencyLastUs"] = snapshot.queueTelemetry.commandLastLatencyUs;
+  metrics["commandLatencyMaxUs"] = snapshot.queueTelemetry.commandMaxLatencyUs;
+
+  // Compatibility aliases retained during portal migration window.
   metrics["scanLastMs"] = snapshot.lastScanMs;
   metrics["scanCompleted"] = snapshot.completedScans;
   metrics["configuredCardCount"] = snapshot.configuredCardCount;
@@ -353,6 +372,7 @@ void PortalService::rebuildSnapshotJson(
       JsonObject item = cardsJson.add<JsonObject>();
       item["id"] = card.id;
       item["type"] = toString(card.type);
+      item["familyOrder"] = card.id;
       item["index"] = card.index;
       item["commandState"] = card.commandState;
       item["actualState"] = card.actualState;
@@ -365,6 +385,16 @@ void PortalService::rebuildSnapshotJson(
       item["repeatCounter"] = card.repeatCounter;
       item["turnOnConditionMet"] = card.turnOnConditionMet;
       item["turnOffConditionMet"] = card.turnOffConditionMet;
+      item["breakpointEnabled"] = false;
+      item["evalCounter"] = snapshot.completedScans;
+      JsonObject maskForced = item["maskForced"].to<JsonObject>();
+      maskForced["inputSource"] = "REAL";
+      maskForced["forcedAIValue"] = 0;
+      maskForced["outputMaskLocal"] = false;
+      maskForced["outputMasked"] = false;
+      JsonObject debug = item["debug"].to<JsonObject>();
+      debug["evalCounter"] = snapshot.completedScans;
+      debug["breakpointEnabled"] = false;
     }
   }
 

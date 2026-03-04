@@ -26,6 +26,8 @@ namespace v3::storage {
 constexpr uint32_t kConfigSchemaVersion = 300;
 constexpr uint32_t kMinScanIntervalMs = 10;
 constexpr uint32_t kMaxScanIntervalMs = 1000;
+constexpr uint32_t kMathValueMin = 0;
+constexpr uint32_t kMathValueMax = 1000000;
 constexpr uint8_t kMaxCards = 64;
 constexpr uint8_t kMaxWiFiSsidLen = 32;
 constexpr uint8_t kMaxWiFiPasswordLen = 64;
@@ -251,11 +253,17 @@ struct SystemConfig {
 };
 
 /**
- * @brief Builds default system config contract values.
+ * @brief Populates default system config contract values.
  * @details Provides deterministic fallback baseline when no valid file config is available.
- * @return Default-initialized system config.
+ * @param outCfg Target config object to populate in-place.
  * @par Used By
  * - src/storage/storage_service.cpp
+ */
+void makeDefaultSystemConfig(SystemConfig& outCfg);
+/**
+ * @brief Builds default system config contract values (compatibility wrapper).
+ * @details Prefer in-place overload in low-stack paths.
+ * @return Default-initialized system config.
  */
 SystemConfig makeDefaultSystemConfig();
 

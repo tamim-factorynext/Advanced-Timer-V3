@@ -20,6 +20,7 @@ Notes:
 #include <string>
 
 namespace {
+constexpr uint32_t kMathValueMax = 1000000U;
 /**
  * @brief Resolves expected card family for a fixed card-id slot.
  * @details Uses configured family start offsets to classify each contiguous id
@@ -320,6 +321,15 @@ bool validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count,
       }
       if (card.math.smoothingFactorPct > 100U) {
         reason = "MATH emaAlpha out of range";
+        return false;
+      }
+      if (card.math.inputA > kMathValueMax || card.math.inputB > kMathValueMax ||
+          card.math.inputMin > kMathValueMax ||
+          card.math.inputMax > kMathValueMax ||
+          card.math.outputMin > kMathValueMax ||
+          card.math.outputMax > kMathValueMax ||
+          card.math.fallbackValue > kMathValueMax) {
+        reason = "MATH value out of range (0..1000000)";
         return false;
       }
       if (!validateConditionBlock(card.math.turnOnCondition, card.cardId,

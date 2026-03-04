@@ -32,6 +32,13 @@ Current guardrails (added 2026-03-03):
   - capacity-reject counts
   - current string capacities
 
+Recent bring-up pain points (observed on 2026-03-04, DOIT ESP32 DevKit V1):
+
+- LittleFS mount corruption occurred on boot and required auto-format recovery path (`LittleFS.begin(true)` fallback).
+- Multiple stack overflow/canary crashes occurred in `core0`/`core1` tasks during early runtime until stack-hardening changes were applied.
+- Memory headroom remains sensitive when snapshot/diagnostics/transport paths grow.
+- Current LittleFS ceiling on this target remains limited (`~1.4 MB`) for firmware + portal asset growth planning.
+
 ## 3. What `.bss` Means (Memory Model Note)
 
 `.bss` is the binary section for global/static variables that are zero-initialized at startup.
@@ -110,7 +117,16 @@ Mitigation: Keep explicit fallback responses and publish memory guard counters f
 Risk: Board-to-board PSRAM differences (2MB/8MB, speed, config).  
 Mitigation: Detect capacity/features at runtime and keep conservative defaults.
 
-## 9. References
+## 9. Migration Trigger Criteria
+
+Start ESP32-S3 migration immediately when any of these persist after one stabilization pass:
+
+- Repeated task stack overflows/canary triggers after normal stack tuning.
+- Inability to keep runtime + portal payload features without memory-related resets/degradation.
+- Portal asset/config growth pressure that cannot be kept safely inside current ESP32 LittleFS budget.
+- Ongoing need to trade away diagnostics/usability features only to stay within SRAM/flash limits.
+
+## 10. References
 
 - `docs/decisions.md` (`DEC-0051`, `DEC-0052`)
 - `docs/worklog.md` (2026-03-02 DRAM overflow + recovery entry)

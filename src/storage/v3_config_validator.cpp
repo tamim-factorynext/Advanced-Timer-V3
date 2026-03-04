@@ -82,25 +82,23 @@ bool validateConditionBlock(const v3::storage::ConditionBlock& block,
 
 }  // namespace
 
-ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
-  ConfigValidationResult result = {};
-  result.ok = false;
-  result.error = {ConfigErrorCode::None, 0};
-
+bool validateSystemConfigLight(const SystemConfig& candidate,
+                               ConfigValidationError& outError) {
+  outError = {ConfigErrorCode::None, 0};
   if (candidate.schemaVersion != kConfigSchemaVersion) {
-    result.error.code = ConfigErrorCode::SchemaVersionMismatch;
-    return result;
+    outError.code = ConfigErrorCode::SchemaVersionMismatch;
+    return false;
   }
 
   if (candidate.scanPeriodMs < kMinScanIntervalMs ||
       candidate.scanPeriodMs > kMaxScanIntervalMs) {
-    result.error.code = ConfigErrorCode::ScanIntervalOutOfRange;
-    return result;
+    outError.code = ConfigErrorCode::ScanIntervalOutOfRange;
+    return false;
   }
 
   if (candidate.cardCount > kMaxCards) {
-    result.error.code = ConfigErrorCode::CardCountOutOfRange;
-    return result;
+    outError.code = ConfigErrorCode::CardCountOutOfRange;
+    return false;
   }
 
   if (!candidate.wifi.staOnly || candidate.wifi.backupAccessNetwork.editable ||
@@ -110,8 +108,8 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       !isNonEmpty(candidate.wifi.userConfiguredNetwork.password) ||
       candidate.wifi.backupAccessNetwork.timeoutSec == 0 || candidate.wifi.userConfiguredNetwork.timeoutSec == 0 ||
       candidate.wifi.retryDelaySec == 0) {
-    result.error.code = ConfigErrorCode::InvalidWiFiPolicy;
-    return result;
+    outError.code = ConfigErrorCode::InvalidWiFiPolicy;
+    return false;
   }
 
   if (!isNonEmpty(candidate.time.timezone) ||
@@ -121,114 +119,136 @@ ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
       candidate.time.timeSync.syncIntervalSec == 0 ||
       candidate.time.timeSync.startupTimeoutSec == 0 ||
       candidate.time.timeSync.maxTimeAgeSec == 0) {
-    result.error.code = ConfigErrorCode::ConfigPayloadInvalidShape;
-    return result;
+    outError.code = ConfigErrorCode::ConfigPayloadInvalidShape;
+    return false;
   }
 
   if (isDuplicateCardId(candidate, candidate.cardCount)) {
-    result.error.code = ConfigErrorCode::DuplicateCardId;
-    return result;
+    outError.code = ConfigErrorCode::DuplicateCardId;
+    return false;
   }
 
   for (uint8_t i = 0; i < candidate.cardCount; ++i) {
     const CardConfig& card = candidate.cards[i];
 
     if (card.family == CardFamily::DI && card.di.edgeMode > 2U) {
-      result.error.code = ConfigErrorCode::InvalidDiMode;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidDiMode;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::DO &&
         (card.dout.mode < 5U || card.dout.mode > 7U)) {
-      result.error.code = ConfigErrorCode::InvalidDoMode;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidDoMode;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::SIO &&
         (card.sio.mode < 5U || card.sio.mode > 7U)) {
-      result.error.code = ConfigErrorCode::InvalidSioMode;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidSioMode;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::DI &&
         (card.di.debounceMs % 10U) != 0U) {
-      result.error.code = ConfigErrorCode::InvalidDiDebounceStep;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidDiDebounceStep;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::DI &&
         (!validateConditionBlock(card.di.turnOnCondition, candidate, candidate.cardCount) ||
          !validateConditionBlock(card.di.turnOffCondition, candidate, candidate.cardCount))) {
-      result.error.code = ConfigErrorCode::InvalidConditionBlock;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidConditionBlock;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::DO &&
         (!validateConditionBlock(card.dout.turnOnCondition, candidate, candidate.cardCount) ||
          !validateConditionBlock(card.dout.turnOffCondition, candidate, candidate.cardCount))) {
-      result.error.code = ConfigErrorCode::InvalidConditionBlock;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidConditionBlock;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::SIO &&
         (!validateConditionBlock(card.sio.turnOnCondition, candidate, candidate.cardCount) ||
          !validateConditionBlock(card.sio.turnOffCondition, candidate, candidate.cardCount))) {
-      result.error.code = ConfigErrorCode::InvalidConditionBlock;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidConditionBlock;
+      outError.cardIndex = i;
+      return false;
     }
     if (card.family == CardFamily::MATH &&
         (!validateConditionBlock(card.math.turnOnCondition, candidate, candidate.cardCount) ||
          !validateConditionBlock(card.math.turnOffCondition, candidate, candidate.cardCount))) {
-      result.error.code = ConfigErrorCode::InvalidConditionBlock;
-      result.error.cardIndex = i;
-      return result;
+      outError.code = ConfigErrorCode::InvalidConditionBlock;
+      outError.cardIndex = i;
+      return false;
     }
 
-    if (card.ai.inputMin > card.ai.inputMax ||
-        card.ai.outputMin > card.ai.outputMax ||
-        card.ai.smoothingFactorPct > 100U) {
-      result.error.code = ConfigErrorCode::InvalidAiRange;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::AI &&
+        (card.ai.inputMin > card.ai.inputMax ||
+         card.ai.outputMin > card.ai.outputMax ||
+         card.ai.smoothingFactorPct > 100U)) {
+      outError.code = ConfigErrorCode::InvalidAiRange;
+      outError.cardIndex = i;
+      return false;
     }
 
-    if (card.math.operation > 3U || card.math.inputMin >= card.math.inputMax ||
-        card.math.smoothingFactorPct > 100U) {
-      result.error.code = ConfigErrorCode::InvalidMathClamp;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::MATH &&
+        (card.math.operation > 3U ||
+         card.math.inputMin >= card.math.inputMax ||
+         card.math.smoothingFactorPct > 100U ||
+         card.math.inputA > kMathValueMax ||
+         card.math.inputB > kMathValueMax ||
+         card.math.inputMin > kMathValueMax ||
+         card.math.inputMax > kMathValueMax ||
+         card.math.outputMin > kMathValueMax ||
+         card.math.outputMax > kMathValueMax ||
+         card.math.fallbackValue > kMathValueMax)) {
+      outError.code = ConfigErrorCode::InvalidMathClamp;
+      outError.cardIndex = i;
+      return false;
     }
 
-    if (card.rtc.hasMonth && (card.rtc.month < 1 || card.rtc.month > 12)) {
-      result.error.code = ConfigErrorCode::InvalidRtcTime;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::RTC &&
+        card.rtc.hasMonth && (card.rtc.month < 1 || card.rtc.month > 12)) {
+      outError.code = ConfigErrorCode::InvalidRtcTime;
+      outError.cardIndex = i;
+      return false;
     }
-    if (card.rtc.hasDay && (card.rtc.day < 1 || card.rtc.day > 31)) {
-      result.error.code = ConfigErrorCode::InvalidRtcTime;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::RTC &&
+        card.rtc.hasDay && (card.rtc.day < 1 || card.rtc.day > 31)) {
+      outError.code = ConfigErrorCode::InvalidRtcTime;
+      outError.cardIndex = i;
+      return false;
     }
-    if (card.rtc.hasWeekday && card.rtc.weekday > 6) {
-      result.error.code = ConfigErrorCode::InvalidRtcTime;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::RTC &&
+        card.rtc.hasWeekday && card.rtc.weekday > 6) {
+      outError.code = ConfigErrorCode::InvalidRtcTime;
+      outError.cardIndex = i;
+      return false;
     }
-    if (card.rtc.hasHour && card.rtc.hour > 23) {
-      result.error.code = ConfigErrorCode::InvalidRtcTime;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::RTC &&
+        card.rtc.hasHour && card.rtc.hour > 23) {
+      outError.code = ConfigErrorCode::InvalidRtcTime;
+      outError.cardIndex = i;
+      return false;
     }
-    if (card.rtc.minute > 59) {
-      result.error.code = ConfigErrorCode::InvalidRtcTime;
-      result.error.cardIndex = i;
-      return result;
+    if (card.family == CardFamily::RTC && card.rtc.minute > 59) {
+      outError.code = ConfigErrorCode::InvalidRtcTime;
+      outError.cardIndex = i;
+      return false;
     }
   }
 
-  result.ok = true;
-  result.validated.system = candidate;
+  outError = {ConfigErrorCode::None, 0};
+  return true;
+}
+
+ConfigValidationResult validateSystemConfig(const SystemConfig& candidate) {
+  ConfigValidationResult result = {};
+  result.ok = validateSystemConfigLight(candidate, result.error);
+  if (result.ok) {
+    result.validated.system = candidate;
+  }
   return result;
 }
 

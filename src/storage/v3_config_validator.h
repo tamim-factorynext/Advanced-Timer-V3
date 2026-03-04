@@ -95,6 +95,18 @@ struct ConfigValidationResult {
  */
 ConfigValidationResult validateSystemConfig(const SystemConfig& candidate);
 /**
+ * @brief Validates typed system config against V3 contract rules (stack-light path).
+ * @details Returns success/failure and fills `outError` without constructing large
+ * result envelopes. Intended for low-stack boot paths.
+ * @param candidate Candidate system config to validate.
+ * @param outError Receives first validation error on failure; `None` on success.
+ * @return `true` when config is valid.
+ * @par Used By
+ * - src/storage/storage_service.cpp
+ */
+bool validateSystemConfigLight(const SystemConfig& candidate,
+                               ConfigValidationError& outError);
+/**
  * @brief Converts config error code to stable display/debug text token.
  * @details Used for startup logs and diagnostics projection surfaces.
  * @param code Error code to stringify.

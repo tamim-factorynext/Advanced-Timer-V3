@@ -136,17 +136,19 @@ void initRtcCard(CardConfig& card, uint8_t id, uint8_t minuteOffset) {
 
 }  // namespace
 
-SystemConfig makeDefaultSystemConfig() {
-  SystemConfig cfg = {};
+void makeDefaultSystemConfig(SystemConfig& cfg) {
+  cfg = {};
   cfg.schemaVersion = kConfigSchemaVersion;
   cfg.scanPeriodMs = kMinScanIntervalMs;
-  strncpy(cfg.wifi.backupAccessNetwork.ssid, "advancedtimer", sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
+  strncpy(cfg.wifi.backupAccessNetwork.ssid, "advancedtimer",
+          sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
   strncpy(cfg.wifi.backupAccessNetwork.password, "12345678",
           sizeof(cfg.wifi.backupAccessNetwork.password) - 1);
   cfg.wifi.backupAccessNetwork.timeoutSec = 2;
   cfg.wifi.backupAccessNetwork.editable = false;
 
-  strncpy(cfg.wifi.userConfiguredNetwork.ssid, "FactoryNext", sizeof(cfg.wifi.userConfiguredNetwork.ssid) - 1);
+  strncpy(cfg.wifi.userConfiguredNetwork.ssid, "FactoryNext",
+          sizeof(cfg.wifi.userConfiguredNetwork.ssid) - 1);
   strncpy(cfg.wifi.userConfiguredNetwork.password, "FactoryNext20$22#",
           sizeof(cfg.wifi.userConfiguredNetwork.password) - 1);
   cfg.wifi.userConfiguredNetwork.timeoutSec = 180;
@@ -199,6 +201,11 @@ SystemConfig makeDefaultSystemConfig() {
   }
 
   cfg.cardCount = nextId;
+}
+
+SystemConfig makeDefaultSystemConfig() {
+  SystemConfig cfg = {};
+  makeDefaultSystemConfig(cfg);
   return cfg;
 }
 

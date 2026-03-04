@@ -53,25 +53,47 @@ bool mapDateTimeToMinuteStamp(const DateTime& dt, LocalMinuteStamp& out) {
 }  // namespace
 
 void PlatformService::begin() {
+  Serial.println("[platform] 01 begin()");
+  Serial.flush();
   profile_ = &activeHardwareProfile();
   gRtcBackendReady = false;
-  if (profile_ == nullptr) return;
+  if (profile_ == nullptr) {
+    Serial.println("[platform] 02 profile null");
+    Serial.flush();
+    return;
+  }
+
+  Serial.printf("[platform] 03 rtcBackend=%u\n",
+                static_cast<unsigned>(profile_->rtcBackend));
+  Serial.flush();
 
   if (profile_->rtcBackend == RtcBackend::RtcMillis) {
     // Keep current behavior: RTC minute stamp source comes from system local time.
     gRtcBackendReady = true;
+    Serial.println("[platform] 04 RTC_MILLIS selected");
+    Serial.flush();
     return;
   }
 
+  Serial.println("[platform] 05 Wire.begin()");
+  Serial.flush();
   Wire.begin();
+  Serial.println("[platform] 06 Wire.begin done");
+  Serial.flush();
   switch (profile_->rtcBackend) {
     case RtcBackend::Ds3231:
+      Serial.println("[platform] 07 DS3231 begin()");
+      Serial.flush();
       gRtcBackendReady = gRtcDs3231.begin();
       break;
     case RtcBackend::Pcf8523:
+      Serial.println("[platform] 08 PCF8523 begin()");
+      Serial.flush();
       gRtcBackendReady = gRtcPcf8523.begin();
       break;
     case RtcBackend::Ds1307:
+      Serial.println("[platform] 09 DS1307 begin()");
+      Serial.flush();
       gRtcBackendReady = gRtcDs1307.begin();
       break;
     case RtcBackend::RtcMillis:
@@ -79,6 +101,9 @@ void PlatformService::begin() {
       gRtcBackendReady = true;
       break;
   }
+  Serial.printf("[platform] 10 rtc backend ready=%u\n",
+                gRtcBackendReady ? 1U : 0U);
+  Serial.flush();
 }
 
 uint32_t PlatformService::nowMs() const { return millis(); }

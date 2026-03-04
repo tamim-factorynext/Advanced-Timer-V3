@@ -675,11 +675,10 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
  * @par Used By
  * StorageService::begin().
  */
-ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
-  ConfigDecodeResult result = {};
-  result.ok = false;
-  result.error = {ConfigErrorCode::None, 0};
-  result.decoded = makeDefaultSystemConfig();
+bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
+                             ConfigValidationError& outError) {
+  outError = {ConfigErrorCode::None, 0};
+  makeDefaultSystemConfig(outDecoded);
 
   JsonObjectConst systemObj = root["system"].as<JsonObjectConst>();
   if (systemObj.isNull()) systemObj = root;
@@ -687,41 +686,51 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
   if (!systemObj["schemaVersion"].is<uint32_t>() ||
       !systemObj["scanPeriodMs"].is<uint32_t>() ||
       !systemObj["cards"].is<JsonArrayConst>()) {
-    result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
-    return result;
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
   }
 
-  result.decoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
-  result.decoded.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
-  if (!parseWiFiConfig(systemObj, result.decoded.wifi)) {
-    result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
-    return result;
+  outDecoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
+  outDecoded.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
+  if (!parseWiFiConfig(systemObj, outDecoded.wifi)) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
   }
-  if (!parseClockConfig(systemObj, result.decoded.time)) {
-    result.error = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
-    return result;
+  if (!parseClockConfig(systemObj, outDecoded.time)) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
   }
 
   JsonArrayConst cards = systemObj["cards"].as<JsonArrayConst>();
   if (cards.size() > kMaxCards) {
-    result.error = {ConfigErrorCode::CardCountOutOfRange, 0};
-    return result;
+    outError = {ConfigErrorCode::CardCountOutOfRange, 0};
+    return false;
   }
 
-  result.decoded.cardCount = static_cast<uint8_t>(cards.size());
+  outDecoded.cardCount = static_cast<uint8_t>(cards.size());
 
   uint8_t cardIndex = 0;
   for (JsonObjectConst cardObj : cards) {
     CardConfig card = {};
-    if (!parseCommonCard(cardObj, card, result.error, cardIndex)) return result;
-    if (!parseFamilyParams(cardObj, card, result.error, cardIndex)) return result;
-    result.decoded.cards[cardIndex] = card;
+    if (!parseCommonCard(cardObj, card, outError, cardIndex)) return false;
+    if (!parseFamilyParams(cardObj, card, outError, cardIndex)) return false;
+    outDecoded.cards[cardIndex] = card;
     ++cardIndex;
   }
 
-  result.ok = true;
+  return true;
+}
+
+ConfigDecodeResult decodeSystemConfig(JsonObjectConst root) {
+  ConfigDecodeResult result = {};
+  result.ok = decodeSystemConfigLight(root, result.decoded, result.error);
   return result;
 }
+
+/*
+ * Compatibility wrapper kept for call sites that still prefer envelope-style
+ * decode flow.
+ */
 
 }  // namespace v3::storage
 

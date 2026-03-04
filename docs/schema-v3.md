@@ -254,6 +254,14 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 - `mode`: required enum `Mode_Math_Standard`.
 - `set`, `reset`: required condition blocks.
 - `fallbackValue`: required `uint32`.
+- MATH numeric fields use `uint32` with enforced range `0..1,000,000`:
+  - `fallbackValue`
+  - `inputA.value`
+  - `inputB.value`
+  - `inputMin`
+  - `inputMax`
+  - `outputMin`
+  - `outputMax`
 - MATH has no condition-visible `STATE` output.
 - MATH has no `actualState` / `commandState` mission semantics.
 
@@ -373,6 +381,7 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-021: reject `RTC` card payload when active build profile does not support RTC.
 - V-CFG-022: reject RTC schedule fields below minute granularity (`second`, `millisecond`, `ms`).
 - V-CFG-023: reject MATH `smoothingFactorPct` outside `0..100`.
+- V-CFG-027: reject MATH numeric fields outside `0..1,000,000`.
 
 ## 10. Open Decisions To Freeze
 

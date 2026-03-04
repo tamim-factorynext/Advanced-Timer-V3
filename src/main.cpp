@@ -15,6 +15,8 @@ Notes:
 - Naming follows docs/naming-glossary-v3.md where applicable.
 */
 #include <Arduino.h>
+#include <esp_system.h>
+#include <esp_task_wdt.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -55,6 +57,8 @@ uint32_t gKernelCommandQueueDropCount = 0;
 uint32_t gKernelCommandAppliedCount = 0;
 uint32_t gKernelCommandSetRunModeCount = 0;
 uint32_t gKernelCommandStepCount = 0;
+uint32_t gKernelCommandLastLatencyUs = 0;
+uint32_t gKernelCommandMaxLatencyUs = 0;
 uint32_t gKernelCommandLastLatencyMs = 0;
 uint32_t gKernelCommandMaxLatencyMs = 0;
 uint8_t gKernelCommandLastAppliedType = 0;
@@ -65,10 +69,29 @@ uint32_t gLastWiFiLogMs = 0;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
+constexpr uint32_t kCore0TaskStackBytes = 12288;
+constexpr uint32_t kCore1TaskStackBytes = 16384;
 constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
-constexpr uint32_t kTaskWatchdogTimeoutSeconds = 8;
+constexpr uint32_t kTaskWatchdogTimeoutSeconds = 16;
 constexpr uint32_t kWiFiStatusLogIntervalMs = 10000;
+constexpr uint32_t kPortalProjectionIntervalMs = 10;
+
+void feedBootWatchdog() {
+  const esp_err_t err = esp_task_wdt_reset();
+  (void)err;
+}
+
+[[noreturn]] void haltBoot(const char* message) {
+  if (message != nullptr) {
+    Serial.println(message);
+    Serial.flush();
+  }
+  while (true) {
+    feedBootWatchdog();
+    delay(250);
+  }
+}
 
 struct KernelSnapshotMessage {
   uint32_t producedAtMs;
@@ -76,6 +99,8 @@ struct KernelSnapshotMessage {
   uint8_t cardCount;
   RuntimeSnapshotCard cards[v3::storage::kMaxCards];
 };
+KernelSnapshotMessage gCore0SnapshotBuffer = {};
+KernelSnapshotMessage gCore1SnapshotBuffer = {};
 
 void updateKernelSnapshotQueueStats() {
   if (gKernelSnapshotQueue == nullptr) return;
@@ -122,9 +147,14 @@ void applyKernelCommands(uint32_t nowUs) {
     gKernelCommandAppliedCount += 1;
     gKernelCommandLastAppliedType = static_cast<uint8_t>(command.type);
 
-    uint32_t latencyMs = 0;
+    uint32_t latencyUs = 0;
     if (nowUs >= command.enqueuedUs) {
-      latencyMs = (nowUs - command.enqueuedUs) / 1000;
+      latencyUs = (nowUs - command.enqueuedUs);
+    }
+    const uint32_t latencyMs = latencyUs / 1000U;
+    gKernelCommandLastLatencyUs = latencyUs;
+    if (latencyUs > gKernelCommandMaxLatencyUs) {
+      gKernelCommandMaxLatencyUs = latencyUs;
     }
     gKernelCommandLastLatencyMs = latencyMs;
     if (latencyMs > gKernelCommandMaxLatencyMs) {
@@ -204,52 +234,81 @@ void dispatchPortalRequestsToControl() {
   }
 }
 
-KernelSnapshotMessage latestKernelSnapshotFromQueue() {
-  KernelSnapshotMessage latest = {};
+void latestKernelSnapshotFromQueue(KernelSnapshotMessage& latest) {
   latest.producedAtMs = gPlatform.nowMs();
   latest.metrics = gLastKernelMetrics;
-  if (gKernelSnapshotQueue == nullptr) return latest;
+  latest.cardCount = 0;
+  if (gKernelSnapshotQueue == nullptr) return;
 
-  KernelSnapshotMessage next = {};
-  while (xQueueReceive(gKernelSnapshotQueue, &next, 0) == pdTRUE) {
-    latest = next;
+  while (xQueueReceive(gKernelSnapshotQueue, &latest, 0) == pdTRUE) {
   }
   gLastKernelMetrics = latest.metrics;
   updateKernelSnapshotQueueStats();
-  return latest;
 }
 
 void core0KernelTask(void*) {
+  Serial.println("[core0] 01 task entry");
+  Serial.flush();
   if (!gPlatform.addCurrentTaskToWatchdog()) {
     Serial.println("V3 watchdog add failed: core0");
     vTaskDelete(nullptr);
     return;
   }
+  Serial.println("[core0] 02 watchdog registered");
+  Serial.flush();
+
+  bool firstLoopLog = true;
 
   while (true) {
+    if (firstLoopLog) {
+      Serial.println("[core0] 03 first loop tick");
+      const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
+      Serial.printf("[core0] stack high-water words=%lu bytes=%lu\n",
+                    static_cast<unsigned long>(hw),
+                    static_cast<unsigned long>(hw * sizeof(StackType_t)));
+      Serial.flush();
+      firstLoopLog = false;
+    }
     const uint32_t nowUs = micros();
     const uint32_t nowMs = gPlatform.nowMs();
     applyKernelCommands(nowUs);
     gKernel.tick(nowMs);
-    KernelSnapshotMessage snapshot = {};
-    snapshot.producedAtMs = nowMs;
-    snapshot.metrics = gKernel.metrics();
-    snapshot.cardCount =
-        gKernel.exportRuntimeSnapshotCards(snapshot.cards, v3::storage::kMaxCards);
-    enqueueKernelSnapshot(snapshot);
+    gCore0SnapshotBuffer.producedAtMs = nowMs;
+    gCore0SnapshotBuffer.metrics = gKernel.metrics();
+    gCore0SnapshotBuffer.cardCount = gKernel.exportRuntimeSnapshotCards(
+        gCore0SnapshotBuffer.cards, v3::storage::kMaxCards);
+    enqueueKernelSnapshot(gCore0SnapshotBuffer);
     gPlatform.resetTaskWatchdog();
     vTaskDelay(pdMS_TO_TICKS(kCore0LoopDelayMs));
   }
 }
 
 void core1ServiceTask(void*) {
+  Serial.println("[core1] 01 task entry");
+  Serial.flush();
   if (!gPlatform.addCurrentTaskToWatchdog()) {
     Serial.println("V3 watchdog add failed: core1");
     vTaskDelete(nullptr);
     return;
   }
+  Serial.println("[core1] 02 watchdog registered");
+  Serial.flush();
+
+  bool firstLoopLog = true;
+  uint32_t lastProjectedScanCount = 0;
+  uint32_t lastPortalProjectionMs = 0;
+  bool projectionInitialized = false;
 
   while (true) {
+    if (firstLoopLog) {
+      Serial.println("[core1] 03 first loop tick");
+      const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
+      Serial.printf("[core1] stack high-water words=%lu bytes=%lu\n",
+                    static_cast<unsigned long>(hw),
+                    static_cast<unsigned long>(hw * sizeof(StackType_t)));
+      Serial.flush();
+      firstLoopLog = false;
+    }
     const uint32_t nowMs = gPlatform.nowMs();
     gWiFi.tick(nowMs);
     const v3::platform::WiFiStatus& wifi = gWiFi.status();
@@ -263,7 +322,7 @@ void core1ServiceTask(void*) {
       gLastWiFiLogMs = nowMs;
     }
 
-    const KernelSnapshotMessage snapshot = latestKernelSnapshotFromQueue();
+    latestKernelSnapshotFromQueue(gCore1SnapshotBuffer);
     gControl.tick(nowMs);
 
     dispatchPortalRequestsToControl();
@@ -272,14 +331,18 @@ void core1ServiceTask(void*) {
     v3::runtime::QueueTelemetry queueTelemetry = {};
     queueTelemetry.snapshotQueueDepth = gKernelSnapshotQueueDepth;
     queueTelemetry.snapshotQueueHighWater = gKernelSnapshotQueueHighWater;
+    queueTelemetry.snapshotQueueCapacity = kKernelSnapshotQueueCapacity;
     queueTelemetry.snapshotQueueDropCount = gKernelSnapshotQueueDropCount;
     queueTelemetry.commandQueueDepth = gKernelCommandQueueDepth;
     queueTelemetry.commandQueueHighWater = gKernelCommandQueueHighWater;
+    queueTelemetry.commandQueueCapacity = kKernelCommandQueueCapacity;
     queueTelemetry.commandQueueDropCount = gKernelCommandQueueDropCount;
     queueTelemetry.commandAppliedCount = gKernelCommandAppliedCount;
     queueTelemetry.commandSetRunModeCount = gKernelCommandSetRunModeCount;
     queueTelemetry.commandStepCount = gKernelCommandStepCount;
     queueTelemetry.commandLastAppliedType = gKernelCommandLastAppliedType;
+    queueTelemetry.commandLastLatencyUs = gKernelCommandLastLatencyUs;
+    queueTelemetry.commandMaxLatencyUs = gKernelCommandMaxLatencyUs;
     queueTelemetry.commandLastLatencyMs = gKernelCommandLastLatencyMs;
     queueTelemetry.commandMaxLatencyMs = gKernelCommandMaxLatencyMs;
     const v3::control::ControlDiagnostics& controlDiag = gControl.diagnostics();
@@ -312,9 +375,22 @@ void core1ServiceTask(void*) {
         (queueTelemetry.commandAppliedCount >
          queueTelemetry.controlAcceptedCount);
 
-    gRuntime.tick(snapshot.producedAtMs, snapshot.metrics, gBootstrapDiagnostics,
-                  queueTelemetry);
-    gPortal.tick(nowMs, gRuntime.snapshot(), snapshot.cards, snapshot.cardCount);
+    gRuntime.tick(gCore1SnapshotBuffer.producedAtMs, gCore1SnapshotBuffer.metrics,
+                  gBootstrapDiagnostics, queueTelemetry);
+    const uint32_t currentScanCount =
+        gCore1SnapshotBuffer.metrics.completedScans;
+    const bool hasNewScan =
+        !projectionInitialized || (currentScanCount != lastProjectedScanCount);
+    const bool intervalElapsed =
+        !projectionInitialized ||
+        ((nowMs - lastPortalProjectionMs) >= kPortalProjectionIntervalMs);
+    if (hasNewScan || intervalElapsed) {
+      gPortal.tick(nowMs, gRuntime.snapshot(), gCore1SnapshotBuffer.cards,
+                   gCore1SnapshotBuffer.cardCount);
+      lastProjectedScanCount = currentScanCount;
+      lastPortalProjectionMs = nowMs;
+      projectionInitialized = true;
+    }
     v3::portal::serviceTransportRuntime();
 
     gPlatform.resetTaskWatchdog();
@@ -326,10 +402,23 @@ void core1ServiceTask(void*) {
 
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  delay(5000);  // Keep startup capture window without starving loop-task WDT.
   Serial.println("Advanced Timer V3 Core bootstrap");
+  Serial.printf("[boot] reset reason=%d\n",
+                static_cast<int>(esp_reset_reason()));
+  Serial.flush();
+  feedBootWatchdog();
 
+  auto logSetupStage = [](const char *stage) {
+    Serial.print("[setup] ");
+    Serial.println(stage);
+    Serial.flush();
+    feedBootWatchdog();
+  };
+
+  logSetupStage("01 begin platform");
   gPlatform.begin();
+  logSetupStage("02 platform begin done");
   const v3::platform::HardwareProfile& hwProfile = gPlatform.profile();
   Serial.printf(
       "V3 hardware profile=%s variant=%s di=%u do=%u ai=%u sio=%u math=%u rtc=%u"
@@ -345,70 +434,89 @@ void setup() {
       static_cast<unsigned>(hwProfile.doBackend),
       static_cast<unsigned>(hwProfile.aiBackend),
       static_cast<unsigned>(hwProfile.rtcBackend));
-  if (!gPlatform.initTaskWatchdog(kTaskWatchdogTimeoutSeconds, true)) {
-    Serial.println("V3 watchdog init failed");
-    while (true) {
-      delay(1000);
-    }
-  }
-  gStorage.begin();
+  Serial.flush();
+  logSetupStage("03 profile print done");
 
+  logSetupStage("04 storage begin");
+  gStorage.begin();
+  logSetupStage("05 storage begin done");
+
+  logSetupStage("06 hasActiveConfig check");
   if (!gStorage.hasActiveConfig()) {
     const v3::storage::ConfigValidationError err = gStorage.lastError();
     Serial.print("V3 config bootstrap failed: ");
     Serial.println(v3::storage::configErrorCodeToString(err.code));
-    while (true) {
-      delay(1000);
-    }
+    haltBoot("V3 halting: storage has no active config");
   }
+  logSetupStage("07 active config available");
 
+  logSetupStage("08 kernel begin");
   gKernel.begin(gStorage.activeConfig(), gPlatform);
+  logSetupStage("09 kernel begin done");
   gBootstrapDiagnostics = gStorage.diagnostics();
   gLastKernelMetrics = gKernel.metrics();
+  logSetupStage("10 diagnostics captured");
 
+  logSetupStage("11 runtime begin");
   gRuntime.begin();
+  logSetupStage("12 runtime begin done");
+  logSetupStage("13 control begin");
   gControl.begin();
+  logSetupStage("14 control begin done");
+  logSetupStage("15 portal begin");
   gPortal.begin();
+  logSetupStage("16 portal begin done");
+  logSetupStage("17 wifi begin");
   gWiFi.begin(gStorage.activeConfig().system.wifi,
               gStorage.activeConfig().system.time);
+  logSetupStage("18 wifi begin done");
+  logSetupStage("19 transport init");
   v3::portal::initTransportRuntime(gPortal);
+  logSetupStage("20 transport init done");
 
+  // Initialize watchdog after heavier bootstrap work so first-boot setup
+  // does not get reset before runtime tasks start feeding the watchdog.
+  logSetupStage("21 watchdog init");
+  if (!gPlatform.initTaskWatchdog(kTaskWatchdogTimeoutSeconds, true)) {
+    haltBoot("V3 watchdog init failed");
+  }
+  logSetupStage("22 watchdog init done");
+
+  logSetupStage("23 create snapshot queue");
   gKernelSnapshotQueue = xQueueCreate(kKernelSnapshotQueueCapacity,
                                       sizeof(KernelSnapshotMessage));
   if (gKernelSnapshotQueue == nullptr) {
-    Serial.println("V3 snapshot queue bootstrap failed");
-    while (true) {
-      delay(1000);
-    }
+    haltBoot("V3 snapshot queue bootstrap failed");
   }
+  logSetupStage("24 snapshot queue ready");
+  logSetupStage("25 create command queue");
   gKernelCommandQueue =
       xQueueCreate(kKernelCommandQueueCapacity, sizeof(::KernelCommand));
   if (gKernelCommandQueue == nullptr) {
-    Serial.println("V3 command queue bootstrap failed");
-    while (true) {
-      delay(1000);
-    }
+    haltBoot("V3 command queue bootstrap failed");
   }
+  logSetupStage("26 command queue ready");
 
-  KernelSnapshotMessage initialSnapshot = {};
-  initialSnapshot.producedAtMs = gPlatform.nowMs();
-  initialSnapshot.metrics = gLastKernelMetrics;
-  initialSnapshot.cardCount = gKernel.exportRuntimeSnapshotCards(
-      initialSnapshot.cards, v3::storage::kMaxCards);
-  enqueueKernelSnapshot(initialSnapshot);
+  logSetupStage("27 enqueue initial snapshot");
+  gCore0SnapshotBuffer.producedAtMs = gPlatform.nowMs();
+  gCore0SnapshotBuffer.metrics = gLastKernelMetrics;
+  gCore0SnapshotBuffer.cardCount = gKernel.exportRuntimeSnapshotCards(
+      gCore0SnapshotBuffer.cards, v3::storage::kMaxCards);
+  enqueueKernelSnapshot(gCore0SnapshotBuffer);
+  logSetupStage("28 initial snapshot queued");
 
+  logSetupStage("29 create core0/core1 tasks");
   BaseType_t core0Created = xTaskCreatePinnedToCore(
-      core0KernelTask, "v3-core0-kernel", 4096, nullptr, 2, &gCore0TaskHandle, 0);
+      core0KernelTask, "v3-core0-kernel", kCore0TaskStackBytes, nullptr, 2,
+      &gCore0TaskHandle, 0);
   BaseType_t core1Created = xTaskCreatePinnedToCore(
-      core1ServiceTask, "v3-core1-services", 6144, nullptr, 1, &gCore1TaskHandle,
-      1);
+      core1ServiceTask, "v3-core1-services", kCore1TaskStackBytes, nullptr, 1,
+      &gCore1TaskHandle, 1);
 
   if (core0Created != pdPASS || core1Created != pdPASS) {
-    Serial.println("V3 dual-core task bootstrap failed");
-    while (true) {
-      delay(1000);
-    }
+    haltBoot("V3 dual-core task bootstrap failed");
   }
+  logSetupStage("30 setup complete");
 }
 
 void loop() {

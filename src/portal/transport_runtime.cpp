@@ -30,6 +30,36 @@ WebSocketsServer gWsServer(81);
 PortalService* gPortal = nullptr;
 bool gTransportInitialized = false;
 
+void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
+
+const char* methodToString(const HTTPMethod method) {
+  switch (method) {
+    case HTTP_GET:
+      return "GET";
+    case HTTP_POST:
+      return "POST";
+    case HTTP_PUT:
+      return "PUT";
+    case HTTP_PATCH:
+      return "PATCH";
+    case HTTP_DELETE:
+      return "DELETE";
+    case HTTP_OPTIONS:
+      return "OPTIONS";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+void handleHttpCorsOptions() {
+  gHttpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  gHttpServer.sendHeader("Access-Control-Allow-Methods",
+                         "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD");
+  gHttpServer.sendHeader("Access-Control-Allow-Headers", "*");
+  gHttpServer.sendHeader("Access-Control-Max-Age", "600");
+  sendNoContent();
+}
+
 /**
  * @brief Handles HTTP command submit endpoint.
  * @details Delegates payload parsing/execution to transport command stub and
@@ -71,6 +101,46 @@ void handleHttpSnapshotGet() {
 }
 
 /**
+ * @brief Handles HTTP diagnostics endpoint.
+ * @par Used By
+ * `GET /api/v3/diagnostics`.
+ */
+void handleHttpDiagnosticsGet() {
+  if (gPortal == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
+    return;
+  }
+  const PortalDiagnosticsState state = gPortal->diagnosticsState();
+  if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
+    gHttpServer.send(503, "application/json",
+                     "{\"ok\":false,\"reason\":\"diagnostics_not_ready\"}");
+    return;
+  }
+  gHttpServer.send(200, "application/json", state.json);
+}
+
+/**
+ * @brief Handles root landing endpoint.
+ * @details Returns a tiny discovery payload with primary API routes so raw-IP
+ * browser opens get a valid response.
+ * @par Used By
+ * `GET /`.
+ */
+void handleHttpRootGet() {
+  if (gPortal == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
+    return;
+  }
+  gHttpServer.send(
+      200, "application/json",
+      "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
+      "snapshot\",\"/api/v3/diagnostics\",\"/api/v3/command\","
+      "\"/api/snapshot\",\"/api/diagnostics\",\"/api/command\"]}");
+}
+
+/**
  * @brief Handles inbound WebSocket command messages.
  * @details Accepts text frames only and responds directly to originating
  * client with command result JSON.
@@ -108,23 +178,56 @@ void initTransportRuntime(PortalService& portal) {
   if (gTransportInitialized) return;
   gPortal = &portal;
 
+  gHttpServer.on("/", HTTP_GET, handleHttpRootGet);
+  gHttpServer.on("/favicon.ico", HTTP_GET, sendNoContent);
+  gHttpServer.on("/generate_204", HTTP_GET, sendNoContent);
+  gHttpServer.on("/hotspot-detect.html", HTTP_GET, sendNoContent);
+  gHttpServer.on("/ncsi.txt", HTTP_GET, sendNoContent);
+  gHttpServer.on("/connecttest.txt", HTTP_GET, sendNoContent);
+
+  gHttpServer.on("/api/command", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/command/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/command", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/command/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/command", HTTP_POST, handleHttpCommandSubmit);
+  gHttpServer.on("/api/command/", HTTP_POST, handleHttpCommandSubmit);
   gHttpServer.on("/api/v3/command", HTTP_POST, handleHttpCommandSubmit);
-  gHttpServer.on(
-      "/api/v3/diagnostics", HTTP_GET, []() {
-        if (gPortal == nullptr) {
-          gHttpServer.send(500, "application/json",
-                           "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
-          return;
-        }
-        const PortalDiagnosticsState state = gPortal->diagnosticsState();
-        if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
-          gHttpServer.send(503, "application/json",
-                           "{\"ok\":false,\"reason\":\"diagnostics_not_ready\"}");
-          return;
-        }
-        gHttpServer.send(200, "application/json", state.json);
-      });
+  gHttpServer.on("/api/v3/command/", HTTP_POST, handleHttpCommandSubmit);
+
+  gHttpServer.on("/api/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/diagnostics/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/diagnostics/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/diagnostics", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
+  gHttpServer.on("/api/diagnostics/", HTTP_GET, handleHttpDiagnosticsGet);
+  gHttpServer.on("/api/v3/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
+  gHttpServer.on("/api/v3/diagnostics/", HTTP_GET, handleHttpDiagnosticsGet);
+  gHttpServer.on("/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
+
+  gHttpServer.on("/api/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/snapshot/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/snapshot/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/snapshot", HTTP_GET, handleHttpSnapshotGet);
+  gHttpServer.on("/api/snapshot/", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
+  gHttpServer.on("/api/v3/snapshot/", HTTP_GET, handleHttpSnapshotGet);
+  gHttpServer.on("/snapshot", HTTP_GET, handleHttpSnapshotGet);
+  gHttpServer.onNotFound([]() {
+    const HTTPMethod method = gHttpServer.method();
+    Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),
+                  gHttpServer.uri().c_str());
+    Serial.flush();
+
+    String body = "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"";
+    body += gHttpServer.uri();
+    body += "\",\"method\":\"";
+    body += methodToString(method);
+    body += "\"}";
+    gHttpServer.send(404, "application/json", body);
+  });
   gHttpServer.begin();
 
   gWsServer.begin();

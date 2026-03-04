@@ -35,14 +35,18 @@ namespace v3::runtime {
 struct QueueTelemetry {
   uint16_t snapshotQueueDepth;
   uint16_t snapshotQueueHighWater;
+  uint16_t snapshotQueueCapacity;
   uint32_t snapshotQueueDropCount;
   uint16_t commandQueueDepth;
   uint16_t commandQueueHighWater;
+  uint16_t commandQueueCapacity;
   uint32_t commandQueueDropCount;
   uint32_t commandAppliedCount;
   uint32_t commandSetRunModeCount;
   uint32_t commandStepCount;
   uint8_t commandLastAppliedType;
+  uint32_t commandLastLatencyUs;
+  uint32_t commandMaxLatencyUs;
   uint32_t commandLastLatencyMs;
   uint32_t commandMaxLatencyMs;
   uint16_t controlPendingDepth;
@@ -77,6 +81,10 @@ struct RuntimeSnapshot {
   uint32_t nowMs;
   uint32_t completedScans;
   uint32_t lastScanMs;
+  uint32_t scanLastUs;
+  uint32_t scanMaxUs;
+  uint32_t scanOverrunCount;
+  bool scanOverrunLast;
   uint32_t scanPeriodMs;
   uint8_t configuredCardCount;
   uint8_t enabledCardCount;

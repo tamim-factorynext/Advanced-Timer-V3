@@ -276,6 +276,7 @@ Condition blocks on MATH (when configured) follow the same numeric compare-sourc
 - Internal storage and runtime use integer centiunits.
 - Portal should display values as two decimal places (`centi / 100.00`).
 - Config/API payloads should carry raw integer centiunits, not float text.
+- MATH numeric fields are capped to `0..1,000,000` centiunits for V3 safety envelope.
 
 ## 7.4 Proposed Control Behavior
 

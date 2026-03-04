@@ -43,6 +43,10 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.nowMs = nowMs;
   snapshot_.completedScans = kernelMetrics.completedScans;
   snapshot_.lastScanMs = kernelMetrics.lastScanMs;
+  snapshot_.scanLastUs = kernelMetrics.scanLastUs;
+  snapshot_.scanMaxUs = kernelMetrics.scanMaxUs;
+  snapshot_.scanOverrunCount = kernelMetrics.scanOverrunCount;
+  snapshot_.scanOverrunLast = kernelMetrics.scanOverrunLast;
   snapshot_.scanPeriodMs = kernelMetrics.scanPeriodMs;
   snapshot_.configuredCardCount = kernelMetrics.configuredCardCount;
   snapshot_.enabledCardCount = kernelMetrics.enabledCardCount;

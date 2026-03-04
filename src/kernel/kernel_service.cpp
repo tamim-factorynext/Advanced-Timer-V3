@@ -16,6 +16,7 @@ Notes:
 */
 #include "kernel/kernel_service.h"
 
+#include <Arduino.h>
 #include <string.h>
 
 #include "kernel/v3_status_runtime.h"
@@ -151,6 +152,10 @@ void KernelService::begin(const v3::storage::ValidatedConfig& config,
   metrics_.stepAppliedCount = 0;
   metrics_.completedScans = 0;
   metrics_.lastScanMs = 0;
+  metrics_.scanLastUs = 0;
+  metrics_.scanMaxUs = 0;
+  metrics_.scanOverrunCount = 0;
+  metrics_.scanOverrunLast = false;
   metrics_.diTotalQualifiedEdges = 0;
   metrics_.diInhibitedCount = 0;
   metrics_.diForcedCount = 0;
@@ -176,6 +181,7 @@ void KernelService::tick(uint32_t nowMs) {
 
   if (metrics_.mode == RUN_STEP && !stepPending_) return;
   if (nowMs < nextScanDueMs_) return;
+  const uint32_t scanStartUs = micros();
 
   metrics_.completedScans += 1;
   if (metrics_.mode == RUN_STEP) {
@@ -188,6 +194,16 @@ void KernelService::tick(uint32_t nowMs) {
   runSioScan(nowMs);
   runMathScan();
   runRtcScan(nowMs);
+  const uint32_t scanElapsedUs = micros() - scanStartUs;
+  const uint32_t scanBudgetUs = metrics_.scanPeriodMs * 1000U;
+  metrics_.scanLastUs = scanElapsedUs;
+  if (scanElapsedUs > metrics_.scanMaxUs) {
+    metrics_.scanMaxUs = scanElapsedUs;
+  }
+  metrics_.scanOverrunLast = (scanElapsedUs > scanBudgetUs);
+  if (metrics_.scanOverrunLast) {
+    metrics_.scanOverrunCount += 1;
+  }
   metrics_.lastScanMs = nowMs;
   nextScanDueMs_ = nowMs + metrics_.scanPeriodMs;
 }
@@ -679,9 +695,8 @@ void KernelService::runDiScan(uint32_t nowMs) {
   uint32_t totalEdges = 0;
   uint8_t inhibited = 0;
   uint8_t forced = 0;
-  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
-
-  buildSignalSnapshot(signals, v3::storage::kMaxCards);
+  memset(signalScratch_, 0, sizeof(signalScratch_));
+  buildSignalSnapshot(signalScratch_, v3::storage::kMaxCards);
 
   for (uint8_t i = 0; i < diSlotCount_; ++i) {
     DiSlot& slot = diSlots_[i];
@@ -696,9 +711,11 @@ void KernelService::runDiScan(uint32_t nowMs) {
     in.forceActive = slot.forceActive;
     in.forcedSample = slot.forcedSample;
     in.turnOnCondition =
-        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOnCondition, signalScratch_,
+                           v3::storage::kMaxCards);
     in.turnOffCondition =
-        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOffCondition, signalScratch_,
+                           v3::storage::kMaxCards);
     in.prevSample = slot.prevSample;
     in.prevSampleValid = slot.prevSampleValid;
 
@@ -719,7 +736,7 @@ void KernelService::runDiScan(uint32_t nowMs) {
     }
 
     if (slot.cardId < v3::storage::kMaxCards) {
-      V3RuntimeSignal& signal = signals[slot.cardId];
+      V3RuntimeSignal& signal = signalScratch_[slot.cardId];
       signal.type = DigitalInput;
       signal.state = slot.state.state;
       signal.commandState = slot.state.commandState;
@@ -737,21 +754,22 @@ void KernelService::runDiScan(uint32_t nowMs) {
 /** @brief Executes DO family pass including condition evaluation and output writes. */
 void KernelService::runDoScan(uint32_t nowMs) {
   uint8_t activeCount = 0;
-  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
 
   for (uint8_t i = 0; i < doSlotCount_; ++i) {
     DoSlot& slot = doSlots_[i];
     if (!slot.active) continue;
 
-    memset(signals, 0, sizeof(signals));
-    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+    memset(signalScratch_, 0, sizeof(signalScratch_));
+    buildSignalSnapshot(signalScratch_, v3::storage::kMaxCards);
 
     V3DoStepInput in = {};
     in.nowMs = nowMs;
     in.turnOnCondition =
-        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOnCondition, signalScratch_,
+                           v3::storage::kMaxCards);
     in.turnOffCondition =
-        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOffCondition, signalScratch_,
+                           v3::storage::kMaxCards);
 
     V3DoStepOutput out = {};
     runV3DoStep(slot.cfg, slot.state, in, out);
@@ -771,21 +789,22 @@ void KernelService::runDoScan(uint32_t nowMs) {
 /** @brief Executes SIO family pass including condition evaluation. */
 void KernelService::runSioScan(uint32_t nowMs) {
   uint8_t activeCount = 0;
-  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
 
   for (uint8_t i = 0; i < sioSlotCount_; ++i) {
     SioSlot& slot = sioSlots_[i];
     if (!slot.active) continue;
 
-    memset(signals, 0, sizeof(signals));
-    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+    memset(signalScratch_, 0, sizeof(signalScratch_));
+    buildSignalSnapshot(signalScratch_, v3::storage::kMaxCards);
 
     V3SioStepInput in = {};
     in.nowMs = nowMs;
     in.turnOnCondition =
-        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOnCondition, signalScratch_,
+                           v3::storage::kMaxCards);
     in.turnOffCondition =
-        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOffCondition, signalScratch_,
+                           v3::storage::kMaxCards);
 
     V3SioStepOutput out = {};
     runV3SioStep(slot.cfg, slot.state, in, out);
@@ -801,20 +820,20 @@ void KernelService::runSioScan(uint32_t nowMs) {
 
 /** @brief Executes MATH family pass including condition evaluation. */
 void KernelService::runMathScan() {
-  V3RuntimeSignal signals[v3::storage::kMaxCards] = {};
-
   for (uint8_t i = 0; i < mathSlotCount_; ++i) {
     MathSlot& slot = mathSlots_[i];
     if (!slot.active) continue;
 
-    memset(signals, 0, sizeof(signals));
-    buildSignalSnapshot(signals, v3::storage::kMaxCards);
+    memset(signalScratch_, 0, sizeof(signalScratch_));
+    buildSignalSnapshot(signalScratch_, v3::storage::kMaxCards);
 
     V3MathStepInput in = {};
     in.turnOnCondition =
-        evalConditionBlock(slot.turnOnCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOnCondition, signalScratch_,
+                           v3::storage::kMaxCards);
     in.turnOffCondition =
-        evalConditionBlock(slot.turnOffCondition, signals, v3::storage::kMaxCards);
+        evalConditionBlock(slot.turnOffCondition, signalScratch_,
+                           v3::storage::kMaxCards);
 
     V3MathStepOutput out = {};
     runV3MathStep(slot.cfg, slot.state, in, out);

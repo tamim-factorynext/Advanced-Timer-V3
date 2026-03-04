@@ -622,5 +622,25 @@ Use one short entry per decision with this structure:
 - Impact: Runtime semantics remain unchanged; this affects only fallback config population when persistent file is absent.
 - References: `src/storage/v3_config_contract.cpp`, `src/storage/storage_service.cpp`, `src/platform/hw_profile.*`, `docs/hardware-profile-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
 
+## DEC-0060: Increase Task Watchdog Window To 16 Seconds During Heavy Bring-Up
+- Date: 2026-03-04
+- Status: Accepted
+- Context: Early hardware bring-up now includes heavier startup/runtime instrumentation and larger cross-core snapshot/diagnostics paths, and recent field logs showed repeated reset pressure during stabilization.
+- Decision: Increase composition-root watchdog timeout from `8s` to `16s` while keeping explicit per-task watchdog registration/feed behavior unchanged.
+- Impact: Adds breathing room for heavy bootstrap/runtime paths during active stabilization and hardware validation.
+- Impact: Preserves existing watchdog ownership model and feed points (`platform` API + `main` task lifecycle wiring).
+- Impact: Does not remove watchdog protection; dead-loop/hang detection remains active with a wider window.
+- References: `src/main.cpp`, `src/platform/platform_service.cpp`, `docs/ARCHITECTURE.md`, `docs/esp32-s3-psram-migration-guide.md`.
+
+## DEC-0061: Align Runtime Snapshot Payload To V3 Contract With Compatibility Aliases
+- Date: 2026-03-04
+- Status: Accepted
+- Context: Runtime execution architecture is already V3, but snapshot JSON shape remained transitional and diverged from frozen V3 API contract fields.
+- Decision: Emit contract-aligned `runtime_snapshot` fields (`apiVersion`, `lastCompleteScanMs`, `testMode`, canonical `metrics.*`, and card-level contract fields) while temporarily keeping prior metrics/card keys as compatibility aliases during portal migration.
+- Impact: Brings snapshot transport semantics in line with V3 contract expectations for new portal/runtime consumers.
+- Impact: Reduces future frontend refactor risk by stabilizing canonical payload keys now.
+- Impact: Preserves rollout safety for existing clients by retaining legacy alias fields in the same payload.
+- References: `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/main.cpp`, `docs/api-contract-v3.md`.
+
 
 
