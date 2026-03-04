@@ -22,7 +22,7 @@ The core purpose is to provide a "no-code" environment for defining complex cont
 
 ## Production Firmware Rewrite (V3)
 
-The project is undergoing a formal, phased rewrite to create a production-ready firmware. This effort is detailed in `docs/legacy/firmware-rewrite-foundations.md`, `docs/legacy/production-firmware-kickoff-plan.md`, and is specified in the new authoritative contract, **`requirements-v3-contract.md`**.
+The project is undergoing a formal, phased rewrite to create a production-ready firmware. This effort is detailed in `docs/legacy/firmware-rewrite-foundations.md`, `docs/legacy/production-firmware-kickoff-plan.md`, and is specified in the new authoritative contract, **`requirements-legacy-v3-contract.md`**.
 
 The key goals of the V3 rewrite are to improve reliability, testability, security, and architectural clarity.
 
@@ -79,9 +79,10 @@ platformio run --target uploadfs
 *   **Authoritative Contracts:**
     *   V3 project introduction: `README.md`.
     *   For the **current V2 PoC**, `docs/legacy/v2-poc-contract.md` is the frozen legacy contract.
-    *   For the **V3 rewrite**, `requirements-v3-contract.md` is the authoritative source of truth.
+    *   For the **V3 rewrite**, `requirements-legacy-v3-contract.md` is the authoritative source of truth.
 *   **Strict Separation:** The dual-core boundary is non-negotiable. The kernel must remain deterministic.
 *   **Configuration as Data:** Logic is defined by JSON configuration files, not user code.
 *   **API-Driven:** All external interactions are handled via the documented HTTP and WebSocket APIs.
 *   **Incremental Refactor:** The transition from V2 PoC to V3 is a phased process, as outlined in the kickoff plan. This allows for continuous integration and testing without a "big bang" switch.
+
 

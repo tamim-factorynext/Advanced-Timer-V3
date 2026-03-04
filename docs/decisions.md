@@ -1,4 +1,4 @@
-﻿# Decision Log
+# Decision Log
 
 Date: 2026-02-28
 Purpose: Minimal "vibe-safe" change log for decisions that affect behavior, contracts, or validation.
@@ -42,7 +42,7 @@ Use one short entry per decision with this structure:
 - Context: Runtime snapshots already include `lastEvalUs` in examples, but the field intent was not explicitly documented.
 - Decision: Keep `lastEvalUs` as a standard per-card runtime snapshot field to expose card evaluation duration in microseconds.
 - Impact: Supports deterministic observability and timing regression detection; enables tooling/UI to detect outlier cards without recomputing runtime internals; keeps this field runtime-only and out of config payload requirements.
-- References: `docs/api-contract-v3.md` (Section 5.1 rules), `requirements-v3-contract.md` (artifact set and change-control linkage), `docs/legacy/v2-poc-contract.md` (working method linkage).
+- References: `docs/api-contract-legacy-v3.md` (Section 5.1 rules), `requirements-legacy-v3-contract.md` (artifact set and change-control linkage), `docs/legacy/v2-poc-contract.md` (working method linkage).
 
 ## DEC-0002: Compile-Time Family Capacities Across All Card Types
 - Date: 2026-02-28
@@ -50,7 +50,7 @@ Use one short entry per decision with this structure:
 - Context: Product models will vary by available channels and optional capabilities; all card families (physical and virtual) must follow one consistent profile-capacity model.
 - Decision: Define explicit compile-time capacities for every family (`DI`, `DO`, `AI`, `SIO`, `MATH`, `RTC` alarm channels), allowing `0..N` instances per family by active hardware profile.
 - Impact: Enables deterministic multi-model product line support; removes assumptions that any family must exist; formalizes RTC as schedule-alarm channel capacity rather than a special-case family.
-- References: `docs/hardware-profile-v3.md`, `requirements-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-v3.md` (family presence/capacity), `docs/acceptance-matrix-v3.md` (`AT-HW-005..007`).
+- References: `docs/hardware-profile-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-legacy-v3.md` (family presence/capacity), `docs/acceptance-matrix-legacy-v3.md` (`AT-HW-005..007`).
 
 ## DEC-0003: RTC Stack Baseline (`RTClib` + `RTCMillis` + NTP Sync)
 - Date: 2026-02-28
@@ -60,7 +60,7 @@ Use one short entry per decision with this structure:
 - Impact: Unblocks RTC scheduler implementation immediately with stable library interfaces.
 - Impact: Keeps migration cost low by preserving one RTC library contract across `RTCMillis` and DS3231 backends.
 - Impact: Requires deterministic time-sync handling policy when NTP is unavailable or stale.
-- References: `platformio.ini`, `docs/hardware-profile-v3.md`, `requirements-v3-contract.md` (RTC sections).
+- References: `platformio.ini`, `docs/hardware-profile-legacy-v3.md`, `requirements-legacy-v3-contract.md` (RTC sections).
 
 ## DEC-0004: Initial V3 Bring-Up Capacity for New Families
 - Date: 2026-02-28
@@ -70,7 +70,7 @@ Use one short entry per decision with this structure:
 - Impact: Provides a focused implementation/test surface for new families.
 - Impact: Simplifies acceptance and debug during early V3 card-family rollout.
 - Impact: Does not supersede profile-based `0..N` capacity model; this is an initial bring-up target only.
-- References: `docs/hardware-profile-v3.md`, `docs/acceptance-matrix-v3.md`, `docs/worklog.md`.
+- References: `docs/hardware-profile-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`, `docs/worklog.md`.
 
 ## DEC-0005: RTC Schedule Granularity Is Minute-Level Only
 - Date: 2026-02-28
@@ -80,7 +80,7 @@ Use one short entry per decision with this structure:
 - Impact: Simplifies scheduler UX and validation semantics.
 - Impact: Avoids false precision and reduces configuration ambiguity.
 - Impact: Trigger matching must evaluate on minute boundaries (`year/month/day/hour/minute/weekday` only).
-- References: `requirements-v3-contract.md` (Section 8.6), `docs/schema-v3.md` (RTC schema and validation), `docs/acceptance-matrix-v3.md` (RTC acceptance cases).
+- References: `requirements-legacy-v3-contract.md` (Section 8.6), `docs/schema-legacy-v3.md` (RTC schema and validation), `docs/acceptance-matrix-legacy-v3.md` (RTC acceptance cases).
 
 ## DEC-0006: RTC Schedule Evaluation Ownership On Networking Core
 - Date: 2026-03-01
@@ -90,7 +90,7 @@ Use one short entry per decision with this structure:
 - Impact: Preserves deterministic scan-loop budget on Core0.
 - Impact: Scales scheduler-card count without coupling minute-tick work to per-scan logic.
 - Impact: Requires queue-path acceptance coverage for minute-tick intent delivery and idempotency.
-- References: `README.md` (Sections 4.2, 8), `requirements-v3-contract.md` (Core ownership and determinism sections), `docs/timing-budget-v3.md`.
+- References: `README.md` (Sections 4.2, 8), `requirements-legacy-v3-contract.md` (Core ownership and determinism sections), `docs/timing-budget-legacy-v3.md`.
 
 ## DEC-0007: Non-Deterministic Service Ownership On Networking Core
 - Date: 2026-03-01
@@ -100,7 +100,7 @@ Use one short entry per decision with this structure:
 - Impact: Protects deterministic runtime from service-side jitter.
 - Impact: Enables feature growth without violating kernel timing guarantees.
 - Impact: Sets architectural guardrails for future plugin/service modules.
-- References: `README.md` (Section 4.3), `requirements-v3-contract.md` (architecture and topology sections), `docs/dependency-topology-rules.md`.
+- References: `README.md` (Section 4.3), `requirements-legacy-v3-contract.md` (architecture and topology sections), `docs/dependency-topology-rules.md`.
 
 ## DEC-0008: HIL Rig Baseline Uses Raspberry Pi As Test Master
 - Date: 2026-03-01
@@ -110,7 +110,7 @@ Use one short entry per decision with this structure:
 - Impact: Unifies lab and production test automation with one control plane.
 - Impact: Improves scriptability, logging, artifact retention, and station management.
 - Impact: Preserves low-cost MCU-based signal emulation where it adds realism.
-- References: `README.md` (Section 8), `docs/acceptance-matrix-v3.md`, `docs/timing-budget-v3.md`.
+- References: `README.md` (Section 8), `docs/acceptance-matrix-legacy-v3.md`, `docs/timing-budget-legacy-v3.md`.
 
 ## DEC-0009: Remove Dedicated `RUN_SLOW` Mode
 - Date: 2026-03-01
@@ -120,7 +120,7 @@ Use one short entry per decision with this structure:
 - Impact: Simplifies run-mode state machine and command validation.
 - Impact: `set_run_mode` accepts only `RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT`.
 - Impact: Runtime pacing path now uses configured `scanPeriodMs` without slow-mode overrides.
-- References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-v3.md`.
+- References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-legacy-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-legacy-v3.md`.
 
 ## DEC-0010: Promote MATH/RTC To First-Class Runtime Families
 - Date: 2026-03-01
@@ -130,7 +130,7 @@ Use one short entry per decision with this structure:
 - Impact: Removes legacy-only card-count assumptions from runtime ownership path.
 - Impact: Makes snapshots/config validation aware of all active V3 families in current bring-up scope.
 - Impact: RTC set/reset misuse is now rejected during validation.
-- References: `src/main.cpp`, `requirements-v3-contract.md` (Sections 6.2, 7.1, 8.5, 8.6), `docs/hardware-profile-v3.md`, `docs/acceptance-matrix-v3.md`.
+- References: `src/main.cpp`, `requirements-legacy-v3-contract.md` (Sections 6.2, 7.1, 8.5, 8.6), `docs/hardware-profile-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`.
 
 ## DEC-0011: V3 Config Envelope Normalization With Time-Bounded Legacy Bridge
 - Date: 2026-03-01
@@ -140,7 +140,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns endpoint behavior with V3 contract-first workflow while keeping migration risk controlled.
 - Impact: Provides stable machine-readable error codes for unsupported API/schema versions and validation failures.
 - Impact: Keeps legacy compatibility explicitly transitional (`usedLegacyCardsBridge`).
-- References: `src/main.cpp`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `requirements-v3-contract.md` (Sections 11, 15, 21).
+- References: `src/main.cpp`, `docs/api-contract-legacy-v3.md`, `docs/schema-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 11, 15, 21).
 
 ## DEC-0012: Persist Active/Staged Config In Native V3 Envelope
 - Date: 2026-03-01
@@ -150,7 +150,7 @@ Use one short entry per decision with this structure:
 - Impact: Active/staged/factory config files now align with V3 schema direction.
 - Impact: Bootstrap/load supports both V3 and legacy storage during transition.
 - Impact: Runtime engine still consumes deterministic internal card model via normalization bridge.
-- References: `src/main.cpp`, `docs/schema-v3.md`, `docs/api-contract-v3.md`, `requirements-v3-contract.md` (Sections 11, 12, 21).
+- References: `src/main.cpp`, `docs/schema-legacy-v3.md`, `docs/api-contract-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 11, 12, 21).
 
 ## DEC-0013: Introduce Per-Family Typed V3 Config Structs Behind Bridge
 - Date: 2026-03-01
@@ -160,7 +160,7 @@ Use one short entry per decision with this structure:
 - Impact: Creates explicit family-specialized model without forcing one-shot runtime rewrite.
 - Impact: Reduces future validator/API complexity by centralizing family field ownership.
 - Impact: Enables staged removal of legacy-only fields after acceptance coverage is complete.
-- References: `src/kernel/v3_card_types.h`, `src/kernel/v3_card_bridge.h`, `src/kernel/v3_card_bridge.cpp`, `src/main.cpp`.
+- References: `src/kernel/legacy_v3_card_types.h`, `src/kernel/legacy_v3_card_bridge.h`, `src/kernel/legacy_v3_card_bridge.cpp`, `src/main.cpp`.
 
 ## DEC-0014: Enforce Per-Family Condition Source Field Applicability
 - Date: 2026-03-01
@@ -170,7 +170,7 @@ Use one short entry per decision with this structure:
 - Impact: Prevents semantically invalid cross-family condition references from entering runtime.
 - Impact: Aligns config validation with typed per-family state ownership.
 - Impact: Reduces hidden behavior drift caused by permissive clause parsing.
-- References: `src/main.cpp` (V3 clause mapping/normalization), `src/kernel/v3_card_types.h`, `docs/schema-v3.md`, `requirements-v3-contract.md` (Section 8).
+- References: `src/main.cpp` (V3 clause mapping/normalization), `src/kernel/legacy_v3_card_types.h`, `docs/schema-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Section 8).
 
 ## DEC-0015: Add Native Acceptance Tests For Condition Field/Operator Rules
 - Date: 2026-03-01
@@ -179,7 +179,7 @@ Use one short entry per decision with this structure:
 - Decision: Add a native Unity test suite for V3 condition source-field/operator rule helpers and keep a dedicated `native` PlatformIO test environment.
 - Impact: Provides fast CI-style guardrails for core validation semantics (`AI.commandState` reject, `RTC.missionState` reject, `missionState` operator constraints).
 - Impact: Reduces regression risk while runtime remains bridge-based.
-- References: `src/kernel/v3_condition_rules.h`, `src/kernel/v3_condition_rules.cpp`, `test/test_v3_condition_rules/test_main.cpp`, `platformio.ini`.
+- References: `src/kernel/legacy_v3_condition_rules.h`, `src/kernel/legacy_v3_condition_rules.cpp`, `test/test_v3_condition_rules/test_main.cpp`, `platformio.ini`.
 
 ## DEC-0016: Validate Into Typed V3 Model Before Legacy Runtime Conversion
 - Date: 2026-03-01
@@ -189,7 +189,7 @@ Use one short entry per decision with this structure:
 - Impact: Strengthens contract-first migration boundaries and makes typed model the primary validation target.
 - Impact: Reduces risk of legacy-field leakage during schema/API evolution.
 - Impact: Keeps deterministic runtime compatibility while migration continues.
-- References: `src/main.cpp` (`parseV3CardToTyped`, `buildLegacyCardsFromV3Cards`), `src/kernel/v3_card_types.h`, `src/kernel/v3_card_bridge.cpp`.
+- References: `src/main.cpp` (`parseV3CardToTyped`, `buildLegacyCardsFromV3Cards`), `src/kernel/legacy_v3_card_types.h`, `src/kernel/legacy_v3_card_bridge.cpp`.
 
 ## DEC-0017: Add Payload-Level JSON Fixture Validation For Clause Source Rules
 - Date: 2026-03-01
@@ -199,17 +199,17 @@ Use one short entry per decision with this structure:
 - Impact: Provides acceptance evidence at payload boundary (`config.cards[*].config.set/reset`), not only utility-function scope.
 - Impact: Prevents invalid payloads from reaching typed parse/legacy bridge stages.
 - Impact: Tightens contract-first behavior for V3 config lifecycle endpoints.
-- References: `src/kernel/v3_payload_rules.h`, `src/kernel/v3_payload_rules.cpp`, `test/test_v3_payload_parse/test_main.cpp`, `src/main.cpp`.
+- References: `src/kernel/legacy_v3_payload_rules.h`, `src/kernel/legacy_v3_payload_rules.cpp`, `test/test_v3_payload_parse/test_main.cpp`, `src/main.cpp`.
 
 ## DEC-0018: Move V3 Normalize/Bridge Pipeline Into Storage Module
 - Date: 2026-03-01
 - Status: Accepted
 - Context: `main.cpp` carried too much config-normalization and bridge orchestration logic, weakening core ownership boundaries and making migration harder to reason about.
-- Decision: Extract normalize/bridge orchestration into `src/storage/v3_normalizer.*` and keep `main.cpp` normalization entrypoint as a thin boundary wrapper with layout/runtime context wiring.
+- Decision: Extract normalize/bridge orchestration into `src/storage/legacy_v3_normalizer.*` and keep `main.cpp` normalization entrypoint as a thin boundary wrapper with layout/runtime context wiring.
 - Impact: Improves module ownership clarity (`storage` owns config normalization flow).
 - Impact: Reduces direct endpoint coupling to conversion internals.
 - Impact: Preserves runtime behavior while enabling further decomposition from monolithic `main.cpp`.
-- References: `src/storage/v3_normalizer.h`, `src/storage/v3_normalizer.cpp`, `src/main.cpp`, `src/storage/README.md`.
+- References: `src/storage/legacy_v3_normalizer.h`, `src/storage/legacy_v3_normalizer.cpp`, `src/main.cpp`, `src/storage/README.md`.
 
 ## DEC-0019: Frontend Rebuild Strategy Uses Fresh V3 Portal Baseline
 - Date: 2026-03-01
@@ -219,7 +219,7 @@ Use one short entry per decision with this structure:
 - Impact: Keeps frontend aligned with V3 contract-first model and avoids carrying legacy UX/DOM constraints into new portal.
 - Impact: Reduces long-term maintenance burden by introducing one coherent theme/token system at start of new UI work.
 - Impact: Requires explicit parity checklist before retiring old portal routes/pages.
-- References: `src/portal/README.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/worklog.md`.
+- References: `src/portal/README.md`, `docs/api-contract-legacy-v3.md`, `docs/schema-legacy-v3.md`, `docs/worklog.md`.
 
 ## DEC-0020: Freeze Legacy Baseline And Execute V3 On Dedicated Branch
 - Date: 2026-03-02
@@ -229,7 +229,7 @@ Use one short entry per decision with this structure:
 - Impact: Preserves a known rollback point while allowing larger V3 milestone changes without legacy coupling pressure.
 - Impact: Improves decision clarity because V3 architectural changes are no longer constrained by V2 notation debt.
 - Impact: Enables milestone-level testing cadence instead of per-micro-change churn.
-- References: `git` refs (`legacy-stable`, `v3-core`, `v2-legacy-baseline-2026-03-02`), `docs/INDEX.md`, `requirements-v3-contract.md`.
+- References: `git` refs (`legacy-stable`, `v3-core`, `v2-legacy-baseline-2026-03-02`), `docs/INDEX.md`, `requirements-legacy-v3-contract.md`.
 
 ## DEC-0021: M1/M2 Baseline Uses Composition Root + Validated Typed Config Entry
 - Date: 2026-03-02
@@ -239,7 +239,7 @@ Use one short entry per decision with this structure:
 - Impact: Enforces explicit startup contract (`config -> validate -> kernel begin`) and fails fast on invalid bootstrap config.
 - Impact: Establishes clear module seams for upcoming V3 work (JSON decode, schema mapping, runtime binding) without legacy monolith coupling.
 - Impact: Keeps architecture aligned with V3 layered boundary rules while maintaining buildability.
-- References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/v3_config_contract.*`, `src/storage/v3_config_validator.*`, `requirements-v3-contract.md` (architecture and validation sections).
+- References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/legacy_v3_config_contract.*`, `src/storage/legacy_v3_config_validator.*`, `requirements-legacy-v3-contract.md` (architecture and validation sections).
 
 ## DEC-0022: Bootstrap Config Must Decode To Typed Model Before Validation
 - Date: 2026-03-02
@@ -249,7 +249,7 @@ Use one short entry per decision with this structure:
 - Impact: Creates explicit decode/validate separation and clearer failure ownership in storage bootstrap.
 - Impact: Adds machine-readable payload error codes for malformed JSON/shape/family mismatches.
 - Impact: Prepares path for API/staged-config ingestion to reuse same typed decode+validate pipeline.
-- References: `src/storage/v3_config_decoder.*`, `src/storage/v3_config_validator.*`, `src/storage/storage_service.cpp`, `src/main.cpp`.
+- References: `src/storage/legacy_v3_config_decoder.*`, `src/storage/legacy_v3_config_validator.*`, `src/storage/storage_service.cpp`, `src/main.cpp`.
 
 ## DEC-0023: Kernel Boot Publishes Typed Config Binding Summary
 - Date: 2026-03-02
@@ -259,7 +259,7 @@ Use one short entry per decision with this structure:
 - Impact: Adds deterministic observability for config-to-runtime binding at boot.
 - Impact: Improves early detection of profile/capacity mismatch regressions.
 - Impact: Creates concrete acceptance hooks for future startup invariants.
-- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0024: Add Startup Binding Invariants To Kernel Metrics
 - Date: 2026-03-02
@@ -269,7 +269,7 @@ Use one short entry per decision with this structure:
 - Impact: Provides machine-readable startup integrity flag for config-to-runtime binding.
 - Impact: Enables acceptance checks to assert binding consistency without duplicating count logic in tests/UI.
 - Impact: Reduces ambiguity when diagnosing early boot/config mismatch faults.
-- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0025: Expose Storage Bootstrap Diagnostics In Runtime Snapshot
 - Date: 2026-03-02
@@ -279,7 +279,7 @@ Use one short entry per decision with this structure:
 - Impact: Improves field/debug observability for startup path selection and bootstrap failures.
 - Impact: Reduces dependence on serial logs for understanding boot source/error context.
 - Impact: Creates stable telemetry hooks for future portal diagnostics panels.
-- References: `src/storage/storage_service.h`, `src/storage/storage_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+- References: `src/storage/storage_service.h`, `src/storage/storage_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0026: Portal Diagnostics Payload Mirrors Runtime Binding/Bootstrap State
 - Date: 2026-03-02
@@ -289,7 +289,7 @@ Use one short entry per decision with this structure:
 - Impact: Establishes a clear portal-side diagnostics contract before route/UI wiring.
 - Impact: Keeps diagnostics semantics centralized and aligned with runtime source-of-truth fields.
 - Impact: Enables incremental addition of HTTP/WebSocket/UI diagnostics without reworking data shape.
-- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `docs/milestones-v3.md`.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0027: Introduce Pinned Dual-Core Task Skeleton In Composition Root
 - Date: 2026-03-02
@@ -299,7 +299,7 @@ Use one short entry per decision with this structure:
 - Impact: Enforces architectural intent early and reduces future refactor risk for task separation.
 - Impact: Provides a minimal, buildable concurrency baseline before queue-based command/snapshot contracts.
 - Impact: Requires follow-up milestone for bounded queue channels and timing/latency instrumentation across cores.
-- References: `src/main.cpp`, `requirements-v3-contract.md` (core ownership and determinism sections), `docs/milestones-v3.md`.
+- References: `src/main.cpp`, `requirements-legacy-v3-contract.md` (core ownership and determinism sections), `docs/milestones-legacy-v3.md`.
 
 ## DEC-0028: Replace Shared Metrics Copy With Bounded Core0->Core1 Queue
 - Date: 2026-03-02
@@ -309,7 +309,7 @@ Use one short entry per decision with this structure:
 - Impact: Improves architectural alignment with queue-driven inter-core boundary model.
 - Impact: Provides observable transport behavior under load via queue counters.
 - Impact: Creates foundation for extending queue-based contracts to command and snapshot channels.
-- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (core ownership/channel boundary sections).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (core ownership/channel boundary sections).
 
 ## DEC-0029: Introduce Bounded Core1->Core0 Command Queue Skeleton
 - Date: 2026-03-02
@@ -319,7 +319,7 @@ Use one short entry per decision with this structure:
 - Impact: Establishes command-channel ownership boundary consistent with dual-core architecture contract.
 - Impact: Adds observable queue and latency telemetry for future command load tuning.
 - Impact: Provides safe migration seam for real kernel command DTO integration in subsequent milestones.
-- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (core ownership and bounded-channel rules).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (core ownership and bounded-channel rules).
 
 ## DEC-0030: Promote Core0->Core1 Transport To Snapshot Payload Queue
 - Date: 2026-03-02
@@ -329,7 +329,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns transport boundary with snapshot-oriented architecture intent.
 - Impact: Keeps queue behavior bounded and observable via depth/high-water/drop counters.
 - Impact: Simplifies future expansion of snapshot payload fields without redesigning transport type.
-- References: `src/main.cpp`, `docs/milestones-v3.md`, `requirements-v3-contract.md` (bounded channels and snapshot semantics).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (bounded channels and snapshot semantics).
 
 ## DEC-0031: Surface Queue Telemetry In Runtime And Portal Diagnostics
 - Date: 2026-03-02
@@ -339,7 +339,7 @@ Use one short entry per decision with this structure:
 - Impact: Enables commissioning and load diagnostics without code-level inspection.
 - Impact: Provides early-warning observability for queue saturation and command latency drift.
 - Impact: Creates stable telemetry contract for future API/UI diagnostics extensions.
-- References: `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/main.cpp`, `src/portal/portal_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0032: Promote Command Queue To Real Run/Step DTO Handling
 - Date: 2026-03-02
@@ -349,7 +349,7 @@ Use one short entry per decision with this structure:
 - Impact: Advances command channel from skeleton transport to behavior-bearing control path.
 - Impact: Enables observable command application semantics (counts, last type, latency).
 - Impact: Creates direct seam for future API-driven command dispatch without changing core boundary model.
-- References: `src/main.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/main.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0033: Control Service Becomes Command Source With Validation/Reject Semantics
 - Date: 2026-03-02
@@ -359,7 +359,7 @@ Use one short entry per decision with this structure:
 - Impact: Separates command intent generation/validation from queue transport mechanics.
 - Impact: Adds explicit reject semantics and counters before portal/API command wiring.
 - Impact: Improves diagnostics by exposing control-layer pending/request/accept/reject state.
-- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0034: Portal Command Ingress Queue With Request/Result Mapping
 - Date: 2026-03-02
@@ -369,7 +369,7 @@ Use one short entry per decision with this structure:
 - Impact: Creates stable pre-transport command entry boundary for upcoming HTTP/WebSocket handler wiring.
 - Impact: Provides request-level diagnostics parity (requested/accepted/rejected/reason/last id) independent of transport details.
 - Impact: Reduces coupling between portal transport handlers and control validation internals.
-- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `src/control/control_service.h`, `docs/milestones-v3.md`.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `src/control/control_service.h`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0035: Add Transport-Facing Command Submit Result Contract
 - Date: 2026-03-02
@@ -379,7 +379,7 @@ Use one short entry per decision with this structure:
 - Impact: Enables HTTP/WebSocket handlers to return deterministic request-level results at submit time.
 - Impact: Clarifies separation between submit acceptance and downstream control/kernel application outcome.
 - Impact: Improves diagnostics parity between endpoint response semantics and portal ingress metrics.
-- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+- References: `src/portal/portal_service.h`, `src/portal/portal_service.cpp`, `src/main.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0036: Add Thin Transport Command Stub Handlers Over Portal Submit API
 - Date: 2026-03-02
@@ -389,7 +389,7 @@ Use one short entry per decision with this structure:
 - Impact: Establishes endpoint-ready handler contract without coupling transport code to control/kernel internals.
 - Impact: Standardizes immediate response semantics (`accepted/rejected/reason/requestId`) across HTTP/WebSocket entry paths.
 - Impact: Reduces integration risk for future real endpoint wiring by validating mapping rules upfront.
-- References: `src/portal/transport_command_stub.h`, `src/portal/transport_command_stub.cpp`, `src/portal/portal_service.h`, `docs/milestones-v3.md`.
+- References: `src/portal/transport_command_stub.h`, `src/portal/transport_command_stub.cpp`, `src/portal/portal_service.h`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0037: Register Concrete Transport Runtime Endpoints To Stub Handlers
 - Date: 2026-03-02
@@ -399,7 +399,7 @@ Use one short entry per decision with this structure:
 - Impact: Completes endpoint wiring needed for practical command/diagnostics interaction during skeleton phase.
 - Impact: Preserves thin-handler architecture by keeping parsing/mapping centralized in stub layer.
 - Impact: Enables next-phase external client integration without changing command flow ownership model.
-- References: `src/portal/transport_runtime.h`, `src/portal/transport_runtime.cpp`, `src/main.cpp`, `src/portal/transport_command_stub.cpp`, `docs/milestones-v3.md`.
+- References: `src/portal/transport_runtime.h`, `src/portal/transport_runtime.cpp`, `src/main.cpp`, `src/portal/transport_command_stub.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0038: Canonical Transport Command Response Envelope + Status Mapping
 - Date: 2026-03-02
@@ -409,7 +409,7 @@ Use one short entry per decision with this structure:
 - Impact: Stabilizes external command contract for HTTP/WebSocket clients.
 - Impact: Simplifies client-side handling with consistent machine-readable and human-readable fields.
 - Impact: Reduces integration regressions caused by inconsistent failure shape/status mapping.
-- References: `src/portal/transport_command_stub.cpp`, `src/portal/transport_runtime.cpp`, `docs/milestones-v3.md`.
+- References: `src/portal/transport_command_stub.cpp`, `src/portal/transport_runtime.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0039: Add Cross-Stage Command Correlation And Parity Flags
 - Date: 2026-03-02
@@ -419,7 +419,7 @@ Use one short entry per decision with this structure:
 - Impact: Enables fast detection of command pipeline drift during commissioning.
 - Impact: Improves debuggability by correlating transport request IDs with kernel apply observations.
 - Impact: Provides a concrete observability gate for skeleton completion review.
-- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-v3.md`.
+- References: `src/control/control_service.h`, `src/control/control_service.cpp`, `src/main.cpp`, `src/runtime/runtime_service.h`, `src/portal/portal_service.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0040: Skeleton Phase Freeze Gate Achieved
 - Date: 2026-03-02
@@ -427,9 +427,9 @@ Use one short entry per decision with this structure:
 - Context: Skeleton phase required completion of transport binding, command contract hardening, observability parity, and freeze review before moving to feature-complete implementation.
 - Decision: Mark skeleton phase complete after `M18`, `M19`, `M20`, and `M21` are all `DONE`, with docs parity and ownership reviews recorded.
 - Impact: Establishes a clean transition point from infrastructure scaffolding to behavior/feature implementation phase.
-- Impact: Prevents premature â€œfeature phaseâ€ start before command/snapshot transport and observability contracts are stabilized.
+- Impact: Prevents premature “feature phase” start before command/snapshot transport and observability contracts are stabilized.
 - Impact: Provides explicit historical checkpoint for future regression triage.
-- References: `docs/milestones-v3.md` (Skeleton Completion Gate + M18..M21), `docs/worklog.md` (M21 freeze review), `src/main.cpp`, `src/portal/transport_runtime.cpp`.
+- References: `docs/milestones-legacy-v3.md` (Skeleton Completion Gate + M18..M21), `docs/worklog.md` (M21 freeze review), `src/main.cpp`, `src/portal/transport_runtime.cpp`.
 
 ## DEC-0041: Add Platform-Owned Per-Task Watchdog Scaffolding
 - Date: 2026-03-02
@@ -439,7 +439,7 @@ Use one short entry per decision with this structure:
 - Impact: Introduces practical hang-detection supervision without altering command/snapshot semantics.
 - Impact: Preserves architectural ownership (`platform` owns watchdog API; `main` owns task lifecycle/feed points).
 - Impact: Creates foundation for future watchdog telemetry and degraded-mode policy integration.
-- References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `requirements-v3-contract.md`, `docs/milestones-v3.md`.
+- References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `requirements-legacy-v3-contract.md`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0042: Move WiFi Policy From Hardcoded Runtime Constants To Validated Config
 - Date: 2026-03-02
@@ -449,7 +449,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns WiFi behavior with active validated config and removes hardcoded policy drift risk.
 - Impact: Enforces contract invariants at validation boundary (`staOnly=true`, `backupAccessNetwork.editable=false`, non-empty credentials, non-zero timing values).
 - Impact: Preserves runtime architecture boundaries (storage validates policy; platform executes policy; main wires dependencies).
-- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/platform/wifi_runtime.h`, `src/platform/wifi_runtime.cpp`, `src/main.cpp`, `docs/milestones-v3.md`.
+- References: `src/storage/legacy_v3_config_contract.h`, `src/storage/legacy_v3_config_decoder.cpp`, `src/storage/legacy_v3_config_validator.cpp`, `src/platform/wifi_runtime.h`, `src/platform/wifi_runtime.cpp`, `src/main.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0043: Defer RBAC/Protected Ops/Audit Until Post-Parity Stabilization
 - Date: 2026-03-02
@@ -459,7 +459,7 @@ Use one short entry per decision with this structure:
 - Impact: Reduces scope contention and keeps delivery focused on deterministic/runtime/portal functional completion first.
 - Impact: Avoids introducing cross-cutting security complexity before API/behavior contracts are stable.
 - Impact: Requires explicit re-entry milestone for security track once parity and HIL gate is satisfied.
-- References: `docs/milestones-v3.md` (Major Workstreams + Deferred Scope), `docs/acceptance-matrix-v3.md`, `docs/hil-task-list-v3.md`.
+- References: `docs/milestones-legacy-v3.md` (Major Workstreams + Deferred Scope), `docs/acceptance-matrix-legacy-v3.md`, `docs/hil-task-list-legacy-v3.md`.
 
 ## DEC-0044: DI First Integration Uses Decoder Defaults + Kernel-Local Force Hook
 - Date: 2026-03-02
@@ -469,7 +469,7 @@ Use one short entry per decision with this structure:
 - Impact: Activates first real card-family runtime execution in production scan loop without waiting for full portal force command implementation.
 - Impact: Makes new-device/factory-default behavior deterministic when DI fields are omitted.
 - Impact: Keeps DI force policy aligned with contract intent (force value path before invert) while transport wiring is staged separately.
-- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_di_runtime.cpp`, `docs/worklog.md`.
+- References: `src/storage/legacy_v3_config_contract.h`, `src/storage/legacy_v3_config_decoder.cpp`, `src/storage/legacy_v3_config_validator.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/kernel/legacy_v3_di_runtime.cpp`, `docs/worklog.md`.
 
 ## DEC-0045: DI Runtime Fields Are Global Signal-Tree Sources
 - Date: 2026-03-02
@@ -479,7 +479,7 @@ Use one short entry per decision with this structure:
 - Impact: Prevents DI values from being treated as local-only runtime details.
 - Impact: Preserves compatibility with condition evaluation and future parameter source binding semantics.
 - Impact: Establishes a non-negotiable integration rule for upcoming DO/AI/SIO/MATH/RTC wiring.
-- References: `requirements-v3-contract.md` (runtime ownership + binding rules), `src/kernel/v3_runtime_signals.h`, `src/kernel/v3_runtime_signals.cpp`, `docs/milestones-v3.md`.
+- References: `requirements-legacy-v3-contract.md` (runtime ownership + binding rules), `src/kernel/legacy_v3_runtime_signals.h`, `src/kernel/legacy_v3_runtime_signals.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0046: DI Force Control Uses Existing Command Queue Contract
 - Date: 2026-03-02
@@ -498,7 +498,7 @@ Use one short entry per decision with this structure:
 - Decision: Add validator rule for DI cards: `debounceMs` must be a multiple of `10`; `0` remains valid as explicit no-debounce behavior.
 - Impact: Prevents ambiguous/non-aligned debounce values in persisted config.
 - Impact: Keeps runtime behavior consistent with centiunit configuration policy.
-- References: `src/storage/v3_config_validator.h`, `src/storage/v3_config_validator.cpp`, `docs/worklog.md`.
+- References: `src/storage/legacy_v3_config_validator.h`, `src/storage/legacy_v3_config_validator.cpp`, `docs/worklog.md`.
 
 ## DEC-0048: DI Set/Reset Gating Uses Condition Blocks Over Runtime Signal Tree
 - Date: 2026-03-02
@@ -508,7 +508,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns DI gating with contract-style cross-card condition semantics.
 - Impact: Preserves compatibility for existing simplified payloads while enabling richer condition logic.
 - Impact: Establishes reusable condition-eval pattern for subsequent card-family migrations.
-- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_runtime_signals.h`, `docs/milestones-v3.md`.
+- References: `src/storage/legacy_v3_config_contract.h`, `src/storage/legacy_v3_config_decoder.cpp`, `src/storage/legacy_v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/legacy_v3_runtime_signals.h`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0049: Freeze RTC Scheduler Contract (Has-Flags + Minute-Required + Restart Window)
 - Date: 2026-03-02
@@ -519,7 +519,7 @@ Use one short entry per decision with this structure:
 - Impact: Enables hourly chime use-case by requiring only `minute`.
 - Impact: Standardizes repeated-match behavior during active duration (`RESTART_WINDOW`).
 - Impact: Simplifies RTC observability contract for portal/HIL.
-- References: `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`, `docs/acceptance-matrix-v3.md`, `src/kernel/v3_rtc_runtime.*`, `src/kernel/kernel_service.*`.
+- References: `docs/schema-legacy-v3.md`, `docs/user-guide-legacy-v3-draft.md`, `docs/acceptance-matrix-legacy-v3.md`, `src/kernel/legacy_v3_rtc_runtime.*`, `src/kernel/kernel_service.*`.
 
 ## DEC-0050: Add Global Time/TimeSync Configuration Model
 - Date: 2026-03-02
@@ -529,7 +529,7 @@ Use one short entry per decision with this structure:
 - Impact: Creates a stable firmware config surface for future settings UI and NTP integration.
 - Impact: Keeps RTC/NTP concerns global instead of per-card.
 - Impact: Enables deterministic validation before runtime use.
-- References: `src/storage/v3_config_contract.*`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `docs/user-guide-v3-draft.md`.
+- References: `src/storage/legacy_v3_config_contract.*`, `src/storage/legacy_v3_config_decoder.cpp`, `src/storage/legacy_v3_config_validator.cpp`, `docs/user-guide-legacy-v3-draft.md`.
 
 ## DEC-0051: Move Portal Snapshot/Diagnostics JSON Buffers Off Static DRAM
 - Date: 2026-03-02
@@ -569,7 +569,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns UI labels, API keys, and config schema terms under one vocabulary.
 - Impact: Reduces operator confusion and documentation drift during portal implementation.
 - Impact: Enables controlled migration with compatibility window instead of one-shot breaking rename.
-- References: `docs/naming-glossary-v3.md`, `docs/api-contract-v3.md`, `docs/schema-v3.md`, `docs/user-guide-v3-draft.md`.
+- References: `docs/naming-glossary-legacy-v3.md`, `docs/api-contract-legacy-v3.md`, `docs/schema-legacy-v3.md`, `docs/user-guide-legacy-v3-draft.md`.
 
 ## DEC-0055: Standardize File Headers And Future Symbol-Level Documentation
 - Date: 2026-03-03
@@ -579,7 +579,7 @@ Use one short entry per decision with this structure:
 - Impact: Improves codebase navigability and execution-flow comprehension without requiring external tooling.
 - Impact: Establishes consistent documentation expectations for future PRs.
 - Impact: Adds lightweight maintenance overhead that should be handled in review when dependencies/behavior change.
-- References: `src/` file header rollout, `docs/worklog.md`, `docs/naming-glossary-v3.md`.
+- References: `src/` file header rollout, `docs/worklog.md`, `docs/naming-glossary-legacy-v3.md`.
 
 ## DEC-0056: Condition Clauses Support Selectable Numeric Compare Source
 - Date: 2026-03-03
@@ -589,7 +589,7 @@ Use one short entry per decision with this structure:
 - Impact: Enables cross-card numeric comparisons without adding new card families.
 - Impact: Keeps validation strict (`numeric operator only`, `no self-reference`, `threshold card in range`, `RTC not allowed as numeric threshold source`).
 - Impact: Preserves scan behavior intent where within-scan order effects are explicitly accepted by design.
-- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_decoder.cpp`, `src/storage/v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/v3_typed_card_parser.cpp`, `src/kernel/v3_typed_config_rules.cpp`, `docs/schema-v3.md`, `docs/ARCHITECTURE.md`, `docs/user-guide-v3-draft.md`.
+- References: `src/storage/legacy_v3_config_contract.h`, `src/storage/legacy_v3_config_decoder.cpp`, `src/storage/legacy_v3_config_validator.cpp`, `src/kernel/kernel_service.cpp`, `src/kernel/legacy_v3_typed_card_parser.cpp`, `src/kernel/legacy_v3_typed_config_rules.cpp`, `docs/schema-legacy-v3.md`, `docs/ARCHITECTURE.md`, `docs/user-guide-legacy-v3-draft.md`.
 
 ## DEC-0057: Build-Time Hardware Profile Drives Logical Channel Mapping
 - Date: 2026-03-04
@@ -600,7 +600,7 @@ Use one short entry per decision with this structure:
 - Impact: Preserves family semantics when migrating to non-GPIO backends (I2C expander, I2C ADC, plugin backends).
 - Impact: Establishes one profile source of truth for `DI/DO/AI` channel arrays and `SIO/MATH/RTC` capacities.
 - Impact: Strict pin/channel validation is intentionally deferred for a later hardening phase.
-- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/kernel/kernel_service.cpp`, `docs/hardware-profile-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
+- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/kernel/kernel_service.cpp`, `docs/hardware-profile-legacy-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
 
 ## DEC-0058: RTC Backend Is Profile-Selected With Stable Numeric Codes
 - Date: 2026-03-04
@@ -610,7 +610,7 @@ Use one short entry per decision with this structure:
 - Impact: Keeps RTC source selection board/profile-specific and easy to change at build time.
 - Impact: Preserves kernel-side contract by keeping minute-stamp acquisition behind `PlatformService`.
 - Impact: Allows future profile expansion without changing card semantics.
-- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.cpp`, `src/main.cpp`, `docs/hardware-profile-v3.md`, `README.md`.
+- References: `platformio.ini`, `src/platform/hw_profile.h`, `src/platform/hw_profile.cpp`, `src/platform/platform_service.cpp`, `src/main.cpp`, `docs/hardware-profile-legacy-v3.md`, `README.md`.
 
 ## DEC-0059: First-Boot Default Config Auto-Instantiates Cards From Active Profile
 - Date: 2026-03-04
@@ -620,7 +620,7 @@ Use one short entry per decision with this structure:
 - Impact: Fresh devices now present live card inventory without requiring manual first-save config bootstrapping.
 - Impact: Profile remains single source of truth for both IO mapping and initial runtime card availability.
 - Impact: Runtime semantics remain unchanged; this affects only fallback config population when persistent file is absent.
-- References: `src/storage/v3_config_contract.cpp`, `src/storage/storage_service.cpp`, `src/platform/hw_profile.*`, `docs/hardware-profile-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
+- References: `src/storage/legacy_v3_config_contract.cpp`, `src/storage/storage_service.cpp`, `src/platform/hw_profile.*`, `docs/hardware-profile-legacy-v3.md`, `docs/ARCHITECTURE.md`, `README.md`.
 
 ## DEC-0060: Increase Task Watchdog Window To 16 Seconds During Heavy Bring-Up
 - Date: 2026-03-04
@@ -640,7 +640,9 @@ Use one short entry per decision with this structure:
 - Impact: Brings snapshot transport semantics in line with V3 contract expectations for new portal/runtime consumers.
 - Impact: Reduces future frontend refactor risk by stabilizing canonical payload keys now.
 - Impact: Preserves rollout safety for existing clients by retaining legacy alias fields in the same payload.
-- References: `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/main.cpp`, `docs/api-contract-v3.md`.
+- References: `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/main.cpp`, `docs/api-contract-legacy-v3.md`.
+
+
 
 
 

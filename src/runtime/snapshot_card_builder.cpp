@@ -8,12 +8,12 @@ Responsibilities:
 
 Used By:
 - src/runtime/runtime_card_meta.cpp
-- src/kernel/v3_runtime_store.cpp
+- src/kernel/legacy_v3_runtime_store.cpp
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "runtime/snapshot_card_builder.h"
 
@@ -113,4 +113,6 @@ void buildRuntimeSnapshotCards(const RuntimeCardMeta* meta, uint8_t count,
     outCards[i] = buildRuntimeSnapshotCard(meta[i], store);
   }
 }
+
+
 

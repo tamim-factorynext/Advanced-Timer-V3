@@ -9,5 +9,6 @@ Planned scope:
 
 Current interfaces:
 - `legacy_config_lifecycle.h`
-- `v3_normalizer.h`
-- `v3_config_service.h`
+- `legacy_v3_normalizer.h`
+- `legacy_v3_config_service.h`
+

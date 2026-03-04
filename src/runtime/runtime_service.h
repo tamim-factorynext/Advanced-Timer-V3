@@ -13,7 +13,7 @@ Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -154,4 +154,5 @@ class RuntimeService {
 };
 
 }  // namespace v3::runtime
+
 

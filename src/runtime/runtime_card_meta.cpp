@@ -7,14 +7,14 @@ Responsibilities:
 - Keep behavior deterministic for scan-cycle/runtime execution.
 
 Used By:
-- src/kernel/v3_runtime_signals.h
+- src/kernel/legacy_v3_runtime_signals.h
 - src/runtime/runtime_card_meta.h
 - src/runtime/snapshot_card_builder.h
 Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "runtime/runtime_card_meta.h"
 
@@ -99,3 +99,5 @@ void refreshRuntimeCardMetaFromTypedCards(
     out[i] = meta;
   }
 }
+
+

@@ -13,7 +13,7 @@ Flow Hook:
 - Portal request handling and runtime snapshot transport.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -38,3 +38,4 @@ TransportCommandResponse handleTransportCommandStub(
     TransportCommandSource source, uint32_t nowUs);
 
 }  // namespace v3::portal
+

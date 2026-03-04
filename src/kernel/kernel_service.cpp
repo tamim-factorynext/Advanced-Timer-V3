@@ -12,14 +12,14 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "kernel/kernel_service.h"
 
 #include <Arduino.h>
 #include <string.h>
 
-#include "kernel/v3_status_runtime.h"
+#include "kernel/legacy_v3_status_runtime.h"
 
 namespace v3::kernel {
 
@@ -951,6 +951,7 @@ bool KernelService::evalConditionClause(const v3::storage::ConditionClause& clau
 }
 
 }  // namespace v3::kernel
+
 
 
 

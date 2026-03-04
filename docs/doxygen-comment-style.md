@@ -106,7 +106,7 @@ Policy:
 
 ## 7. V3-Specific Comment Guidance
 
-1. Use glossary terms from `docs/naming-glossary-v3.md`.
+1. Use glossary terms from `docs/naming-glossary-legacy-v3.md`.
 2. Keep `Used By` module-level (2-5 references), not exhaustive call graph.
 3. Prefer documenting public `.h` APIs first, then complex `.cpp` internals.
 4. For deterministic paths, include timing/allocation notes when relevant.
@@ -125,7 +125,7 @@ Policy:
  * @note Allocation-free and called in scan-cycle path.
  * @par Used By
  * - src/kernel/kernel_service.cpp
- * - src/kernel/v3_payload_rules.cpp
+ * - src/kernel/legacy_v3_payload_rules.cpp
  */
 bool evalConditionBlock(const v3::storage::ConditionBlock& block,
                         const V3RuntimeSignal* signals,
@@ -146,3 +146,5 @@ bool evalConditionBlock(const v3::storage::ConditionBlock& block,
 - this style guide
 - optional generation script (for local/CI use)
 - generated docs only if you explicitly want versioned static snapshots.
+
+

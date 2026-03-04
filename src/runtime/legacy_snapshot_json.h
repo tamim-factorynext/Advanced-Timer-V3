@@ -12,7 +12,7 @@ Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -44,3 +44,4 @@ void legacyAppendRuntimeSnapshotCard(JsonArray& cards,
  * - src/runtime/legacy_snapshot_json.cpp (or equivalent translation unit)
  */
 void legacySerializeRuntimeSnapshot(JsonDocument& doc, uint32_t nowMs);
+

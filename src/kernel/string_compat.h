@@ -8,14 +8,14 @@ Responsibilities:
 
 Used By:
 - src/kernel/legacy_config_validator.h
-- src/kernel/v3_typed_card_parser.h
+- src/kernel/legacy_v3_typed_card_parser.h
 - src/storage/legacy_config_lifecycle.h
 - (+ more call sites)
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -25,3 +25,5 @@ Notes:
 #include <string>
 using String = std::string;
 #endif
+
+

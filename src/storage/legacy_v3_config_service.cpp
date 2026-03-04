@@ -1,0 +1,91 @@
+/*
+File: src/storage/legacy_v3_config_service.cpp
+Purpose: Implements the v3 config service module behavior.
+
+Responsibilities:
+- Provide executable logic for the paired module contract.
+- Keep behavior deterministic for scan-cycle/runtime execution.
+
+Used By:
+- firmware build target
+Flow Hook:
+- Config load/validate/normalize and persistence lifecycle.
+
+Notes:
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
+*/
+#include "storage/legacy_v3_config_service.h"
+
+#include <string>
+
+#include "kernel/legacy_v3_typed_config_rules.h"
+
+bool normalizeV3ConfigRequestTyped(
+    JsonObjectConst root, const V3CardLayout& layout, const char* apiVersion,
+    const char* schemaVersion, const LogicCard* baselineCards,
+    size_t baselineCount, V3CardConfig* outTypedCards, size_t outTypedCount,
+    V3RtcScheduleChannel* outRtc, size_t outRtcCount, String& reason,
+    const char*& outErrorCode) {
+  JsonDocument normalizedDoc;
+  JsonArrayConst normalizedCards;
+  if (!normalizeConfigRequestWithLayout(
+          root, layout, apiVersion, schemaVersion, baselineCards, baselineCount,
+          normalizedDoc, normalizedCards, reason, outErrorCode, outRtc,
+          outRtcCount, outTypedCards, outTypedCount)) {
+    return false;
+  }
+
+  std::string typedReason;
+  if (!validateTypedCardConfigs(outTypedCards, static_cast<uint8_t>(layout.totalCards),
+                                layout.doStart, layout.aiStart, layout.sioStart,
+                                layout.mathStart, layout.rtcStart, typedReason)) {
+    reason = typedReason.c_str();
+    outErrorCode = "VALIDATION_FAILED";
+    return false;
+  }
+  return true;
+}
+
+bool normalizeV3ConfigRequestContext(
+    JsonObjectConst root, const V3CardLayout& layout, const char* apiVersion,
+    const char* schemaVersion, const LogicCard* baselineCards,
+    size_t baselineCount, size_t rtcChannelCount, V3ConfigContext& outContext,
+    String& reason, const char*& outErrorCode) {
+  if (layout.totalCards > kV3ConfigContextMaxCards) {
+    reason = "layout totalCards exceeds context capacity";
+    outErrorCode = "INTERNAL_ERROR";
+    return false;
+  }
+  if (rtcChannelCount > kV3ConfigContextMaxRtcChannels) {
+    reason = "rtc channel count exceeds context capacity";
+    outErrorCode = "INTERNAL_ERROR";
+    return false;
+  }
+
+  outContext.typedCount = layout.totalCards;
+  outContext.rtcCount = rtcChannelCount;
+  return normalizeV3ConfigRequestTyped(
+      root, layout, apiVersion, schemaVersion, baselineCards, baselineCount,
+      outContext.typedCards, outContext.typedCount, outContext.rtcChannels,
+      outContext.rtcCount, reason, outErrorCode);
+}
+
+void applyRtcScheduleChannelsFromConfig(const V3RtcScheduleChannel* source,
+                                        size_t sourceCount,
+                                        V3RtcScheduleChannel* target,
+                                        size_t targetCount) {
+  if (source == nullptr || target == nullptr) return;
+  const size_t count = (sourceCount < targetCount) ? sourceCount : targetCount;
+  for (size_t i = 0; i < count; ++i) {
+    target[i].enabled = source[i].enabled;
+    target[i].year = source[i].year;
+    target[i].month = source[i].month;
+    target[i].day = source[i].day;
+    target[i].weekday = source[i].weekday;
+    target[i].hour = source[i].hour;
+    target[i].minute = source[i].minute;
+    target[i].rtcCardId = source[i].rtcCardId;
+  }
+}
+
+

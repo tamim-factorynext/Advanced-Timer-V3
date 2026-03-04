@@ -12,13 +12,13 @@ Flow Hook:
 - Board/platform integration and connectivity runtime.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
 #include <stdint.h>
 
-#include "storage/v3_config_contract.h"
+#include "storage/legacy_v3_config_contract.h"
 
 namespace v3::platform {
 
@@ -69,3 +69,4 @@ class WiFiRuntime {
 };
 
 }  // namespace v3::platform
+

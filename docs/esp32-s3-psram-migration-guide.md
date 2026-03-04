@@ -216,6 +216,7 @@ Mitigation: contract-first + doxygen + phase completion checklist.
 - We do not accept "works once" behavior; we require repeatable stability.
 - We challenge each design choice with:  
   "Is this the best approach for correctness, determinism, efficiency, and long-term maintainability?"
+- We keep V3 docs as legacy/reference and create new V4 docs only when implementation actually needs them.
 
 ## 12. Immediate Next Actions
 

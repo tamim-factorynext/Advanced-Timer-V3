@@ -12,7 +12,7 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -45,3 +45,4 @@ void profileInitializeCardArraySafeDefaults(LogicCard* cards,
 
 bool profileDeserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards,
                                       const LegacyCardProfileLayout& layout);
+

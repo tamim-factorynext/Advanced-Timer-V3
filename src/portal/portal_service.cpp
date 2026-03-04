@@ -14,7 +14,7 @@ Flow Hook:
 - Portal request handling and runtime snapshot transport.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "portal/portal_service.h"
 
@@ -446,6 +446,7 @@ bool PortalService::enqueueRequest(const PortalCommandRequest& request) {
 }
 
 }  // namespace v3::portal
+
 
 
 

@@ -13,13 +13,13 @@ Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
 #include <WString.h>
 
-#include "storage/v3_config_validator.h"
+#include "storage/legacy_v3_config_validator.h"
 
 namespace v3::storage {
 
@@ -167,3 +167,4 @@ class StorageService {
 };
 
 }  // namespace v3::storage
+

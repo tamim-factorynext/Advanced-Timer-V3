@@ -12,7 +12,7 @@ Flow Hook:
 - Firmware entrypoint and service wiring.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include <Arduino.h>
 #include <esp_system.h>
@@ -542,3 +542,4 @@ void setup() {
 void loop() {
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
+

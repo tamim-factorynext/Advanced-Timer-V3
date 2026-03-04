@@ -13,24 +13,24 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
 #include <stdint.h>
 
 #include "control/command_dto.h"
-#include "kernel/v3_ai_runtime.h"
-#include "kernel/v3_di_runtime.h"
-#include "kernel/v3_do_runtime.h"
-#include "kernel/v3_math_runtime.h"
-#include "kernel/v3_rtc_runtime.h"
-#include "kernel/v3_runtime_signals.h"
-#include "kernel/v3_sio_runtime.h"
+#include "kernel/legacy_v3_ai_runtime.h"
+#include "kernel/legacy_v3_di_runtime.h"
+#include "kernel/legacy_v3_do_runtime.h"
+#include "kernel/legacy_v3_math_runtime.h"
+#include "kernel/legacy_v3_rtc_runtime.h"
+#include "kernel/legacy_v3_runtime_signals.h"
+#include "kernel/legacy_v3_sio_runtime.h"
 #include "platform/platform_service.h"
 #include "runtime/runtime_snapshot_card.h"
-#include "storage/v3_config_contract.h"
-#include "storage/v3_config_validator.h"
+#include "storage/legacy_v3_config_contract.h"
+#include "storage/legacy_v3_config_validator.h"
 
 namespace v3::kernel {
 
@@ -261,6 +261,7 @@ class KernelService {
 };
 
 }  // namespace v3::kernel
+
 
 
 

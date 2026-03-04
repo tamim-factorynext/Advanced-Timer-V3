@@ -12,7 +12,7 @@ Flow Hook:
 - Config load/validate/normalize and persistence lifecycle.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -40,3 +40,4 @@ void legacyWriteConfigErrorResponse(int statusCode, const char* code,
                                     const String& message);
 bool legacyLoadPortalSettingsFromLittleFS();
 bool legacySavePortalSettingsToLittleFS();
+

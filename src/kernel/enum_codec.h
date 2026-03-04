@@ -14,7 +14,7 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -48,7 +48,7 @@ const char* toString(inputSourceMode value);
  * @details Returns false on unknown token and leaves deterministic caller fallback in control.
  * @par Used By
  * - src/kernel/legacy_config_validator.cpp
- * - src/kernel/v3_typed_card_parser.cpp
+ * - src/kernel/legacy_v3_typed_card_parser.cpp
  */
 bool tryParseLogicCardType(const char* s, logicCardType& out);
 /** @copydoc tryParseLogicCardType */
@@ -76,4 +76,6 @@ cardMode parseOrDefault(const char* s, cardMode fallback);
 cardState parseOrDefault(const char* s, cardState fallback);
 /** @copydoc parseOrDefault(const char*, logicCardType) */
 combineMode parseOrDefault(const char* s, combineMode fallback);
+
+
 

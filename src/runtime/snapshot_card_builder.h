@@ -12,13 +12,13 @@ Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
 #include <stdint.h>
 
-#include "kernel/v3_runtime_store.h"
+#include "kernel/legacy_v3_runtime_store.h"
 #include "runtime/runtime_card_meta.h"
 #include "runtime/runtime_snapshot_card.h"
 
@@ -40,3 +40,4 @@ RuntimeSnapshotCard buildRuntimeSnapshotCard(const RuntimeCardMeta& meta,
 void buildRuntimeSnapshotCards(const RuntimeCardMeta* meta, uint8_t count,
                                const V3RuntimeStoreView& store,
                                RuntimeSnapshotCard* outCards);
+

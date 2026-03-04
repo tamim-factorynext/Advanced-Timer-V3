@@ -1,32 +1,40 @@
 # Documentation Index
 
-Date: 2026-02-28
-Purpose: Canonical map of documentation for clean V3 transition.
+Date: 2026-03-04
+Purpose: Canonical map of active documentation on the V4 rebuild branch.
 
-## 1. Source Of Truth
+## 1. Source Of Truth (Branch: `esp32-s3-v4-rebuild`)
 
-- V3 production rewrite contract: `requirements-v3-contract.md` (root)
-- Project-level introduction/orientation: `README.md` (root)
+- V4 rebuild contract anchor: `requirements-v4-contract.md` (root, draft)
+- Project-level introduction/orientation: `README.md` (root, V4)
+- Rebuild execution plan: `docs/esp32-s3-psram-migration-guide.md`
 - V2 PoC frozen legacy contract: `docs/legacy/v2-poc-contract.md`
+- V3 prior root overview: `README-legacy-v3.md`
 
-## 2. Active V3 Docs (`docs/`)
+## 2. Active Docs (`docs/`)
 
-- `docs/schema-v3.md` - Config schema and validation rules.
-- `docs/ARCHITECTURE.md` - Runtime architecture source of truth, queue/task boundaries, and execution sequence diagrams.
-- `docs/api-contract-v3.md` - Transport/API envelope contract.
-- `docs/acceptance-matrix-v3.md` - Acceptance test mapping.
-- `docs/hardware-profile-v3.md` - Hardware profile/capability model.
-- `docs/timing-budget-v3.md` - Runtime timing budget and threshold contract.
-- `docs/fault-policy-v3.md` - Fault class/severity and safe-state policy contract.
+Documentation creation policy on this branch:
+
+- Keep existing V3 documents as legacy/reference unless and until a V4 replacement is actually needed by implementation work.
+- Do not mass-copy or mass-rename V3 docs into V4 docs.
+- Create new V4 `.md` files only when there is an active coding task that requires that contract/spec.
+
+- `docs/schema-legacy-v3.md` - V3 schema reference (legacy baseline until V4 replacement exists).
+- `docs/ARCHITECTURE.md` - V3 runtime architecture reference (legacy baseline).
+- `docs/api-contract-legacy-v3.md` - V3 API contract reference (legacy baseline).
+- `docs/acceptance-matrix-legacy-v3.md` - V3 acceptance mapping reference.
+- `docs/hardware-profile-legacy-v3.md` - V3 hardware profile/capability reference.
+- `docs/timing-budget-legacy-v3.md` - V3 timing budget reference.
+- `docs/fault-policy-legacy-v3.md` - V3 fault policy reference.
 - `docs/dependency-topology-rules.md` - Module dependency boundaries and layering rules.
-- `docs/poc-gap-log-v3.md` - PoC-to-V3 gap traceability.
+- `docs/poc-gap-log-legacy-v3.md` - PoC-to-V3 gap traceability.
 - `docs/decisions.md` - Decision log (accepted/superseded changes).
 - `docs/worklog.md` - Consolidated session worklog.
-- `docs/milestones-v3.md` - Milestone checkpoint ledger for V3 execution status.
-- `docs/hil-task-list-v3.md` - Hardware-in-the-loop execution checklist and evidence tracking.
-- `docs/user-guide-v3-draft.md` - End-user guide draft (initial DI behavior section included).
-- `docs/esp32-s3-psram-migration-guide.md` - Planned migration path for future ESP32-S3 + PSRAM memory architecture.
-- `docs/naming-glossary-v3.md` - Canonical user-facing naming vocabulary and staged key-migration plan.
+- `docs/milestones-legacy-v3.md` - Historical V3 milestone ledger.
+- `docs/hil-task-list-legacy-v3.md` - Historical V3 HIL checklist.
+- `docs/user-guide-legacy-v3-draft.md` - Historical V3 user guide draft.
+- `docs/esp32-s3-psram-migration-guide.md` - Active V4 rebuild and migration source of truth.
+- `docs/naming-glossary-legacy-v3.md` - Canonical user-facing naming vocabulary and staged key-migration plan.
 - `docs/doxygen-comment-style.md` - Standard Doxygen comment templates and rollout guidance for symbol-level documentation.
 
 ## 2.1 Market/Strategy Research
@@ -49,8 +57,9 @@ These files are retained for historical/planning context and are not the active 
 
 ## 4. Root Folder Policy
 
-- Keep only canonical anchors at repo root: `README.md`, `requirements-v3-contract.md`, and tool-specific root docs (for example `GEMINI.md`).
+- Keep canonical anchors at repo root: `README.md`, `requirements-v4-contract.md`, and tool-specific root docs (for example `GEMINI.md`).
 - Place all evolving design/spec/test docs under `docs/`.
 - Place historical/planning artifacts under `docs/legacy/`.
+
 
 

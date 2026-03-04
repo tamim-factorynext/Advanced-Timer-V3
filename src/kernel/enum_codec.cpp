@@ -14,7 +14,7 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "kernel/enum_codec.h"
 
@@ -296,4 +296,5 @@ combineMode parseOrDefault(const char* s, combineMode fallback) {
   if (tryParseCombineMode(s, value)) return value;
   return fallback;
 }
+
 

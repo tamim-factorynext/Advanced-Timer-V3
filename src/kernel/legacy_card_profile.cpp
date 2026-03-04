@@ -12,12 +12,12 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "kernel/legacy_card_profile.h"
 
 #include "kernel/enum_codec.h"
-#include "kernel/v3_config_sanitize.h"
+#include "kernel/legacy_v3_config_sanitize.h"
 
 void profileSerializeCardToJson(const LogicCard& card, JsonObject& json) {
   json["id"] = card.id;
@@ -259,4 +259,5 @@ bool profileDeserializeCardsFromArray(JsonArrayConst array, LogicCard* outCards,
   sanitizeConfigCardsRuntimeFields(outCards, layout.totalCards);
   return true;
 }
+
 

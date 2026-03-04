@@ -12,7 +12,7 @@ Flow Hook:
 - Portal request handling and runtime snapshot transport.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "portal/transport_runtime.h"
 
@@ -23,8 +23,8 @@ Notes:
 #include <WebSocketsServer.h>
 
 #include "portal/transport_command_stub.h"
-#include "storage/v3_config_decoder.h"
-#include "storage/v3_config_validator.h"
+#include "storage/legacy_v3_config_decoder.h"
+#include "storage/legacy_v3_config_validator.h"
 
 namespace v3::portal {
 
@@ -867,3 +867,4 @@ bool hasRecentTransportActivity(uint32_t nowMs, uint32_t windowMs) {
 }
 
 }  // namespace v3::portal
+

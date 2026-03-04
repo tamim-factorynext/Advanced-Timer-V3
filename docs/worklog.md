@@ -24,7 +24,7 @@ Today we converted planning into implementation-grade documentation for V2.
 
 ### Completed
 
-- Updated `requirements-v3-contract.md` with final decisions:
+- Updated `requirements-legacy-v3-contract.md` with final decisions:
   - MATH uses arithmetic operators only (no comparison operators).
   - RTC switched to field-based schedule (`year/month/day/hour/minute/second/weekday`) with wildcard semantics.
   - RTC uses `triggerDuration` for asserted output window.
@@ -38,32 +38,32 @@ Today we converted planning into implementation-grade documentation for V2.
     - `FACTORY`
 
 - Created/updated docs:
-  - `docs/schema-v3.md` (schema draft aligned with above decisions)
-  - `docs/acceptance-matrix-v3.md` (acceptance coverage expanded)
-  - `docs/poc-gap-log-v3.md` (PoC->V3 gap tracking updated)
-  - `docs/api-contract-v3.md` (new, payload-level API freeze draft)
+  - `docs/schema-legacy-v3.md` (schema draft aligned with above decisions)
+  - `docs/acceptance-matrix-legacy-v3.md` (acceptance coverage expanded)
+  - `docs/poc-gap-log-legacy-v3.md` (PoC->V3 gap tracking updated)
+  - `docs/api-contract-legacy-v3.md` (new, payload-level API freeze draft)
 
 - Gap status:
   - GAP-005 resolved (STATE condition model)
   - GAP-006 resolved (`emaAlpha` frozen to centiunits `0..100` for `0.00..1.00`)
   - GAP-008 resolved (restore sources frozen to `LKG|FACTORY`)
-  - GAP-007 drafted as resolved via `docs/api-contract-v3.md`
+  - GAP-007 drafted as resolved via `docs/api-contract-legacy-v3.md`
 
 ### Current Blocker
 
 - Unresolved merge markers exist in:
-  - `docs/acceptance-matrix-v3.md` (lines around 112-116)
+  - `docs/acceptance-matrix-legacy-v3.md` (lines around 112-116)
 - This must be cleaned first before further edits.
 
 ### Exact Start Plan For Next Session
 
-1. Resolve merge markers in `docs/acceptance-matrix-v3.md`.
+1. Resolve merge markers in `docs/acceptance-matrix-legacy-v3.md`.
 2. Re-run consistency pass across:
-   - `requirements-v3-contract.md`
-   - `docs/schema-v3.md`
-   - `docs/api-contract-v3.md`
-   - `docs/poc-gap-log-v3.md`
-   - `docs/acceptance-matrix-v3.md`
+   - `requirements-legacy-v3-contract.md`
+   - `docs/schema-legacy-v3.md`
+   - `docs/api-contract-legacy-v3.md`
+   - `docs/poc-gap-log-legacy-v3.md`
+   - `docs/acceptance-matrix-legacy-v3.md`
 3. Confirm final gap table status (all intended gaps closed, or explicitly deferred).
 4. Start implementation phase:
    - validator rules (`V-CFG-*`)
@@ -89,7 +89,7 @@ Established a minimal "vibe-safe" documentation workflow and aligned V2 docs wit
   - Workflow rules for contract-first changes.
   - `DEC-0001` documenting `lastEvalUs` as per-card evaluation timing metric.
 
-- Updated `docs/api-contract-v3.md`:
+- Updated `docs/api-contract-legacy-v3.md`:
   - Added `docs/decisions.md` in related docs.
   - Clarified `lastEvalUs` semantics:
     - microsecond unit
@@ -98,9 +98,9 @@ Established a minimal "vibe-safe" documentation workflow and aligned V2 docs wit
 
 - Updated process docs:
   - `README.md` Section 18.4 now requires decision-log updates for behavior/API/validation changes.
-  - `requirements-v3-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
+  - `requirements-legacy-v3-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
 
-- Cleaned unresolved merge markers in `docs/acceptance-matrix-v3.md`.
+- Cleaned unresolved merge markers in `docs/acceptance-matrix-legacy-v3.md`.
 
 ### Next Session Starting Point
 
@@ -122,22 +122,22 @@ Added V2 hardware-profile gating contract so build targets can define available 
   - AI backend selection
   - optional IO pin list macros
 
-- Added `docs/hardware-profile-v3.md`:
+- Added `docs/hardware-profile-legacy-v3.md`:
   - build-time hardware profile model
   - empty-array semantics for unavailable IO families
   - RTC gating rules
   - backend abstraction contract
   - plugin boundary for remote/protocol-specific IO
 
-- Updated `requirements-v3-contract.md`:
+- Updated `requirements-legacy-v3-contract.md`:
   - Added Section `6.4 Build-Time Hardware Profile Contract`
-  - Added `docs/hardware-profile-v3.md` to required artifacts
+  - Added `docs/hardware-profile-legacy-v3.md` to required artifacts
 
-- Updated `docs/schema-v3.md`:
+- Updated `docs/schema-legacy-v3.md`:
   - Linked hardware profile contract
   - Added validation IDs `V-CFG-017..019` for profile gates/capacity/RTC support
 
-- Updated `docs/acceptance-matrix-v3.md`:
+- Updated `docs/acceptance-matrix-legacy-v3.md`:
   - Added hardware-profile acceptance tests `AT-HW-001..004`
 
 ## 2026-02-28 (Capacity Model Clarification)
@@ -148,19 +148,19 @@ Finalized the family-capacity model: every card family (physical and virtual) is
 
 ### Completed
 
-- Updated `docs/hardware-profile-v3.md`:
+- Updated `docs/hardware-profile-legacy-v3.md`:
   - Added explicit compile-time capacities per family.
   - Clarified RTC as schedule-based alarm channel capacity (`0..N` by profile/hardware design).
   - Clarified that all families can be `0` and are profile-optional.
 
-- Updated `requirements-v3-contract.md`:
+- Updated `requirements-legacy-v3-contract.md`:
   - Added compile-time capacity language in hardware profile requirements.
   - Clarified RTC section with alarm-channel capacity gating.
 
-- Updated `docs/schema-v3.md`:
+- Updated `docs/schema-legacy-v3.md`:
   - Added compile-time family-capacity statement for all families.
 
-- Updated `docs/acceptance-matrix-v3.md`:
+- Updated `docs/acceptance-matrix-legacy-v3.md`:
   - Added `AT-HW-007` for RTC alarm-capacity enforcement.
 
 - Updated `docs/decisions.md`:
@@ -210,21 +210,21 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
   - overrun event counter
 
 - Added missing contract artifact:
-  - `docs/timing-budget-v3.md`
+  - `docs/timing-budget-legacy-v3.md`
 
 - Updated docs index:
-  - added `docs/timing-budget-v3.md` to active V3 docs.
+  - added `docs/timing-budget-legacy-v3.md` to active V3 docs.
 
 ## 2026-02-28 (Contract Artifact Completion + Conflict Cleanup)
 
 ### Completed
 
 - Resolved merge conflict markers in:
-  - `docs/api-contract-v3.md`
-  - `docs/acceptance-matrix-v3.md`
+  - `docs/api-contract-legacy-v3.md`
+  - `docs/acceptance-matrix-legacy-v3.md`
 
 - Added missing required V3 artifacts listed by source contract:
-  - `docs/fault-policy-v3.md`
+  - `docs/fault-policy-legacy-v3.md`
   - `docs/dependency-topology-rules.md`
 
 - Updated `docs/INDEX.md` to include the two new artifacts in active V3 docs.
@@ -233,14 +233,14 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 
 ### Completed
 
-- Updated `docs/api-contract-v3.md` runtime snapshot contract:
+- Updated `docs/api-contract-legacy-v3.md` runtime snapshot contract:
   - Added explicit `metrics` object shape and required fields.
   - Added snapshot invariants:
     - `metrics.scanBudgetUs == scanIntervalMs * 1000`
     - `metrics.queueDepth <= metrics.queueCapacity`
   - Clarified HTTP snapshot response mirrors WebSocket runtime snapshot payload.
 
-- Updated `docs/acceptance-matrix-v3.md`:
+- Updated `docs/acceptance-matrix-legacy-v3.md`:
   - Added `AT-API-008` (metrics shape/presence)
   - Added `AT-API-009` (scan budget invariant)
   - Added `AT-API-010` (queue depth capacity invariant)
@@ -375,15 +375,15 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
     - `second` and millisecond-level schedule fields are unsupported and must be rejected.
 
 - Updated contracts:
-  - `requirements-v3-contract.md` Section 8.6:
+  - `requirements-legacy-v3-contract.md` Section 8.6:
     - removed required `second` schedule field.
     - added minute-level granularity rule.
-  - `docs/schema-v3.md`:
+  - `docs/schema-legacy-v3.md`:
     - removed `second` from RTC schedule schema.
     - added validation rule `V-CFG-022` to reject sub-minute schedule fields.
 
 - Updated acceptance mapping:
-  - `docs/acceptance-matrix-v3.md`:
+  - `docs/acceptance-matrix-legacy-v3.md`:
     - added `AT-RTC-006` for rejecting `second`/millisecond RTC schedule fields.
     - shifted previous RTC TBD placeholder to `AT-RTC-007`.
 
@@ -435,11 +435,11 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 
 - Versioning baseline is active:
   - `V2` = frozen PoC baseline (`README.md`)
-  - `V3` = active rewrite track (`requirements-v3-contract.md` + `docs/*-v3.md`)
+  - `V3` = active rewrite track (`requirements-legacy-v3-contract.md` + `docs/*-v3.md`)
 
 - Phase 0 status:
   - Runtime metrics instrumentation added and exposed in `/api/snapshot`.
-  - Timing budget contract added (`docs/timing-budget-v3.md`).
+  - Timing budget contract added (`docs/timing-budget-legacy-v3.md`).
   - Baseline captures completed and logged:
     - `docs/snapshot-baseline.csv`
     - `docs/snapshot-stress.csv`
@@ -622,9 +622,9 @@ Started the structural split away from unified legacy `LogicCard` by introducing
 ### Completed
 
 - Added new kernel typed model files:
-  - `src/kernel/v3_card_types.h`
-  - `src/kernel/v3_card_bridge.h`
-  - `src/kernel/v3_card_bridge.cpp`
+  - `src/kernel/legacy_v3_card_types.h`
+  - `src/kernel/legacy_v3_card_bridge.h`
+  - `src/kernel/legacy_v3_card_bridge.cpp`
 
 - Added typed family definitions:
   - `V3DiConfig`, `V3DoConfig`, `V3AiConfig`, `V3SioConfig`, `V3MathConfig`, `V3RtcConfig`
@@ -663,7 +663,7 @@ Applied strict family-aware validation for V3 condition clauses so set/reset ref
 - Added V3 signal capability model:
   - `V3SignalSupport`
   - `signalSupportForFamily(...)`
-  - file: `src/kernel/v3_card_types.h`
+  - file: `src/kernel/legacy_v3_card_types.h`
 
 - Tightened V3 clause mapping in `src/main.cpp`:
   - validates source `cardType` map up-front by `cardId` slot.
@@ -695,8 +695,8 @@ Added executable native tests for per-family condition source field/operator con
 ### Completed
 
 - Added kernel rule module:
-  - `src/kernel/v3_condition_rules.h`
-  - `src/kernel/v3_condition_rules.cpp`
+  - `src/kernel/legacy_v3_condition_rules.h`
+  - `src/kernel/legacy_v3_condition_rules.cpp`
   - Functions:
     - `parseV3CardTypeToken(...)`
     - `isV3FieldAllowedForSourceType(...)`
@@ -769,8 +769,8 @@ Added payload-level JSON fixture validation coverage for clause-source semantics
 ### Completed
 
 - Added payload validator module:
-  - `src/kernel/v3_payload_rules.h`
-  - `src/kernel/v3_payload_rules.cpp`
+  - `src/kernel/legacy_v3_payload_rules.h`
+  - `src/kernel/legacy_v3_payload_rules.cpp`
   - Main entry:
     - `validateV3PayloadConditionSources(...)`
 
@@ -807,8 +807,8 @@ Moved V3 config normalization/bridge orchestration out of `main.cpp` into a dedi
 ### Completed
 
 - Added storage normalization module:
-  - `src/storage/v3_normalizer.h`
-  - `src/storage/v3_normalizer.cpp`
+  - `src/storage/legacy_v3_normalizer.h`
+  - `src/storage/legacy_v3_normalizer.cpp`
   - Entry function:
     - `normalizeConfigRequestWithLayout(...)`
 
@@ -821,7 +821,7 @@ Moved V3 config normalization/bridge orchestration out of `main.cpp` into a dedi
     - performs final legacy-array semantic validation.
 
 - Updated storage layer inventory:
-  - `src/storage/README.md` now lists `v3_normalizer.h`.
+  - `src/storage/README.md` now lists `legacy_v3_normalizer.h`.
 
 ### Evidence
 
@@ -844,8 +844,8 @@ Activated the extracted DI runtime module in the live scan path and added determ
 - Resolved typed-model naming collision between config model and runtime module:
   - renamed runtime config type to `V3DiRuntimeConfig`.
   - files:
-    - `src/kernel/v3_di_runtime.h`
-    - `src/kernel/v3_di_runtime.cpp`
+    - `src/kernel/legacy_v3_di_runtime.h`
+    - `src/kernel/legacy_v3_di_runtime.cpp`
     - `src/main.cpp` (`processDICard(...)` runtime call site)
 
 - Kept runtime ownership explicit:
@@ -879,8 +879,8 @@ Extracted DO runtime transition logic into a dedicated kernel module and switche
 ### Completed
 
 - Added DO runtime kernel module:
-  - `src/kernel/v3_do_runtime.h`
-  - `src/kernel/v3_do_runtime.cpp`
+  - `src/kernel/legacy_v3_do_runtime.h`
+  - `src/kernel/legacy_v3_do_runtime.cpp`
   - entrypoint:
     - `runV3DoStep(...)`
 
@@ -892,7 +892,7 @@ Extracted DO runtime transition logic into a dedicated kernel module and switche
   - deleted `gPrevSetCondition` usage/state reset path (no behavioral impact; retrigger semantics are level-based while idle/finished).
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_do_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_do_runtime.h`.
 
 - Added native DO runtime acceptance tests:
   - `test/test_v3_do_runtime/test_main.cpp`
@@ -922,8 +922,8 @@ Established explicit SIO runtime ownership by introducing a dedicated SIO runtim
 ### Completed
 
 - Added SIO runtime boundary module:
-  - `src/kernel/v3_sio_runtime.h`
-  - `src/kernel/v3_sio_runtime.cpp`
+  - `src/kernel/legacy_v3_sio_runtime.h`
+  - `src/kernel/legacy_v3_sio_runtime.cpp`
   - entrypoint:
     - `runV3SioStep(...)`
 
@@ -932,7 +932,7 @@ Established explicit SIO runtime ownership by introducing a dedicated SIO runtim
   - SIO keeps service/runtime semantics explicit while sharing DO state machine implementation via runtime wrapper internals.
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_sio_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_sio_runtime.h`.
 
 - Added native SIO runtime acceptance tests:
   - `test/test_v3_sio_runtime/test_main.cpp`
@@ -961,8 +961,8 @@ Extracted transitional MATH evaluation behavior into a dedicated runtime module 
 ### Completed
 
 - Added MATH runtime module:
-  - `src/kernel/v3_math_runtime.h`
-  - `src/kernel/v3_math_runtime.cpp`
+  - `src/kernel/legacy_v3_math_runtime.h`
+  - `src/kernel/legacy_v3_math_runtime.cpp`
   - entrypoint:
     - `runV3MathStep(...)`
 
@@ -975,7 +975,7 @@ Extracted transitional MATH evaluation behavior into a dedicated runtime module 
     - optional clamp window applies when `startOffMs >= startOnMs`
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_math_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_math_runtime.h`.
 
 - Added native MATH runtime acceptance tests:
   - `test/test_v3_math_runtime/test_main.cpp`
@@ -1005,8 +1005,8 @@ Extracted RTC runtime-state handling into a dedicated module, wired minute-sched
 ### Completed
 
 - Added RTC runtime module:
-  - `src/kernel/v3_rtc_runtime.h`
-  - `src/kernel/v3_rtc_runtime.cpp`
+  - `src/kernel/legacy_v3_rtc_runtime.h`
+  - `src/kernel/legacy_v3_rtc_runtime.cpp`
   - runtime entrypoints/helpers:
     - `runV3RtcStep(...)`
     - `v3RtcChannelMatchesMinute(...)`
@@ -1027,7 +1027,7 @@ Extracted RTC runtime-state handling into a dedicated module, wired minute-sched
     - minute key progression behavior
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_rtc_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_rtc_runtime.h`.
 
 ### Evidence
 
@@ -1048,8 +1048,8 @@ Covered AI before operator/state cleanup by extracting AI processing into a dedi
 ### Completed
 
 - Added AI runtime module:
-  - `src/kernel/v3_ai_runtime.h`
-  - `src/kernel/v3_ai_runtime.cpp`
+  - `src/kernel/legacy_v3_ai_runtime.h`
+  - `src/kernel/legacy_v3_ai_runtime.cpp`
   - entrypoint:
     - `runV3AiStep(...)`
 
@@ -1058,7 +1058,7 @@ Covered AI before operator/state cleanup by extracting AI processing into a dedi
   - Removed local AI-only math helpers from `main.cpp` by moving mapping/filtering logic into kernel runtime module.
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_ai_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_ai_runtime.h`.
 
 - Added native AI runtime acceptance tests:
   - `test/test_v3_ai_runtime/test_main.cpp`
@@ -1088,8 +1088,8 @@ Completed operator/status cleanup after AI extraction by replacing DO-only missi
 ### Completed
 
 - Added status runtime helper module:
-  - `src/kernel/v3_status_runtime.h`
-  - `src/kernel/v3_status_runtime.cpp`
+  - `src/kernel/legacy_v3_status_runtime.h`
+  - `src/kernel/legacy_v3_status_runtime.cpp`
   - helpers:
     - `isMissionRunning(...)`
     - `isMissionFinished(...)`
@@ -1106,7 +1106,7 @@ Completed operator/status cleanup after AI extraction by replacing DO-only missi
     - non-mission families rejected for mission-state operators
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_status_runtime.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_status_runtime.h`.
 
 ### Evidence
 
@@ -1127,8 +1127,8 @@ Started explicit step-by-step phase-out of direct `LogicCard` usage by isolating
 ### Completed
 
 - Added runtime adapter boundary module:
-  - `src/kernel/v3_runtime_adapters.h`
-  - `src/kernel/v3_runtime_adapters.cpp`
+  - `src/kernel/legacy_v3_runtime_adapters.h`
+  - `src/kernel/legacy_v3_runtime_adapters.cpp`
   - provides family-specific mapping helpers for:
     - `DI`, `AI`, `DO`, `SIO`, `MATH`, `RTC`
 
@@ -1146,7 +1146,7 @@ Started explicit step-by-step phase-out of direct `LogicCard` usage by isolating
     - RTC trigger-duration/start mapping
 
 - Updated kernel layer inventory:
-  - `src/kernel/README.md` now lists `v3_runtime_adapters.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_runtime_adapters.h`.
 
 ### Evidence
 
@@ -1167,8 +1167,8 @@ Moved per-family mutable runtime state ownership out of `LogicCard` into a typed
 ### Completed
 
 - Added typed runtime store module:
-  - `src/kernel/v3_runtime_store.h`
-  - `src/kernel/v3_runtime_store.cpp`
+  - `src/kernel/legacy_v3_runtime_store.h`
+  - `src/kernel/legacy_v3_runtime_store.cpp`
   - capabilities:
     - family/index-safe runtime state lookup
     - runtime store sync from legacy cards during config lifecycle transitions
@@ -1198,7 +1198,7 @@ Moved per-family mutable runtime state ownership out of `LogicCard` into a typed
     - lookup rejection on wrong family or out-of-range index
 
 - Updated kernel inventory:
-  - `src/kernel/README.md` now lists `v3_runtime_store.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_runtime_store.h`.
 
 ### Evidence
 
@@ -1219,8 +1219,8 @@ Stopped accepting runtime-mutable state from config deserialization so persisted
 ### Completed
 
 - Added config sanitization module:
-  - `src/kernel/v3_config_sanitize.h`
-  - `src/kernel/v3_config_sanitize.cpp`
+  - `src/kernel/legacy_v3_config_sanitize.h`
+  - `src/kernel/legacy_v3_config_sanitize.cpp`
   - APIs:
     - `sanitizeConfigCardRuntimeFields(...)`
     - `sanitizeConfigCardsRuntimeFields(...)`
@@ -1242,7 +1242,7 @@ Stopped accepting runtime-mutable state from config deserialization so persisted
     - array-wide sanitize behavior
 
 - Updated kernel inventory:
-  - `src/kernel/README.md` now lists `v3_config_sanitize.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_config_sanitize.h`.
 
 ### Evidence
 
@@ -1294,7 +1294,7 @@ Removed the remaining external legacy `config.cards` payload acceptance path so 
 ### Completed
 
 - Updated shared normalizer:
-  - `src/storage/v3_normalizer.cpp`
+  - `src/storage/legacy_v3_normalizer.cpp`
   - `normalizeConfigRequestWithLayout(...)` now rejects legacy-shaped cards payloads with:
     - `INVALID_REQUEST`
     - reason: legacy payload is no longer supported.
@@ -1326,8 +1326,8 @@ Removed leftover legacy-bridge flags/metadata from normalizer signatures and API
 ### Completed
 
 - Removed `usedLegacyBridge` from config normalization interfaces:
-  - `src/storage/v3_normalizer.h`
-  - `src/storage/v3_normalizer.cpp`
+  - `src/storage/legacy_v3_normalizer.h`
+  - `src/storage/legacy_v3_normalizer.cpp`
   - `src/main.cpp`
 
 - Removed bridge metadata emission:
@@ -1412,8 +1412,8 @@ Completed the next decoupling step by removing live `LogicCard` reads from snaps
     - `refreshRuntimeCardMetaFromCards(...)`
 
 - Extended runtime store with index-based accessors:
-  - `src/kernel/v3_runtime_store.h`
-  - `src/kernel/v3_runtime_store.cpp`
+  - `src/kernel/legacy_v3_runtime_store.h`
+  - `src/kernel/legacy_v3_runtime_store.cpp`
   - added `runtime*StateAt(index, store)` helpers for all families.
 
 - Refactored snapshot card builder to metadata-based input:
@@ -1453,8 +1453,8 @@ Removed direct `LogicCard` dependency from runtime signal publication/evaluation
 ### Completed
 
 - Refactored signal APIs to runtime-owned inputs:
-  - `src/kernel/v3_runtime_signals.h`
-  - `src/kernel/v3_runtime_signals.cpp`
+  - `src/kernel/legacy_v3_runtime_signals.h`
+  - `src/kernel/legacy_v3_runtime_signals.cpp`
   - changes:
     - `makeRuntimeSignal(...)` now consumes `RuntimeCardMeta + V3RuntimeStoreView`.
     - `refreshRuntimeSignalsFromRuntime(...)` added for full-array refresh.
@@ -1487,8 +1487,8 @@ Moved config normalization/commit flow one step closer to V3 ownership by carryi
 ### Completed
 
 - Extended normalizer output contract:
-  - `src/storage/v3_normalizer.h`
-  - `src/storage/v3_normalizer.cpp`
+  - `src/storage/legacy_v3_normalizer.h`
+  - `src/storage/legacy_v3_normalizer.cpp`
   - `normalizeConfigRequestWithLayout(...)` now returns merged typed cards via `V3CardConfig* typedOut`.
   - typed output is derived from normalized merged cards (including RTC schedule fields).
 
@@ -1591,8 +1591,8 @@ Moved typed config validation out of `main.cpp` into a reusable kernel module an
 ### Completed
 
 - Added new kernel validation module:
-  - `src/kernel/v3_typed_config_rules.h`
-  - `src/kernel/v3_typed_config_rules.cpp`
+  - `src/kernel/legacy_v3_typed_config_rules.h`
+  - `src/kernel/legacy_v3_typed_config_rules.cpp`
   - exposes:
     - `validateTypedCardConfigs(const V3CardConfig* cards, uint8_t count, uint8_t doStart, uint8_t aiStart, uint8_t sioStart, uint8_t mathStart, uint8_t rtcStart, std::string& reason)`
 
@@ -1611,7 +1611,7 @@ Moved typed config validation out of `main.cpp` into a reusable kernel module an
     - RTC minute bounds rejection
 
 - Updated kernel inventory docs:
-  - `src/kernel/README.md` now lists `v3_typed_config_rules.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_typed_config_rules.h`.
 
 ### Migration Impact
 
@@ -1634,8 +1634,8 @@ Moved V3 typed card parsing out of `main.cpp` and into a dedicated kernel module
 ### Completed
 
 - Added parser module:
-  - `src/kernel/v3_typed_card_parser.h`
-  - `src/kernel/v3_typed_card_parser.cpp`
+  - `src/kernel/legacy_v3_typed_card_parser.h`
+  - `src/kernel/legacy_v3_typed_card_parser.cpp`
   - exposes:
     - `parseV3CardToTyped(...)` with explicit layout boundaries (`totalCards`, `doStart`, `aiStart`, `sioStart`, `mathStart`, `rtcStart`)
   - migrated helper logic from `main.cpp`:
@@ -1645,7 +1645,7 @@ Moved V3 typed card parsing out of `main.cpp` and into a dedicated kernel module
     - family mapping for typed output
 
 - Rewired normalizer:
-  - `src/storage/v3_normalizer.cpp`
+  - `src/storage/legacy_v3_normalizer.cpp`
   - removed `extern` linkage to `main.cpp` parser.
   - now calls `parseV3CardToTyped(...)` from kernel parser module.
 
@@ -1662,7 +1662,7 @@ Moved V3 typed card parsing out of `main.cpp` and into a dedicated kernel module
     - RTC parse success
 
 - Updated kernel inventory docs:
-  - `src/kernel/README.md` now lists `v3_typed_card_parser.h`.
+  - `src/kernel/README.md` now lists `legacy_v3_typed_card_parser.h`.
 
 ### Migration Impact
 
@@ -1686,8 +1686,8 @@ Completed extraction of normalize orchestration from `main.cpp` into a dedicated
 ### Completed
 
 - Added config service module:
-  - `src/storage/v3_config_service.h`
-  - `src/storage/v3_config_service.cpp`
+  - `src/storage/legacy_v3_config_service.h`
+  - `src/storage/legacy_v3_config_service.cpp`
   - exposes:
     - `normalizeV3ConfigRequestTyped(...)`
   - responsibilities:
@@ -1707,7 +1707,7 @@ Completed extraction of normalize orchestration from `main.cpp` into a dedicated
     - valid DI/DO payload normalization success
 
 - Updated storage inventory docs:
-  - `src/storage/README.md` now lists `v3_config_service.h`.
+  - `src/storage/README.md` now lists `legacy_v3_config_service.h`.
 
 ### Migration Impact
 
@@ -1730,12 +1730,12 @@ Moved typed-to-legacy build logic (`buildLegacyCardsFromTyped`) out of `main.cpp
 ### Completed
 
 - Extended storage config service API:
-  - `src/storage/v3_config_service.h`
+  - `src/storage/legacy_v3_config_service.h`
   - added:
     - `buildLegacyCardsFromTypedWithBaseline(...)`
 
 - Implemented helper in:
-  - `src/storage/v3_config_service.cpp`
+  - `src/storage/legacy_v3_config_service.cpp`
   - behavior:
     - starts from caller-provided baseline cards
     - overlays typed config via `v3CardConfigToLegacy(...)`
@@ -1774,12 +1774,12 @@ Removed `applyRtcScheduleChannels(...)` from `main.cpp` and moved RTC schedule a
 ### Completed
 
 - Extended storage service API:
-  - `src/storage/v3_config_service.h`
+  - `src/storage/legacy_v3_config_service.h`
   - added:
     - `applyRtcScheduleChannelsFromConfig(...)`
 
 - Implemented schedule apply helper in:
-  - `src/storage/v3_config_service.cpp`
+  - `src/storage/legacy_v3_config_service.cpp`
   - copies schedule channel fields from normalized output to runtime-owned schedule array.
 
 - Rewired `main.cpp` callsites:
@@ -1811,7 +1811,7 @@ Introduced a single typed config context object to carry normalized typed cards 
 ### Completed
 
 - Added context type in storage config service:
-  - `src/storage/v3_config_service.h`
+  - `src/storage/legacy_v3_config_service.h`
   - `V3ConfigContext` with:
     - `typedCards[]`
     - `typedCount`
@@ -1820,8 +1820,8 @@ Introduced a single typed config context object to carry normalized typed cards 
 
 - Added normalize entrypoint returning context:
   - `normalizeV3ConfigRequestContext(...)` in
-    - `src/storage/v3_config_service.h`
-    - `src/storage/v3_config_service.cpp`
+    - `src/storage/legacy_v3_config_service.h`
+    - `src/storage/legacy_v3_config_service.cpp`
 
 - Rewired `main.cpp` callsites to context-based flow:
   - staged save
@@ -1903,9 +1903,9 @@ Removed Arduino-framework-only include coupling from typed parser/storage header
   - provides `String` alias for non-Arduino targets while keeping Arduino builds unchanged.
 
 - Updated headers to use compatibility layer:
-  - `src/kernel/v3_typed_card_parser.h`
-  - `src/storage/v3_normalizer.h`
-  - `src/storage/v3_config_service.h`
+  - `src/kernel/legacy_v3_typed_card_parser.h`
+  - `src/storage/legacy_v3_normalizer.h`
+  - `src/storage/legacy_v3_config_service.h`
   - `src/storage/config_lifecycle.h`
 
 ### Migration Impact
@@ -2003,8 +2003,8 @@ Introduced and adopted typed mirror API to remove runtime reflection dependence 
 ### Completed
 
 - Added runtime store API in:
-  - `src/kernel/v3_runtime_store.h`
-  - `src/kernel/v3_runtime_store.cpp`
+  - `src/kernel/legacy_v3_runtime_store.h`
+  - `src/kernel/legacy_v3_runtime_store.cpp`
   - new:
     - `mirrorRuntimeStoreCardToLegacyByTyped(...)`
 
@@ -2039,7 +2039,7 @@ Removed legacy runtime-store APIs that depended on `LogicCard.type`/`*ForCard` l
 
 ### Completed
 
-- Removed from `src/kernel/v3_runtime_store.h/.cpp`:
+- Removed from `src/kernel/legacy_v3_runtime_store.h/.cpp`:
   - `syncRuntimeStoreFromCards(...)`
   - `mirrorRuntimeStoreCardToLegacy(...)`
   - `runtime*StateForCard(...)` family wrappers
@@ -2105,7 +2105,7 @@ Ran a focused cleanup pass after slices 39-44 to remove low-risk dead code and u
 
 - `src/main.cpp`
   - removed unused include:
-    - `#include "kernel/v3_runtime_adapters.h"`
+    - `#include "kernel/legacy_v3_runtime_adapters.h"`
   - removed unused typed helper functions:
     - `isSoftIOCard(...)`
     - `isMathCard(...)`
@@ -2137,8 +2137,8 @@ Added an explicit semantic field alias layer for legacy `LogicCard` payload fiel
   - semantic getters/setters for DI/DO/AI/MATH/RTC legacy-backed fields.
 
 - Updated callsites to consume semantic aliases:
-  - `src/kernel/v3_card_bridge.cpp`
-  - `src/kernel/v3_runtime_adapters.cpp`
+  - `src/kernel/legacy_v3_card_bridge.cpp`
+  - `src/kernel/legacy_v3_runtime_adapters.cpp`
 
 ### Migration Impact
 
@@ -2232,9 +2232,9 @@ Switched from incremental legacy-constrained updates to a dedicated V3 fast-trac
 
 - Milestone 2 baseline contract path:
   - added typed config contract:
-    - `src/storage/v3_config_contract.*`
+    - `src/storage/legacy_v3_config_contract.*`
   - added validator + explicit error codes:
-    - `src/storage/v3_config_validator.*`
+    - `src/storage/legacy_v3_config_validator.*`
   - updated storage service to produce/hold validated active config
   - updated kernel service to accept only validated config at `begin(...)`
   - updated bootstrap to fail-fast on invalid config before kernel start
@@ -2263,15 +2263,15 @@ Resumed fast-track path and added the bootstrap JSON decode stage so storage can
 ### Completed
 
 - Added decode module:
-  - `src/storage/v3_config_decoder.h`
-  - `src/storage/v3_config_decoder.cpp`
+  - `src/storage/legacy_v3_config_decoder.h`
+  - `src/storage/legacy_v3_config_decoder.cpp`
 - Added payload-shape error codes:
   - `config_payload_invalid_json`
   - `config_payload_invalid_shape`
   - `config_payload_unknown_family`
   - files:
-    - `src/storage/v3_config_validator.h`
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_validator.h`
+    - `src/storage/legacy_v3_config_validator.cpp`
 - Updated storage bootstrap flow (`src/storage/storage_service.cpp`):
   - attempt load from `/config_v3.json` (LittleFS)
   - deserialize JSON
@@ -3051,21 +3051,21 @@ Rewired WiFi runtime to consume validated config policy instead of hardcoded cre
   - `wifi.master`, `wifi.user`, `retryBackoffSec`, `staOnly`
   - default values set in `makeDefaultSystemConfig()`.
   - files:
-    - `src/storage/v3_config_contract.h`
-    - `src/storage/v3_config_contract.cpp`
+    - `src/storage/legacy_v3_config_contract.h`
+    - `src/storage/legacy_v3_config_contract.cpp`
 
 - Added decoder parsing for WiFi object (over defaults):
   - parses + bounds-checks SSID/password fields
   - parses timeout/backoff and STA-only flag
   - file:
-    - `src/storage/v3_config_decoder.cpp`
+    - `src/storage/legacy_v3_config_decoder.cpp`
 
 - Added validator WiFi policy guardrails:
   - enforce `staOnly=true`
   - enforce `master.editable=false`
   - reject empty credentials and zero timeout/backoff
   - file:
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 - Wired runtime to active validated config:
   - `WiFiRuntime::begin(const WiFiConfig&)`
@@ -3117,7 +3117,7 @@ Expanded HIL planning to support card-family completion without executing HIL im
 
 ### Completed
 
-- Extended `docs/hil-task-list-v3.md` with card-family HIL scenarios:
+- Extended `docs/hil-task-list-legacy-v3.md` with card-family HIL scenarios:
   - `HIL-002` DI verification
   - `HIL-003` DO verification
   - `HIL-004` AI verification
@@ -3150,7 +3150,7 @@ Aligned DI runtime step semantics to the agreed behavior model before full DI fa
   - added `invert` in `V3DiRuntimeConfig`
   - added force-path input fields (`forceActive`, `forcedSample`) in `V3DiStepInput`
   - file:
-    - `src/kernel/v3_di_runtime.h`
+    - `src/kernel/legacy_v3_di_runtime.h`
 
 - Updated DI runtime behavior:
   - force sample selected before invert.
@@ -3159,11 +3159,11 @@ Aligned DI runtime step semantics to the agreed behavior model before full DI fa
   - `reset=true` path resets counter/filter state only and inhibits processing.
   - debounce window implemented as explicit filtering state before edge qualification.
   - file:
-    - `src/kernel/v3_di_runtime.cpp`
+    - `src/kernel/legacy_v3_di_runtime.cpp`
 
 - Wired invert into DI runtime adapter config mapping:
   - file:
-    - `src/kernel/v3_runtime_adapters.cpp`
+    - `src/kernel/legacy_v3_runtime_adapters.cpp`
 
 ### Open Note
 
@@ -3186,10 +3186,10 @@ Integrated DI runtime execution into active `KernelService` scan loop and extend
     - `resetEnabled = false`
   - validator now rejects invalid DI edge mode values.
   - files:
-    - `src/storage/v3_config_contract.h`
-    - `src/storage/v3_config_decoder.cpp`
-    - `src/storage/v3_config_validator.h`
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_contract.h`
+    - `src/storage/legacy_v3_config_decoder.cpp`
+    - `src/storage/legacy_v3_config_validator.h`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 - Active DI scan wiring in kernel:
   - `KernelService` now binds enabled DI cards at boot and runs `runV3DiStep(...)` each scan.
@@ -3255,18 +3255,18 @@ Added DI debounce validation policy so only 10 ms step values are accepted by co
 - Added new validation error code:
   - `InvalidDiDebounceStep`
   - file:
-    - `src/storage/v3_config_validator.h`
+    - `src/storage/legacy_v3_config_validator.h`
 
 - Added DI debounce step rule:
   - DI `debounceMs` must be multiple of `10`
   - `0` remains valid as explicit no-debounce
   - files:
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 - Added error string mapping:
   - `invalid_di_debounce_step`
   - file:
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 ### Why This Slice
 
@@ -3294,20 +3294,20 @@ Replaced DI temporary boolean gate usage with condition-block evaluation against
   - added condition operator/combiner/clause/block structs.
   - DI params now include `setCondition` and `resetCondition`.
   - file:
-    - `src/storage/v3_config_contract.h`
+    - `src/storage/legacy_v3_config_contract.h`
 
 - Added decoder parsing for DI `set`/`reset` blocks:
   - supports explicit block parsing from payload.
   - retains backward compatibility by deriving defaults from existing `setEnabled/resetEnabled`.
   - file:
-    - `src/storage/v3_config_decoder.cpp`
+    - `src/storage/legacy_v3_config_decoder.cpp`
 
 - Added validator checks for DI condition blocks:
   - validates source IDs, operators, and combiner values.
   - new error mapping: `invalid_condition_block`.
   - files:
-    - `src/storage/v3_config_validator.h`
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_validator.h`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 - Migrated kernel DI gating source:
   - per-scan evaluates DI `set` and `reset` conditions from runtime signal tree.
@@ -3343,7 +3343,7 @@ Updated end-user DI guide to explicitly document inert default set/reset blocks 
 - Added DI counter-overflow note:
   - unsigned 32-bit counter wraps to `0` after `4,294,967,295`.
 - File:
-  - `docs/user-guide-v3-draft.md`
+  - `docs/user-guide-legacy-v3-draft.md`
 
 ## 2026-03-02 (DI Inert Default Clause Baseline In Decoder)
 
@@ -3361,7 +3361,7 @@ Updated DI decoder defaults so new-device/factory-reset style payloads start wit
   - `combiner = NONE`
 - DI legacy `setEnabled` default changed to `false` for safer inert baseline.
 - File:
-  - `src/storage/v3_config_decoder.cpp`
+  - `src/storage/legacy_v3_config_decoder.cpp`
 
 ## 2026-03-02 (AI Centiunit Alpha + Default Scale Alignment)
 
@@ -3374,18 +3374,18 @@ Aligned AI runtime/config defaults with centiunit policy and requested default s
 - AI runtime alpha precision changed to centiunit:
   - `emaAlphaX100` (`0..100`) now used directly in filter equation.
   - files:
-    - `src/kernel/v3_ai_runtime.h`
-    - `src/kernel/v3_ai_runtime.cpp`
+    - `src/kernel/legacy_v3_ai_runtime.h`
+    - `src/kernel/legacy_v3_ai_runtime.cpp`
 
 - Adapter mapping aligned:
   - legacy milliunit alpha (`0..1000`) converted to centiunit (`/10`) when building AI runtime config.
   - file:
-    - `src/kernel/v3_runtime_adapters.cpp`
+    - `src/kernel/legacy_v3_runtime_adapters.cpp`
 
 - Typed parser default output scale adjusted:
   - default `outputRange.max` changed from `10000` to `100`.
   - file:
-    - `src/kernel/v3_typed_card_parser.cpp`
+    - `src/kernel/legacy_v3_typed_card_parser.cpp`
 
 ## 2026-03-02 (AI End-to-End Wiring Slice)
 
@@ -3430,9 +3430,9 @@ Completed the AI family runtime/command path wiring so AI cards now run through 
   - parser defaults aligned to same 4-20mA assumption.
   - validator enforces `emaAlphaX100 <= 100`.
   - files:
-    - `src/storage/v3_config_decoder.cpp`
-    - `src/storage/v3_config_validator.cpp`
-    - `src/kernel/v3_typed_card_parser.cpp`
+    - `src/storage/legacy_v3_config_decoder.cpp`
+    - `src/storage/legacy_v3_config_validator.cpp`
+    - `src/kernel/legacy_v3_typed_card_parser.cpp`
 
 ### Note
 
@@ -3477,7 +3477,7 @@ Finalized RTC scheduler contract direction, expanded live snapshot exposure for 
     - `src/kernel/kernel_service.h`
     - `src/kernel/kernel_service.cpp`
     - `src/portal/portal_service.cpp`
-    - `docs/api-contract-v3.md`
+    - `docs/api-contract-legacy-v3.md`
 
 - RTC contract freeze (implementation-aligned):
   - required schedule field: `minute`.
@@ -3487,12 +3487,12 @@ Finalized RTC scheduler contract direction, expanded live snapshot exposure for 
   - retrigger policy: `RESTART_WINDOW`.
   - invalid/unavailable wall-clock time: scheduler skip (no fire).
   - files:
-    - `src/kernel/v3_rtc_runtime.h`
-    - `src/kernel/v3_rtc_runtime.cpp`
+    - `src/kernel/legacy_v3_rtc_runtime.h`
+    - `src/kernel/legacy_v3_rtc_runtime.cpp`
     - `src/kernel/kernel_service.h`
     - `src/kernel/kernel_service.cpp`
-    - `src/kernel/v3_condition_rules.cpp`
-    - `src/kernel/v3_runtime_signals.cpp`
+    - `src/kernel/legacy_v3_condition_rules.cpp`
+    - `src/kernel/legacy_v3_runtime_signals.cpp`
     - `src/runtime/snapshot_card_builder.cpp`
 
 - Global clock/NTP config model:
@@ -3505,10 +3505,10 @@ Finalized RTC scheduler contract direction, expanded live snapshot exposure for 
     - `ntp.maxStaleSec`
   - added defaults + decode + validation.
   - files:
-    - `src/storage/v3_config_contract.h`
-    - `src/storage/v3_config_contract.cpp`
-    - `src/storage/v3_config_decoder.cpp`
-    - `src/storage/v3_config_validator.cpp`
+    - `src/storage/legacy_v3_config_contract.h`
+    - `src/storage/legacy_v3_config_contract.cpp`
+    - `src/storage/legacy_v3_config_decoder.cpp`
+    - `src/storage/legacy_v3_config_validator.cpp`
 
 - Platform time-read hook:
   - added local minute stamp read API for RTC scheduler:
@@ -3519,10 +3519,10 @@ Finalized RTC scheduler contract direction, expanded live snapshot exposure for 
 
 - Documentation alignment:
   - RTC section updated to latest contract in:
-    - `docs/schema-v3.md`
-    - `docs/user-guide-v3-draft.md`
-    - `docs/acceptance-matrix-v3.md`
-    - `docs/hil-task-list-v3.md`
+    - `docs/schema-legacy-v3.md`
+    - `docs/user-guide-legacy-v3-draft.md`
+    - `docs/acceptance-matrix-legacy-v3.md`
+    - `docs/hil-task-list-legacy-v3.md`
   - decision log entries added:
     - `DEC-0049` (RTC contract freeze)
     - `DEC-0050` (global clock/NTP model)
@@ -3555,14 +3555,14 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
 ### Completed
 
 - Phase 3 symbol-level comments (parser/rules internals):
-  - `src/kernel/v3_typed_card_parser.cpp`
-  - `src/kernel/v3_typed_config_rules.cpp`
+  - `src/kernel/legacy_v3_typed_card_parser.cpp`
+  - `src/kernel/legacy_v3_typed_config_rules.cpp`
 
 - Phase 4 focused gaps (core execution path):
   - `src/control/control_service.cpp`
   - `src/runtime/runtime_service.cpp`
   - `src/storage/storage_service.cpp`
-  - `src/storage/v3_config_decoder.cpp`
+  - `src/storage/legacy_v3_config_decoder.cpp`
   - `src/portal/transport_command_stub.cpp`
   - `src/portal/transport_runtime.cpp`
 
@@ -3656,13 +3656,13 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - dropped `/api/snapshot` alias route; kept canonical `/api/v3/snapshot`
     - file: `src/portal/transport_runtime.cpp`
   - removed `Op_*` operator alias acceptance from config decoder
-    - file: `src/storage/v3_config_decoder.cpp`
+    - file: `src/storage/legacy_v3_config_decoder.cpp`
   - removed legacy-shape branch in normalizer (now only V3 shape accepted)
-    - file: `src/storage/v3_normalizer.cpp`
+    - file: `src/storage/legacy_v3_normalizer.cpp`
   - removed unused `buildLegacyCardsFromTypedWithBaseline(...)` API
     - files:
-      - `src/storage/v3_config_service.h`
-      - `src/storage/v3_config_service.cpp`
+      - `src/storage/legacy_v3_config_service.h`
+      - `src/storage/legacy_v3_config_service.cpp`
   - updated active placeholder pages text from `Legacy` to `Deprecated`
     - files:
       - `data/index.html`
@@ -3721,12 +3721,12 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - reject self-reference and out-of-range threshold card IDs
   - reject RTC as threshold source card (no numeric `liveValue`)
 - Updated documentation set:
-  - `docs/schema-v3.md`
+  - `docs/schema-legacy-v3.md`
   - `docs/ARCHITECTURE.md`
-  - `docs/user-guide-v3-draft.md`
-  - `docs/api-contract-v3.md`
-  - `docs/acceptance-matrix-v3.md`
-  - `docs/naming-glossary-v3.md`
+  - `docs/user-guide-legacy-v3-draft.md`
+  - `docs/api-contract-legacy-v3.md`
+  - `docs/acceptance-matrix-legacy-v3.md`
+  - `docs/naming-glossary-legacy-v3.md`
   - `docs/decisions.md` (`DEC-0056`)
 
 ### Verification
@@ -3751,7 +3751,7 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
     - file: `src/main.cpp`
 
 - Portal planning document restructured for coherence and early-stage maturity:
-  - rewrote `docs/portal-v3-plan.md` into continuous working-draft format.
+  - rewrote `docs/portal-legacy-v3-plan.md` into continuous working-draft format.
   - clarified current maturity state: planning/contract foundation, not final scope.
   - aligned screen model to 4-page baseline:
     - `Live Runtime`
@@ -3814,12 +3814,12 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - capture baseline UX + responsiveness + network/asset-size metrics.
 
 4. Documentation discipline:
-  - keep `docs/portal-v3-plan.md` as source-of-truth for scope/order.
+  - keep `docs/portal-legacy-v3-plan.md` as source-of-truth for scope/order.
   - append decisions and outcomes to worklog at end of day.
 
 ### Open Questions Seeded
 
-- Added an `Open Questions (Working Backlog)` section to `docs/portal-v3-plan.md` to guide next brainstorming sessions.
+- Added an `Open Questions (Working Backlog)` section to `docs/portal-legacy-v3-plan.md` to guide next brainstorming sessions.
 - Topics include:
   - Live Runtime minimum data set
   - Config Studio first-pass scope
@@ -3827,3 +3827,5 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - Tutorial flow strategy
   - Debug/simulation guardrails
   - Asset-size and stack rollout thresholds
+
+

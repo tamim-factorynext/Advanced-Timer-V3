@@ -12,7 +12,7 @@ Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -62,6 +62,7 @@ struct SharedRuntimeSnapshotT {
   bool turnOffConditionMet[N];
   uint32_t evalCounter[N];
 };
+
 
 
 

@@ -12,7 +12,7 @@ Flow Hook:
 - Board/platform integration and connectivity runtime.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "platform/wifi_runtime.h"
 
@@ -151,4 +151,5 @@ void WiFiRuntime::refreshStaIp() {
 }
 
 }  // namespace v3::platform
+
 

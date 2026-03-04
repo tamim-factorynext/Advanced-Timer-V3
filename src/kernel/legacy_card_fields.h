@@ -7,13 +7,13 @@ Responsibilities:
 - Keep cross-module contract changes explicit and reviewable.
 
 Used By:
-- src/kernel/v3_card_bridge.cpp
-- src/kernel/v3_runtime_adapters.cpp
+- src/kernel/legacy_v3_card_bridge.cpp
+- src/kernel/legacy_v3_runtime_adapters.cpp
 Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -138,3 +138,5 @@ inline uint32_t legacyRtcTriggerDurationMs(const LogicCard& card) {
 inline void setLegacyRtcTriggerDurationMs(LogicCard& card, uint32_t value) {
   card.setting1 = value;
 }
+
+

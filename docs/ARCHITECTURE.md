@@ -276,7 +276,7 @@ sequenceDiagram
 
 Authoritative contract reference:
 
-- `docs/timing-budget-v3.md`
+- `docs/timing-budget-legacy-v3.md`
 
 Current implementation targets and guardrails:
 
@@ -294,7 +294,7 @@ Operational budget intent:
 When changing queue capacities, scan period, or transport command rate limits:
 
 1. Update this section.
-2. Update `docs/timing-budget-v3.md` if contract thresholds change.
+2. Update `docs/timing-budget-legacy-v3.md` if contract thresholds change.
 3. Re-run stress/soak validation and record evidence.
 
 ## 8. Observability Map
@@ -318,7 +318,7 @@ When changing queue capacities, scan period, or transport command rate limits:
 - Storage validation gate must pass before kernel begin.
 - Kernel must access DI/DO/AI through `PlatformService` logical-channel APIs, not hardcoded board pin constants.
 - Portal responses are cache-backed; do not build large transport payloads directly on hot request path.
-- User-facing terms must align with `docs/naming-glossary-v3.md` for payload/UI consistency.
+- User-facing terms must align with `docs/naming-glossary-legacy-v3.md` for payload/UI consistency.
 
 ## 10. Change Control
 
@@ -326,4 +326,5 @@ When changing module boundaries, queues, or command/snapshot flow:
 
 1. Update this document in the same PR.
 2. Update `docs/decisions.md` if behavior/contracts changed.
-3. Update `docs/api-contract-v3.md` and `docs/schema-v3.md` when payload/schema semantics change.
+3. Update `docs/api-contract-legacy-v3.md` and `docs/schema-legacy-v3.md` when payload/schema semantics change.
+

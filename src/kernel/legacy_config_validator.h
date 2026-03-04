@@ -12,7 +12,7 @@ Flow Hook:
 - Kernel scan cycle and card runtime evaluation.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #pragma once
 
@@ -26,3 +26,4 @@ bool validateLegacyConfigCardsArray(JsonArrayConst array, uint8_t totalCards,
                                     uint8_t doStart, uint8_t aiStart,
                                     uint8_t sioStart, uint8_t mathStart,
                                     uint8_t rtcStart, String& reason);
+

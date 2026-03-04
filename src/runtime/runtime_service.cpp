@@ -13,7 +13,7 @@ Flow Hook:
 - Runtime snapshot shaping and cross-module data projection.
 
 Notes:
-- Naming follows docs/naming-glossary-v3.md where applicable.
+- Naming follows docs/naming-glossary-legacy-v3.md where applicable.
 */
 #include "runtime/runtime_service.h"
 
@@ -82,4 +82,5 @@ void RuntimeService::tick(uint32_t nowMs,
 const RuntimeSnapshot& RuntimeService::snapshot() const { return snapshot_; }
 
 }  // namespace v3::runtime
+
 
