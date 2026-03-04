@@ -125,6 +125,14 @@ Execution rule:
 - Build pages in the agreed order with minimal viable behavior first.
 - End every phase with one demoable vertical slice (UI + API wiring + loading/error handling).
 
+### 6.1 Delivery Model (Locked For This Phase)
+
+- Use iterative collaborative frontend + backend delivery (simultaneous work, not frontend-last).
+- Implement in vertical slices:
+- each slice includes contract update (if needed), backend endpoint wiring, frontend integration, loading/error states, and hardware validation.
+- No mock API phase for primary flows. Build and integrate against live firmware endpoints slice-by-slice.
+- Avoid large one-shot merges; prefer small reviewable increments with immediate hardware verification.
+
 ### Phase 1: Foundation Shell
 
 Build:
