@@ -79,7 +79,7 @@ Deferred items remain out of current execution scope until core functional parit
   - `src/platform/platform_service.*`
 - References:
   - `DEC-0021`
-  - `requirements-legacy-v3-contract.md` (architecture boundaries)
+  - `legacy/requirements-legacy-v3-contract.md` (architecture boundaries)
 - Checkpoint SHA: `d3b1840`
 
 ## M2: Typed Config Contract + Validation Boot Gate
@@ -94,7 +94,7 @@ Deferred items remain out of current execution scope until core functional parit
   - `src/main.cpp` (fail-fast on invalid config)
 - References:
   - `DEC-0021`
-  - `requirements-legacy-v3-contract.md` (validation and ownership rules)
+  - `legacy/requirements-legacy-v3-contract.md` (validation and ownership rules)
 - Evidence:
   - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
 - Checkpoint SHA: `d3b1840`
@@ -137,7 +137,7 @@ Deferred items remain out of current execution scope until core functional parit
 - References:
   - `DEC-0021`
   - `DEC-0022`
-  - `requirements-legacy-v3-contract.md` (state ownership and startup contract)
+  - `legacy/requirements-legacy-v3-contract.md` (state ownership and startup contract)
 - Evidence:
   - firmware build `esp32doit-devkit-v1`: `SUCCESS` (2026-03-02)
   - Duration: `00:00:12.591`
@@ -812,6 +812,7 @@ Deferred items remain out of current execution scope until core functional parit
   - Duration: `00:00:30.786`
   - RAM: `73140 / 327680` (22.3%)
   - Flash: `883529 / 1310720` (67.4%)
+
 
 
 

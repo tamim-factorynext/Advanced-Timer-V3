@@ -3,7 +3,7 @@
 Status: Draft placeholder
 Date: 2026-03-04
 
-This file will become the canonical V4 contract replacing `requirements-legacy-v3-contract.md` for active implementation on the ESP32-S3 rebuild track.
+This file will become the canonical V4 contract replacing `legacy/requirements-legacy-v3-contract.md` for active implementation on the ESP32-S3 rebuild track.
 
 Planned sections:
 
@@ -15,4 +15,5 @@ Planned sections:
 6. Observability and telemetry contract
 7. Fault policy and recovery behavior
 8. Acceptance criteria and phase gates
+
 

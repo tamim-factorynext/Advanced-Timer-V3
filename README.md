@@ -18,7 +18,7 @@ Primary direction:
 
 ## Legacy Reference
 
-- Previous root overview preserved as: `README-legacy-v3.md`
+- Previous root overview preserved as: `legacy/README-legacy-v3.md`
 - Existing V3 contracts/docs are retained as reference until replaced by V4 equivalents.
 
 ## Immediate Next
@@ -26,3 +26,4 @@ Primary direction:
 1. Define V4 contracts for platform, storage, runtime, and transport.
 2. Stand up minimal ESP32-S3 boot skeleton.
 3. Add telemetry baseline (CPU/core load, SRAM, PSRAM, heap, stack high-water).
+

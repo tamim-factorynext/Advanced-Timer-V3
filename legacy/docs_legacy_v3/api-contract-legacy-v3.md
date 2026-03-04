@@ -1,7 +1,7 @@
 # API Contract V3
 
 Date: 2026-02-28
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Related: `docs/schema-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`, `docs/decisions.md`
 Status: Frozen for implementation
 
@@ -379,7 +379,7 @@ Rules:
 
 ## 9. Security Interaction
 
-- Protected endpoints/commands require role-based authorization per `requirements-legacy-v3-contract.md` Section 16.
+- Protected endpoints/commands require role-based authorization per `legacy/requirements-legacy-v3-contract.md` Section 16.
 - Unauthorized authn state returns `UNAUTHORIZED`.
 - Authenticated but insufficient role returns `FORBIDDEN`.
 
@@ -394,6 +394,7 @@ Rules:
 - `AT-API-009`: `metrics.scanBudgetUs == scanPeriodMs * 1000` invariant.
 - `AT-API-010`: queue depth invariant (`metrics.queueDepth <= metrics.queueCapacity`).
 - `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
+
 
 
 

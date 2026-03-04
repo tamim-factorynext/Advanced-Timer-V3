@@ -42,7 +42,7 @@ Use one short entry per decision with this structure:
 - Context: Runtime snapshots already include `lastEvalUs` in examples, but the field intent was not explicitly documented.
 - Decision: Keep `lastEvalUs` as a standard per-card runtime snapshot field to expose card evaluation duration in microseconds.
 - Impact: Supports deterministic observability and timing regression detection; enables tooling/UI to detect outlier cards without recomputing runtime internals; keeps this field runtime-only and out of config payload requirements.
-- References: `docs/api-contract-legacy-v3.md` (Section 5.1 rules), `requirements-legacy-v3-contract.md` (artifact set and change-control linkage), `docs/legacy/v2-poc-contract.md` (working method linkage).
+- References: `docs/api-contract-legacy-v3.md` (Section 5.1 rules), `legacy/requirements-legacy-v3-contract.md` (artifact set and change-control linkage), `docs/legacy/v2-poc-contract.md` (working method linkage).
 
 ## DEC-0002: Compile-Time Family Capacities Across All Card Types
 - Date: 2026-02-28
@@ -50,7 +50,7 @@ Use one short entry per decision with this structure:
 - Context: Product models will vary by available channels and optional capabilities; all card families (physical and virtual) must follow one consistent profile-capacity model.
 - Decision: Define explicit compile-time capacities for every family (`DI`, `DO`, `AI`, `SIO`, `MATH`, `RTC` alarm channels), allowing `0..N` instances per family by active hardware profile.
 - Impact: Enables deterministic multi-model product line support; removes assumptions that any family must exist; formalizes RTC as schedule-alarm channel capacity rather than a special-case family.
-- References: `docs/hardware-profile-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-legacy-v3.md` (family presence/capacity), `docs/acceptance-matrix-legacy-v3.md` (`AT-HW-005..007`).
+- References: `docs/hardware-profile-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (Sections 6.4, 7.1, 8.6), `docs/schema-legacy-v3.md` (family presence/capacity), `docs/acceptance-matrix-legacy-v3.md` (`AT-HW-005..007`).
 
 ## DEC-0003: RTC Stack Baseline (`RTClib` + `RTCMillis` + NTP Sync)
 - Date: 2026-02-28
@@ -60,7 +60,7 @@ Use one short entry per decision with this structure:
 - Impact: Unblocks RTC scheduler implementation immediately with stable library interfaces.
 - Impact: Keeps migration cost low by preserving one RTC library contract across `RTCMillis` and DS3231 backends.
 - Impact: Requires deterministic time-sync handling policy when NTP is unavailable or stale.
-- References: `platformio.ini`, `docs/hardware-profile-legacy-v3.md`, `requirements-legacy-v3-contract.md` (RTC sections).
+- References: `platformio.ini`, `docs/hardware-profile-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (RTC sections).
 
 ## DEC-0004: Initial V3 Bring-Up Capacity for New Families
 - Date: 2026-02-28
@@ -80,7 +80,7 @@ Use one short entry per decision with this structure:
 - Impact: Simplifies scheduler UX and validation semantics.
 - Impact: Avoids false precision and reduces configuration ambiguity.
 - Impact: Trigger matching must evaluate on minute boundaries (`year/month/day/hour/minute/weekday` only).
-- References: `requirements-legacy-v3-contract.md` (Section 8.6), `docs/schema-legacy-v3.md` (RTC schema and validation), `docs/acceptance-matrix-legacy-v3.md` (RTC acceptance cases).
+- References: `legacy/requirements-legacy-v3-contract.md` (Section 8.6), `docs/schema-legacy-v3.md` (RTC schema and validation), `docs/acceptance-matrix-legacy-v3.md` (RTC acceptance cases).
 
 ## DEC-0006: RTC Schedule Evaluation Ownership On Networking Core
 - Date: 2026-03-01
@@ -90,7 +90,7 @@ Use one short entry per decision with this structure:
 - Impact: Preserves deterministic scan-loop budget on Core0.
 - Impact: Scales scheduler-card count without coupling minute-tick work to per-scan logic.
 - Impact: Requires queue-path acceptance coverage for minute-tick intent delivery and idempotency.
-- References: `README.md` (Sections 4.2, 8), `requirements-legacy-v3-contract.md` (Core ownership and determinism sections), `docs/timing-budget-legacy-v3.md`.
+- References: `README.md` (Sections 4.2, 8), `legacy/requirements-legacy-v3-contract.md` (Core ownership and determinism sections), `docs/timing-budget-legacy-v3.md`.
 
 ## DEC-0007: Non-Deterministic Service Ownership On Networking Core
 - Date: 2026-03-01
@@ -100,7 +100,7 @@ Use one short entry per decision with this structure:
 - Impact: Protects deterministic runtime from service-side jitter.
 - Impact: Enables feature growth without violating kernel timing guarantees.
 - Impact: Sets architectural guardrails for future plugin/service modules.
-- References: `README.md` (Section 4.3), `requirements-legacy-v3-contract.md` (architecture and topology sections), `docs/dependency-topology-rules.md`.
+- References: `README.md` (Section 4.3), `legacy/requirements-legacy-v3-contract.md` (architecture and topology sections), `docs/dependency-topology-rules.md`.
 
 ## DEC-0008: HIL Rig Baseline Uses Raspberry Pi As Test Master
 - Date: 2026-03-01
@@ -120,7 +120,7 @@ Use one short entry per decision with this structure:
 - Impact: Simplifies run-mode state machine and command validation.
 - Impact: `set_run_mode` accepts only `RUN_NORMAL|RUN_STEP|RUN_BREAKPOINT`.
 - Impact: Runtime pacing path now uses configured `scanPeriodMs` without slow-mode overrides.
-- References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `requirements-legacy-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-legacy-v3.md`.
+- References: `src/control/command_dto.h`, `src/main.cpp`, `src/kernel/enum_codec.cpp`, `README.md`, `legacy/requirements-legacy-v3-contract.md` (Section 6.1/6.3), `docs/api-contract-legacy-v3.md`.
 
 ## DEC-0010: Promote MATH/RTC To First-Class Runtime Families
 - Date: 2026-03-01
@@ -130,7 +130,7 @@ Use one short entry per decision with this structure:
 - Impact: Removes legacy-only card-count assumptions from runtime ownership path.
 - Impact: Makes snapshots/config validation aware of all active V3 families in current bring-up scope.
 - Impact: RTC set/reset misuse is now rejected during validation.
-- References: `src/main.cpp`, `requirements-legacy-v3-contract.md` (Sections 6.2, 7.1, 8.5, 8.6), `docs/hardware-profile-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`.
+- References: `src/main.cpp`, `legacy/requirements-legacy-v3-contract.md` (Sections 6.2, 7.1, 8.5, 8.6), `docs/hardware-profile-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`.
 
 ## DEC-0011: V3 Config Envelope Normalization With Time-Bounded Legacy Bridge
 - Date: 2026-03-01
@@ -140,7 +140,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns endpoint behavior with V3 contract-first workflow while keeping migration risk controlled.
 - Impact: Provides stable machine-readable error codes for unsupported API/schema versions and validation failures.
 - Impact: Keeps legacy compatibility explicitly transitional (`usedLegacyCardsBridge`).
-- References: `src/main.cpp`, `docs/api-contract-legacy-v3.md`, `docs/schema-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 11, 15, 21).
+- References: `src/main.cpp`, `docs/api-contract-legacy-v3.md`, `docs/schema-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (Sections 11, 15, 21).
 
 ## DEC-0012: Persist Active/Staged Config In Native V3 Envelope
 - Date: 2026-03-01
@@ -150,7 +150,7 @@ Use one short entry per decision with this structure:
 - Impact: Active/staged/factory config files now align with V3 schema direction.
 - Impact: Bootstrap/load supports both V3 and legacy storage during transition.
 - Impact: Runtime engine still consumes deterministic internal card model via normalization bridge.
-- References: `src/main.cpp`, `docs/schema-legacy-v3.md`, `docs/api-contract-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Sections 11, 12, 21).
+- References: `src/main.cpp`, `docs/schema-legacy-v3.md`, `docs/api-contract-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (Sections 11, 12, 21).
 
 ## DEC-0013: Introduce Per-Family Typed V3 Config Structs Behind Bridge
 - Date: 2026-03-01
@@ -170,7 +170,7 @@ Use one short entry per decision with this structure:
 - Impact: Prevents semantically invalid cross-family condition references from entering runtime.
 - Impact: Aligns config validation with typed per-family state ownership.
 - Impact: Reduces hidden behavior drift caused by permissive clause parsing.
-- References: `src/main.cpp` (V3 clause mapping/normalization), `src/kernel/legacy_v3_card_types.h`, `docs/schema-legacy-v3.md`, `requirements-legacy-v3-contract.md` (Section 8).
+- References: `src/main.cpp` (V3 clause mapping/normalization), `src/kernel/legacy_v3_card_types.h`, `docs/schema-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (Section 8).
 
 ## DEC-0015: Add Native Acceptance Tests For Condition Field/Operator Rules
 - Date: 2026-03-01
@@ -229,7 +229,7 @@ Use one short entry per decision with this structure:
 - Impact: Preserves a known rollback point while allowing larger V3 milestone changes without legacy coupling pressure.
 - Impact: Improves decision clarity because V3 architectural changes are no longer constrained by V2 notation debt.
 - Impact: Enables milestone-level testing cadence instead of per-micro-change churn.
-- References: `git` refs (`legacy-stable`, `v3-core`, `v2-legacy-baseline-2026-03-02`), `docs/INDEX.md`, `requirements-legacy-v3-contract.md`.
+- References: `git` refs (`legacy-stable`, `v3-core`, `v2-legacy-baseline-2026-03-02`), `docs/INDEX.md`, `legacy/requirements-legacy-v3-contract.md`.
 
 ## DEC-0021: M1/M2 Baseline Uses Composition Root + Validated Typed Config Entry
 - Date: 2026-03-02
@@ -239,7 +239,7 @@ Use one short entry per decision with this structure:
 - Impact: Enforces explicit startup contract (`config -> validate -> kernel begin`) and fails fast on invalid bootstrap config.
 - Impact: Establishes clear module seams for upcoming V3 work (JSON decode, schema mapping, runtime binding) without legacy monolith coupling.
 - Impact: Keeps architecture aligned with V3 layered boundary rules while maintaining buildability.
-- References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/legacy_v3_config_contract.*`, `src/storage/legacy_v3_config_validator.*`, `requirements-legacy-v3-contract.md` (architecture and validation sections).
+- References: `src/main.cpp`, `src/kernel/kernel_service.*`, `src/storage/storage_service.*`, `src/storage/legacy_v3_config_contract.*`, `src/storage/legacy_v3_config_validator.*`, `legacy/requirements-legacy-v3-contract.md` (architecture and validation sections).
 
 ## DEC-0022: Bootstrap Config Must Decode To Typed Model Before Validation
 - Date: 2026-03-02
@@ -299,7 +299,7 @@ Use one short entry per decision with this structure:
 - Impact: Enforces architectural intent early and reduces future refactor risk for task separation.
 - Impact: Provides a minimal, buildable concurrency baseline before queue-based command/snapshot contracts.
 - Impact: Requires follow-up milestone for bounded queue channels and timing/latency instrumentation across cores.
-- References: `src/main.cpp`, `requirements-legacy-v3-contract.md` (core ownership and determinism sections), `docs/milestones-legacy-v3.md`.
+- References: `src/main.cpp`, `legacy/requirements-legacy-v3-contract.md` (core ownership and determinism sections), `docs/milestones-legacy-v3.md`.
 
 ## DEC-0028: Replace Shared Metrics Copy With Bounded Core0->Core1 Queue
 - Date: 2026-03-02
@@ -309,7 +309,7 @@ Use one short entry per decision with this structure:
 - Impact: Improves architectural alignment with queue-driven inter-core boundary model.
 - Impact: Provides observable transport behavior under load via queue counters.
 - Impact: Creates foundation for extending queue-based contracts to command and snapshot channels.
-- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (core ownership/channel boundary sections).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (core ownership/channel boundary sections).
 
 ## DEC-0029: Introduce Bounded Core1->Core0 Command Queue Skeleton
 - Date: 2026-03-02
@@ -319,7 +319,7 @@ Use one short entry per decision with this structure:
 - Impact: Establishes command-channel ownership boundary consistent with dual-core architecture contract.
 - Impact: Adds observable queue and latency telemetry for future command load tuning.
 - Impact: Provides safe migration seam for real kernel command DTO integration in subsequent milestones.
-- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (core ownership and bounded-channel rules).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (core ownership and bounded-channel rules).
 
 ## DEC-0030: Promote Core0->Core1 Transport To Snapshot Payload Queue
 - Date: 2026-03-02
@@ -329,7 +329,7 @@ Use one short entry per decision with this structure:
 - Impact: Aligns transport boundary with snapshot-oriented architecture intent.
 - Impact: Keeps queue behavior bounded and observable via depth/high-water/drop counters.
 - Impact: Simplifies future expansion of snapshot payload fields without redesigning transport type.
-- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `requirements-legacy-v3-contract.md` (bounded channels and snapshot semantics).
+- References: `src/main.cpp`, `docs/milestones-legacy-v3.md`, `legacy/requirements-legacy-v3-contract.md` (bounded channels and snapshot semantics).
 
 ## DEC-0031: Surface Queue Telemetry In Runtime And Portal Diagnostics
 - Date: 2026-03-02
@@ -439,7 +439,7 @@ Use one short entry per decision with this structure:
 - Impact: Introduces practical hang-detection supervision without altering command/snapshot semantics.
 - Impact: Preserves architectural ownership (`platform` owns watchdog API; `main` owns task lifecycle/feed points).
 - Impact: Creates foundation for future watchdog telemetry and degraded-mode policy integration.
-- References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `requirements-legacy-v3-contract.md`, `docs/milestones-legacy-v3.md`.
+- References: `src/platform/platform_service.h`, `src/platform/platform_service.cpp`, `src/main.cpp`, `legacy/requirements-legacy-v3-contract.md`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0042: Move WiFi Policy From Hardcoded Runtime Constants To Validated Config
 - Date: 2026-03-02
@@ -479,7 +479,7 @@ Use one short entry per decision with this structure:
 - Impact: Prevents DI values from being treated as local-only runtime details.
 - Impact: Preserves compatibility with condition evaluation and future parameter source binding semantics.
 - Impact: Establishes a non-negotiable integration rule for upcoming DO/AI/SIO/MATH/RTC wiring.
-- References: `requirements-legacy-v3-contract.md` (runtime ownership + binding rules), `src/kernel/legacy_v3_runtime_signals.h`, `src/kernel/legacy_v3_runtime_signals.cpp`, `docs/milestones-legacy-v3.md`.
+- References: `legacy/requirements-legacy-v3-contract.md` (runtime ownership + binding rules), `src/kernel/legacy_v3_runtime_signals.h`, `src/kernel/legacy_v3_runtime_signals.cpp`, `docs/milestones-legacy-v3.md`.
 
 ## DEC-0046: DI Force Control Uses Existing Command Queue Contract
 - Date: 2026-03-02
@@ -641,6 +641,7 @@ Use one short entry per decision with this structure:
 - Impact: Reduces future frontend refactor risk by stabilizing canonical payload keys now.
 - Impact: Preserves rollout safety for existing clients by retaining legacy alias fields in the same payload.
 - References: `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/main.cpp`, `docs/api-contract-legacy-v3.md`.
+
 
 
 

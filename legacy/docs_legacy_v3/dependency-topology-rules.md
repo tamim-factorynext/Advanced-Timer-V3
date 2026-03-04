@@ -1,7 +1,7 @@
 # Dependency Topology Rules V3
 
 Date: 2026-02-28
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Related: `docs/hardware-profile-legacy-v3.md`, `docs/fault-policy-legacy-v3.md`
 Status: Draft for implementation
 
@@ -54,4 +54,5 @@ Allowed direction is inward toward deterministic core:
 
 - New module/file dependencies must be reviewed against this document before merge.
 - Violations must be tracked in `docs/decisions.md` with explicit remediation path or accepted exception.
+
 

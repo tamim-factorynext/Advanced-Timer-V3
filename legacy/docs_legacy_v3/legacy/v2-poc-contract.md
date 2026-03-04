@@ -10,7 +10,7 @@ Applies to: AdvancedTimer V2 PoC firmware and portal integration baseline
 - Production-hardened firmware work is V3 and is being built from scratch (not incremental patching of PoC behavior/comments).
 - Active source-of-truth for V3 planning/implementation:
   - `docs/INDEX.md`
-  - `requirements-legacy-v3-contract.md`
+  - `legacy/requirements-legacy-v3-contract.md`
   - `docs/schema-legacy-v3.md`
   - `docs/api-contract-legacy-v3.md`
   - `docs/acceptance-matrix-legacy-v3.md`
@@ -646,7 +646,7 @@ Status legend:
 
 `README.md` is the frozen primary contract for V2 PoC portal + kernel integration behavior.
 
-For production-hardened V3 rewrite work, `requirements-legacy-v3-contract.md` and the `docs/*-v3.md` set are authoritative.
+For production-hardened V3 rewrite work, `legacy/requirements-legacy-v3-contract.md` and the `docs/*-v3.md` set are authoritative.
 
 Rules:
 - PoC behavior changes (if any) MUST be reflected here first (or in the same change set).
@@ -1239,6 +1239,7 @@ Each config card payload MUST include at minimum:
 - `resetCombine`
 
 Runtime-only fields MUST NOT be required in commit payloads.
+
 
 
 

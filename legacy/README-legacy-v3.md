@@ -28,7 +28,7 @@ Primary target users of the final off-the-shelf product:
 V3 is a clean production rewrite path, not incremental patching of V2 behavior. The deterministic runtime and the portal/networking services are intentionally separated by core ownership and clear module boundaries.
 
 Canonical V3 contracts:
-- `requirements-legacy-v3-contract.md`
+- `legacy/requirements-legacy-v3-contract.md`
 - `docs/schema-legacy-v3.md`
 - `docs/api-contract-legacy-v3.md`
 - `docs/acceptance-matrix-legacy-v3.md`
@@ -316,7 +316,7 @@ Hardware documentation can expand under `docs/` while keeping this README as the
 
 Expected workflow for contributors:
 1. Read this README to understand architecture and design intent.
-2. Read the active contracts in `docs/` and `requirements-legacy-v3-contract.md`.
+2. Read the active contracts in `docs/` and `legacy/requirements-legacy-v3-contract.md`.
 3. Make contract updates first (or together) for behavior/API/schema changes.
 4. Implement code changes respecting layer and core boundaries.
 5. Add/adjust tests and acceptance mappings.
@@ -336,7 +336,7 @@ Core engineering rules:
 
 ## 13. Canonical References
 
-- V3 requirements: `requirements-legacy-v3-contract.md`
+- V3 requirements: `legacy/requirements-legacy-v3-contract.md`
 - V3 docs index: `docs/INDEX.md`
 - V3 decisions: `docs/decisions.md`
 - V2 frozen contract: `docs/legacy/v2-poc-contract.md`
@@ -346,4 +346,5 @@ Core engineering rules:
 This README is the project-level long-form introduction and orientation document.
 
 Detailed normative contracts remain in the V3 contract documents listed above. If there is any conflict, the contract files are authoritative for implementation and testing behavior.
+
 

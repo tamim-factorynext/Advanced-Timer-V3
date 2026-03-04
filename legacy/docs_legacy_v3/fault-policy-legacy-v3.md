@@ -1,7 +1,7 @@
 # Fault Policy V3
 
 Date: 2026-02-28
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Related: `docs/timing-budget-legacy-v3.md`, `docs/acceptance-matrix-legacy-v3.md`
 Status: Draft for implementation
 
@@ -66,4 +66,5 @@ Snapshot/system metrics should expose, at minimum:
 - `AT-REL-001`: severity policy behavior
 - `AT-REL-002`: critical safe-state enforcement + latch
 - `AT-REL-003`: reboot/fault counter persistence
+
 

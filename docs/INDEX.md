@@ -8,7 +8,7 @@ Purpose: Canonical map of active documentation on the V4 rebuild branch.
 - V4 rebuild contract anchor: `requirements-v4-contract.md` (root, draft)
 - Project-level introduction/orientation: `README.md` (root, V4)
 - Rebuild execution plan: `docs/esp32-s3-psram-migration-guide.md`
-- V3 prior root overview: `README-legacy-v3.md`
+- V3 prior root overview: `legacy/README-legacy-v3.md`
 
 ## 2. Active Docs (`docs/`)
 
@@ -19,6 +19,7 @@ Documentation creation policy on this branch:
 - Create new V4 `.md` files only when there is an active coding task that requires that contract/spec.
 
 - `docs/esp32-s3-psram-migration-guide.md` - Active V4 rebuild and migration source of truth.
+- `docs/worklog-v4.md` - Active V4 implementation worklog.
 
 ## 3. Legacy Archive Location
 
@@ -30,9 +31,10 @@ Legacy V3 docs/assets/code were isolated out of active paths and moved under:
 
 ## 4. Root Folder Policy
 
-- Keep canonical anchors at repo root: `README.md`, `requirements-v4-contract.md`, and tool-specific root docs (for example `GEMINI.md`).
+- Keep canonical anchors at repo root: `README.md` and `requirements-v4-contract.md`.
 - Place all evolving design/spec/test docs under `docs/`.
 - Keep historical/planning/runtime artifacts under `legacy/`.
+
 
 
 

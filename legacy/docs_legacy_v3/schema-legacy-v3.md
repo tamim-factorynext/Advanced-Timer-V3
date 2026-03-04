@@ -1,7 +1,7 @@
 # Schema V3
 
 Date: 2026-02-26
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Related Tests: `docs/acceptance-matrix-legacy-v3.md`
 Related Hardware Profile: `docs/hardware-profile-legacy-v3.md`
 Status: Draft for implementation
@@ -401,6 +401,7 @@ Top-level `bindings` allows typed parameter binding.
 - `docs/api-contract-legacy-v3.md`
 - `docs/timing-budget-legacy-v3.md`
 - Validation error catalog in code aligned with rule IDs (`V-CFG-*`).
+
 
 
 

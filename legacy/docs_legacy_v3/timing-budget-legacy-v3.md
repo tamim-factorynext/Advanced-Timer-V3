@@ -1,7 +1,7 @@
 # Timing Budget V3
 
 Date: 2026-02-28
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Related: `docs/acceptance-matrix-legacy-v3.md`, `docs/api-contract-legacy-v3.md`
 
 ## 1. Purpose
@@ -61,5 +61,6 @@ These thresholds are for baseline instrumentation acceptance and may be tightene
 - `AT-REL-*`: scan overrun and stability under portal load.
 - `AT-CORE-*`: deterministic full-scan behavior and run-mode timing integrity.
 - `AT-CFG-*`: config changes must not violate timing budget reporting integrity.
+
 
 

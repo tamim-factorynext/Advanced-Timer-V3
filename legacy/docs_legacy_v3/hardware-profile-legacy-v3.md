@@ -1,7 +1,7 @@
 # Hardware Profile Contract V3
 
 Date: 2026-02-28
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Status: Draft for implementation
 
 ## 1. Purpose
@@ -140,6 +140,7 @@ Recommended implementation path:
 1. Build flags select profile.
 2. Profile header materializes typed channel arrays and gates.
 3. Validator and card factory consume this profile as single source of truth.
+
 
 
 

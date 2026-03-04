@@ -1,7 +1,7 @@
 # Acceptance Matrix V3
 
 Date: 2026-02-26
-Source Contract: `requirements-legacy-v3-contract.md` (v3.0.0-draft)
+Source Contract: `legacy/requirements-legacy-v3-contract.md` (v3.0.0-draft)
 Status: Draft for implementation kickoff
 
 ## 1. Scope And Gate
@@ -128,6 +128,7 @@ These tests are defined as acceptance placeholders and should be finalized when 
 
 - Required suite prefixes from contract are present: `AT-CORE`, `AT-DI/AI/SIO/DO`, `AT-MATH`, `AT-RTC`, `AT-BIND`, `AT-CFG`, `AT-SEC`, `AT-REL`.
 - Every major contract section (4 through 20) has at least one mapped acceptance test.
+
 
 
 

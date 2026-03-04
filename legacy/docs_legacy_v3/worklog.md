@@ -24,7 +24,7 @@ Today we converted planning into implementation-grade documentation for V2.
 
 ### Completed
 
-- Updated `requirements-legacy-v3-contract.md` with final decisions:
+- Updated `legacy/requirements-legacy-v3-contract.md` with final decisions:
   - MATH uses arithmetic operators only (no comparison operators).
   - RTC switched to field-based schedule (`year/month/day/hour/minute/second/weekday`) with wildcard semantics.
   - RTC uses `triggerDuration` for asserted output window.
@@ -59,7 +59,7 @@ Today we converted planning into implementation-grade documentation for V2.
 
 1. Resolve merge markers in `docs/acceptance-matrix-legacy-v3.md`.
 2. Re-run consistency pass across:
-   - `requirements-legacy-v3-contract.md`
+   - `legacy/requirements-legacy-v3-contract.md`
    - `docs/schema-legacy-v3.md`
    - `docs/api-contract-legacy-v3.md`
    - `docs/poc-gap-log-legacy-v3.md`
@@ -98,7 +98,7 @@ Established a minimal "vibe-safe" documentation workflow and aligned V2 docs wit
 
 - Updated process docs:
   - `README.md` Section 18.4 now requires decision-log updates for behavior/API/validation changes.
-  - `requirements-legacy-v3-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
+  - `legacy/requirements-legacy-v3-contract.md` now includes decision-log requirement and lists `docs/decisions.md` as a required artifact.
 
 - Cleaned unresolved merge markers in `docs/acceptance-matrix-legacy-v3.md`.
 
@@ -129,7 +129,7 @@ Added V2 hardware-profile gating contract so build targets can define available 
   - backend abstraction contract
   - plugin boundary for remote/protocol-specific IO
 
-- Updated `requirements-legacy-v3-contract.md`:
+- Updated `legacy/requirements-legacy-v3-contract.md`:
   - Added Section `6.4 Build-Time Hardware Profile Contract`
   - Added `docs/hardware-profile-legacy-v3.md` to required artifacts
 
@@ -153,7 +153,7 @@ Finalized the family-capacity model: every card family (physical and virtual) is
   - Clarified RTC as schedule-based alarm channel capacity (`0..N` by profile/hardware design).
   - Clarified that all families can be `0` and are profile-optional.
 
-- Updated `requirements-legacy-v3-contract.md`:
+- Updated `legacy/requirements-legacy-v3-contract.md`:
   - Added compile-time capacity language in hardware profile requirements.
   - Clarified RTC section with alarm-channel capacity gating.
 
@@ -375,7 +375,7 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
     - `second` and millisecond-level schedule fields are unsupported and must be rejected.
 
 - Updated contracts:
-  - `requirements-legacy-v3-contract.md` Section 8.6:
+  - `legacy/requirements-legacy-v3-contract.md` Section 8.6:
     - removed required `second` schedule field.
     - added minute-level granularity rule.
   - `docs/schema-legacy-v3.md`:
@@ -435,7 +435,7 @@ Started execution of kickoff plan Phase 0 instrumentation tasks by adding runtim
 
 - Versioning baseline is active:
   - `V2` = frozen PoC baseline (`README.md`)
-  - `V3` = active rewrite track (`requirements-legacy-v3-contract.md` + `docs/*-v3.md`)
+  - `V3` = active rewrite track (`legacy/requirements-legacy-v3-contract.md` + `docs/*-v3.md`)
 
 - Phase 0 status:
   - Runtime metrics instrumentation added and exposed in `/api/snapshot`.
@@ -3827,5 +3827,6 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - Tutorial flow strategy
   - Debug/simulation guardrails
   - Asset-size and stack rollout thresholds
+
 
 
