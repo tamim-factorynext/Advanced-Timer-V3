@@ -75,7 +75,10 @@ constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
 constexpr uint32_t kTaskWatchdogTimeoutSeconds = 16;
 constexpr uint32_t kWiFiStatusLogIntervalMs = 10000;
-constexpr uint32_t kPortalProjectionIntervalMs = 10;
+constexpr uint32_t kPortalProjectionActiveIntervalMs = 10;
+constexpr uint32_t kPortalProjectionIdleIntervalMs = 500;
+constexpr uint32_t kTransportActivityWindowMs = 15000;
+constexpr uint32_t kCore1IdleLoopDelayMs = 5;
 
 void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -318,6 +321,8 @@ void core1ServiceTask(void*) {
       firstLoopLog = false;
     }
     const uint32_t nowMs = gPlatform.nowMs();
+    const bool transportActive = v3::portal::hasRecentTransportActivity(
+        nowMs, kTransportActivityWindowMs);
     gWiFi.tick(nowMs);
     const v3::platform::WiFiStatus& wifi = gWiFi.status();
     if (wifi.state != gLastWiFiState ||
@@ -389,10 +394,15 @@ void core1ServiceTask(void*) {
         gCore1SnapshotBuffer.metrics.completedScans;
     const bool hasNewScan =
         !projectionInitialized || (currentScanCount != lastProjectedScanCount);
+    const uint32_t projectionIntervalMs = transportActive
+                                              ? kPortalProjectionActiveIntervalMs
+                                              : kPortalProjectionIdleIntervalMs;
     const bool intervalElapsed =
         !projectionInitialized ||
-        ((nowMs - lastPortalProjectionMs) >= kPortalProjectionIntervalMs);
-    if (hasNewScan || intervalElapsed) {
+        ((nowMs - lastPortalProjectionMs) >= projectionIntervalMs);
+    const bool shouldProject = transportActive ? (hasNewScan || intervalElapsed)
+                                               : intervalElapsed;
+    if (shouldProject) {
       gPortal.tick(nowMs, gRuntime.snapshot(), gCore1SnapshotBuffer.cards,
                    gCore1SnapshotBuffer.cardCount);
       lastProjectedScanCount = currentScanCount;
@@ -402,7 +412,9 @@ void core1ServiceTask(void*) {
     v3::portal::serviceTransportRuntime();
 
     gPlatform.resetTaskWatchdog();
-    vTaskDelay(pdMS_TO_TICKS(kCore1LoopDelayMs));
+    const uint32_t core1DelayMs =
+        transportActive ? kCore1LoopDelayMs : kCore1IdleLoopDelayMs;
+    vTaskDelay(pdMS_TO_TICKS(core1DelayMs));
   }
 }
 

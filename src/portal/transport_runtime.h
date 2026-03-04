@@ -35,5 +35,16 @@ void initTransportRuntime(PortalService& portal);
  * - src/main.cpp
  */
 void serviceTransportRuntime();
+/**
+ * @brief Reports whether recent HTTP/WebSocket client activity was observed.
+ * @details Used to downshift portal projection work when no client is actively
+ * polling or commanding.
+ * @param nowMs Current monotonic time in milliseconds.
+ * @param windowMs Activity lookback window in milliseconds.
+ * @return `true` when any transport activity occurred within the window.
+ * @par Used By
+ * - src/main.cpp
+ */
+bool hasRecentTransportActivity(uint32_t nowMs, uint32_t windowMs);
 
 }  // namespace v3::portal

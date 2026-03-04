@@ -29,8 +29,10 @@ WebServer gHttpServer(80);
 WebSocketsServer gWsServer(81);
 PortalService* gPortal = nullptr;
 bool gTransportInitialized = false;
+uint32_t gLastTransportActivityMs = 0;
 
 void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
+void markTransportActivity() { gLastTransportActivityMs = millis(); }
 
 const char* methodToString(const HTTPMethod method) {
   switch (method) {
@@ -68,6 +70,7 @@ void handleHttpCorsOptions() {
  * `POST /api/v3/command`.
  */
 void handleHttpCommandSubmit() {
+  markTransportActivity();
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -86,6 +89,7 @@ void handleHttpCommandSubmit() {
  * `GET /api/v3/snapshot`.
  */
 void handleHttpSnapshotGet() {
+  markTransportActivity();
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -106,6 +110,7 @@ void handleHttpSnapshotGet() {
  * `GET /api/v3/diagnostics`.
  */
 void handleHttpDiagnosticsGet() {
+  markTransportActivity();
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -128,6 +133,7 @@ void handleHttpDiagnosticsGet() {
  * `GET /`.
  */
 void handleHttpRootGet() {
+  markTransportActivity();
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -150,6 +156,7 @@ void handleHttpRootGet() {
  */
 void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
                       size_t length) {
+  markTransportActivity();
   if (gPortal == nullptr) return;
   if (type != WStype_TEXT) return;
 
@@ -176,6 +183,7 @@ void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
 void initTransportRuntime(PortalService& portal) {
   if (gTransportInitialized) return;
   gPortal = &portal;
+  gLastTransportActivityMs = millis();
 
   gHttpServer.on("/", HTTP_GET, handleHttpRootGet);
   gHttpServer.on("/favicon.ico", HTTP_GET, sendNoContent);
@@ -199,6 +207,7 @@ void initTransportRuntime(PortalService& portal) {
   gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.on("/api/v3/snapshot/", HTTP_GET, handleHttpSnapshotGet);
   gHttpServer.onNotFound([]() {
+    markTransportActivity();
     const HTTPMethod method = gHttpServer.method();
     Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),
                   gHttpServer.uri().c_str());
@@ -228,6 +237,13 @@ void serviceTransportRuntime() {
   if (!gTransportInitialized) return;
   gHttpServer.handleClient();
   gWsServer.loop();
+}
+
+bool hasRecentTransportActivity(uint32_t nowMs, uint32_t windowMs) {
+  if (!gTransportInitialized) return false;
+  if (windowMs == 0) return true;
+  const uint32_t elapsedMs = nowMs - gLastTransportActivityMs;
+  return elapsedMs <= windowMs;
 }
 
 }  // namespace v3::portal
