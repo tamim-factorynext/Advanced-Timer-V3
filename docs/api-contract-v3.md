@@ -210,6 +210,13 @@ Rules:
 
 ## 6.2 Config Lifecycle
 
+Condition-block shape rule (applies to request/response config payloads):
+- `turnOnCondition` and `turnOffCondition` must always include:
+  - `combiner`
+  - `clauseA`
+  - `clauseB`
+- Even when `combiner = "NONE"`, `clauseB` must still be present as an inert clause (typically `ALWAYS_FALSE`) to keep payload shape deterministic for clients.
+
 ### `GET /api/v3/config/active`
 
 ```json

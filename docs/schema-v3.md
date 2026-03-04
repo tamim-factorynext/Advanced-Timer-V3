@@ -131,7 +131,7 @@ Used by `DI`, `DO`, `SIO`, and `MATH`.
 
 - `combiner`: enum `NONE|AND|OR`.
 - `clauseA`: required.
-- `clauseB`: required only when `combiner != NONE`.
+- `clauseB`: required always (including `combiner = NONE`) for stable payload shape across firmware and portal clients.
 - Clause `operator` enum: `GT|GTE|LT|LTE|EQ|NEQ`.
 - Clause RHS source fields:
   - `thresholdValue`: required `uint32` literal compare value.
@@ -360,8 +360,8 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-003: reject card references to missing card/field.
 - V-CFG-004: reject any negative numeric value.
 - V-CFG-005: reject `scan.intervalMs` outside `10..1000`.
-- V-CFG-006: reject `combiner=NONE` with non-empty `clauseB` if policy requires strict form.
-- V-CFG-007: reject missing `clauseB` for `AND|OR`.
+- V-CFG-006: require `clauseB` object presence for all condition blocks (including `combiner=NONE`) to preserve deterministic payload shape.
+- V-CFG-007: for `combiner=NONE`, `clauseB` should remain inert (recommended `ALWAYS_FALSE`) and must not change logical outcome.
 - V-CFG-008: reject AI set/reset fields (unsupported).
 - V-CFG-009: reject RTC set/reset fields (unsupported).
 - V-CFG-010: reject MATH operators outside `ADD|SUB_SAT|MUL|DIV_SAFE`.

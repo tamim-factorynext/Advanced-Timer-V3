@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -13,25 +13,42 @@
       body[data-theme="velvet-sand"] { --bg:#1b1412; --bg-top:#3b2a24; --panel:#2a1f1a; --line:#8f6e5f; --text:#f8eee8; --muted:#d6c1b4; --muted-strong:#e5d5cb; --accent:#e7a977; --accent-2:#d3b37a; --ok:#7ccf9a; --bad:#e07a6f; --surface:#3a2a23; --surface-hover:#49362d; --surface-field:#241b17; --surface-log:#221916; --shadow:0 14px 30px rgba(24, 16, 13, 0.45); }
       * { box-sizing: border-box; }
       html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 16% 0%, var(--bg-top) 0%, transparent 35%), var(--bg); color: var(--text); }
-      .app { max-width: 1080px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
+      .app { max-width: 1200px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
       .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
       .nav { display: flex; gap: 8px; }
       .nav a { color: var(--muted-strong); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
       .nav a.active { color: var(--text); background: var(--surface); }
       .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; box-shadow: var(--shadow); }
-      .muted { color: var(--muted-strong); }
-      .row { display: grid; gap: 10px; grid-template-columns: 1fr; }
-      textarea { width: 100%; min-height: 360px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-field); color: var(--text); padding: 10px; font-family: Consolas, monospace; font-size: 12px; }
       .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .layout { display: grid; gap: 10px; grid-template-columns: 280px 1fr; margin-top: 10px; }
+      .card-list { display: grid; gap: 6px; max-height: 72vh; overflow: auto; }
+      .card-btn { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); padding: 8px; text-align: left; cursor: pointer; }
+      .card-btn.active { border-color: var(--accent-2); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); }
+      .section-title { margin: 0 0 6px; color: var(--accent-2); font-size: 13px; font-weight: 700; }
+      .grid { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+      .grid-4 { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(140px, 1fr)); }
+      .field { display: grid; gap: 4px; }
+      .field label { font-size: 12px; color: var(--muted-strong); }
+      .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
+      .hint { font-size: 11px; color: var(--muted); min-height: 14px; }
+      .eval-block { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--surface-log); }
       button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 8px 11px; cursor: pointer; }
       button:hover { background: var(--surface-hover); }
+      button:disabled { opacity: 0.65; cursor: wait; }
       .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 8px; font-size: 13px; }
+      .result { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; }
+      .result strong { color: var(--accent-2); }
       .log { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-log); }
       .ok { color: var(--ok); }
       .bad { color: var(--bad); }
+      .muted { color: var(--muted-strong); }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--muted-strong); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
-      @media (max-width: 760px) { textarea { min-height: 280px; } }
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        .card-list { max-height: 220px; }
+        .grid, .grid-4 { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body data-theme="dark">
@@ -62,13 +79,45 @@
           <button id="btnCommit">&#x1F680; Commit</button>
           <button id="btnRestoreLkg">&#x21A9; Restore LKG</button>
           <button id="btnRestoreFactory">&#x267B; Restore Factory</button>
-          <button id="btnFormat">&#x1F4DD; Pretty Format</button>
         </div>
-        <div class="row" style="margin-top:10px;">
-          <textarea id="editor" spellcheck="false"></textarea>
+
+        <div class="layout">
+          <aside>
+            <div class="muted" style="margin-bottom:6px;"><strong>Cards</strong></div>
+            <div id="cardList" class="card-list"></div>
+          </aside>
+
+          <section>
+            <div class="section-title">Core</div>
+            <div class="grid">
+              <div class="field"><label>Card ID</label><input id="cId" type="number" disabled /></div>
+              <div class="field"><label>Family</label><input id="cFamily" type="text" disabled /></div>
+              <div class="field"><label>Enabled</label><select id="cEnabled"><option value="true">true</option><option value="false">false</option></select></div>
+            </div>
+
+            <div class="section-title" style="margin-top:10px;">Card Parameters</div>
+            <div id="familyFields" class="grid"></div>
+
+            <div id="evalPanel" style="display:none; margin-top:10px;">
+              <div class="section-title">Evaluation Groups</div>
+              <div class="eval-block">
+                <div class="section-title">Turn ON (SET)</div>
+                <div class="grid-4" id="onGroup"></div>
+              </div>
+              <div class="eval-block" style="margin-top:8px;">
+                <div class="section-title">Turn OFF (RESET)</div>
+                <div class="grid-4" id="offGroup"></div>
+              </div>
+            </div>
+
+            <div class="actions" style="margin-top:10px;"><button id="btnApplyCard">Apply Card Changes</button></div>
+          </section>
         </div>
+
+        <div id="result" class="result"><strong>Status:</strong> Idle.</div>
         <div id="log" class="log">Ready.</div>
       </section>
+
       <footer class="site-footer">
         <div>&copy; Advanced Timer V3</div>
         <div class="name">Developed by Yahya Tamim</div>
@@ -76,9 +125,31 @@
     </main>
 
     <script>
-      const editor = document.getElementById("editor");
-      const logEl = document.getElementById("log");
       const themeSelect = document.getElementById("themeSelect");
+      const resultEl = document.getElementById("result");
+      const logEl = document.getElementById("log");
+      const cardListEl = document.getElementById("cardList");
+      const familyFieldsEl = document.getElementById("familyFields");
+      const evalPanelEl = document.getElementById("evalPanel");
+      const onGroupEl = document.getElementById("onGroup");
+      const offGroupEl = document.getElementById("offGroup");
+
+      const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit", "btnRestoreLkg", "btnRestoreFactory", "btnApplyCard"];
+      let requestInFlight = false;
+      let currentConfig = null;
+      let selectedCardIndex = 0;
+      let dirty = false;
+      let activeFieldDefs = [];
+
+      const cId = document.getElementById("cId");
+      const cFamily = document.getElementById("cFamily");
+      const cEnabled = document.getElementById("cEnabled");
+
+      const CONDITION_OPERATORS = [
+        "ALWAYS_TRUE", "ALWAYS_FALSE", "LOGICAL_TRUE", "LOGICAL_FALSE", "PHYSICAL_ON", "PHYSICAL_OFF",
+        "TRIGGERED", "TRIGGER_CLEARED", "GT", "LT", "EQ", "NEQ", "GTE", "LTE", "RUNNING", "FINISHED", "STOPPED"
+      ];
+      const COMBINERS = ["NONE", "AND", "OR"];
 
       function normalizeTheme(theme) {
         if (theme === "colorful-a") return "neon-orchid";
@@ -94,24 +165,283 @@
         const bg = getComputedStyle(document.body).getPropertyValue("--bg").trim();
         if (meta && bg) meta.setAttribute("content", bg);
       }
-      const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
-      themeSelect.value = savedTheme;
-      applyTheme(savedTheme);
-      themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
 
-      function stamp() {
-        return new Date().toISOString();
+      function setBusy(busy) {
+        requestInFlight = busy;
+        actionIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = busy;
+        });
       }
 
+      function setResult(ok, title, detail) {
+        resultEl.className = ok ? "result ok" : "result bad";
+        resultEl.innerHTML = `<strong>${title}</strong>${detail ? ` ${detail}` : ""}`;
+      }
+
+      function stamp() { return new Date().toISOString(); }
       function setLog(ok, msg, body) {
         logEl.className = ok ? "log ok" : "log bad";
         logEl.textContent = `[${stamp()}] ${msg}${body ? "\n" + body : ""}`;
       }
 
-      function parseEditorConfig() {
-        const raw = editor.value.trim();
-        if (!raw) throw new Error("Editor is empty");
-        return JSON.parse(raw);
+      function markDirty() {
+        dirty = true;
+        document.title = `* AT-V3 Portal | Config Studio`;
+      }
+
+      function clearDirty() {
+        dirty = false;
+        document.title = `AT-V3 Portal | Config Studio`;
+      }
+
+      function cardLabel(card) {
+        const idx = card?.params?.channel;
+        if (typeof idx === "number") return `#${card.id} ${card.family} (ch ${idx})`;
+        return `#${card.id} ${card.family}`;
+      }
+
+      function renderCardList() {
+        const cards = currentConfig?.cards || [];
+        if (!cards.length) {
+          cardListEl.innerHTML = `<div class="muted">No cards</div>`;
+          return;
+        }
+        cardListEl.innerHTML = cards.map((c, i) => {
+          const active = i === selectedCardIndex ? "active" : "";
+          return `<button class="card-btn ${active}" data-card-index="${i}">${cardLabel(c)} ${c.enabled ? "(on)" : "(off)"}</button>`;
+        }).join("");
+        cardListEl.querySelectorAll("button[data-card-index]").forEach((b) => {
+          b.addEventListener("click", () => {
+            selectedCardIndex = Number(b.getAttribute("data-card-index"));
+            renderCardList();
+            loadSelectedCardToForm();
+          });
+        });
+      }
+
+      function boolOptions() {
+        return `<option value="true">true</option><option value="false">false</option>`;
+      }
+
+      function selectOptions(map, current) {
+        return Object.entries(map).map(([v, t]) => `<option value="${v}" ${String(v) === String(current) ? "selected" : ""}>${t}</option>`).join("");
+      }
+
+      function fieldDefsForFamily(family) {
+        if (family === "DI") return [
+          { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
+          { key: "invert", label: "Invert", type: "bool" },
+          { key: "debounceMs", label: "Debounce", type: "number", unit: "ms", step: 10, hint: "centi-ms" },
+          { key: "edgeMode", label: "Edge Mode", type: "enum", options: { 0: "Rising", 1: "Falling", 2: "Change" } },
+          { key: "setEnabled", label: "Set Enabled", type: "bool" },
+          { key: "resetEnabled", label: "Reset Enabled", type: "bool" }
+        ];
+        if (family === "DO") return [
+          { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
+          { key: "invert", label: "Invert", type: "bool" },
+          { key: "mode", label: "Mode", type: "enum", options: { 5: "Normal", 6: "Immediate", 7: "Gated" } },
+          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
+        ];
+        if (family === "AI") return [
+          { key: "channel", label: "ADC Channel", type: "number", unit: "pin" },
+          { key: "inputMin", label: "Input Min", type: "number", unit: "raw" },
+          { key: "inputMax", label: "Input Max", type: "number", unit: "raw" },
+          { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
+          { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
+          { key: "smoothingFactorPct", label: "Smoothing", type: "number", unit: "%", min: 0, max: 100 }
+        ];
+        if (family === "SIO") return [
+          { key: "invert", label: "Invert", type: "bool" },
+          { key: "mode", label: "Mode", type: "enum", options: { 5: "Normal", 6: "Immediate", 7: "Gated" } },
+          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
+        ];
+        if (family === "MATH") return [
+          { key: "operation", label: "Operation", type: "enum", options: { 0: "ADD", 1: "SUB_SAT", 2: "MUL", 3: "DIV_SAFE" } },
+          { key: "inputA", label: "Input A", type: "number", unit: "unit" },
+          { key: "inputB", label: "Input B", type: "number", unit: "unit" },
+          { key: "inputMin", label: "Input Min", type: "number", unit: "unit" },
+          { key: "inputMax", label: "Input Max", type: "number", unit: "unit" },
+          { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
+          { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
+          { key: "smoothingFactorPct", label: "Smoothing", type: "number", unit: "%", min: 0, max: 100 },
+          { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit" }
+        ];
+        if (family === "RTC") return [
+          { key: "hasYear", label: "Has Year", type: "bool" },
+          { key: "year", label: "Year", type: "number", unit: "year" },
+          { key: "hasMonth", label: "Has Month", type: "bool" },
+          { key: "month", label: "Month", type: "number", unit: "1..12" },
+          { key: "hasDay", label: "Has Day", type: "bool" },
+          { key: "day", label: "Day", type: "number", unit: "1..31" },
+          { key: "hasWeekday", label: "Has Weekday", type: "bool" },
+          { key: "weekday", label: "Weekday", type: "number", unit: "0..6" },
+          { key: "hasHour", label: "Has Hour", type: "bool" },
+          { key: "hour", label: "Hour", type: "number", unit: "0..23" },
+          { key: "minute", label: "Minute", type: "number", unit: "0..59" },
+          { key: "triggerDurationMs", label: "Trigger Duration", type: "number", unit: "ms", hint: "centi-ms" }
+        ];
+        return [];
+      }
+
+      function renderFamilyFields(card) {
+        const params = card.params || {};
+        activeFieldDefs = fieldDefsForFamily(card.family);
+        familyFieldsEl.innerHTML = activeFieldDefs.map((def) => {
+          const id = `f_${def.key}`;
+          const hintId = `h_${def.key}`;
+          const label = def.unit ? `${def.label} (${def.unit})` : def.label;
+          let control = "";
+          if (def.type === "bool") {
+            control = `<select id="${id}">${boolOptions()}</select>`;
+          } else if (def.type === "enum") {
+            control = `<select id="${id}">${selectOptions(def.options, params[def.key])}</select>`;
+          } else {
+            const step = def.step != null ? `step="${def.step}"` : "";
+            const min = def.min != null ? `min="${def.min}"` : "";
+            const max = def.max != null ? `max="${def.max}"` : "";
+            control = `<input id="${id}" type="number" ${step} ${min} ${max} value="${params[def.key] ?? ""}" />`;
+          }
+          return `<div class="field"><label for="${id}">${label}</label>${control}<div id="${hintId}" class="hint"></div></div>`;
+        }).join("");
+
+        activeFieldDefs.forEach((def) => {
+          const el = document.getElementById(`f_${def.key}`);
+          if (!el) return;
+          if (def.type === "bool") {
+            el.value = String(!!params[def.key]);
+          }
+          const updateHint = () => {
+            const hintEl = document.getElementById(`h_${def.key}`);
+            if (!hintEl) return;
+            if (def.hint === "centi-ms") {
+              const ms = Number(el.value || 0);
+              if (!Number.isNaN(ms)) {
+                hintEl.textContent = `${(ms / 1000).toFixed(2)} s (${Math.round(ms / 10)} centiseconds)`;
+              }
+            } else {
+              hintEl.textContent = "";
+            }
+          };
+          updateHint();
+          el.addEventListener("input", () => { updateHint(); markDirty(); });
+          el.addEventListener("change", () => { updateHint(); markDirty(); });
+        });
+      }
+
+      function emptyConditionBlock(cardId) {
+        return {
+          combiner: "NONE",
+          clauseA: { sourceCardId: cardId, operator: "ALWAYS_FALSE", thresholdValue: 0, thresholdCardId: cardId, useThresholdCard: false },
+          clauseB: { sourceCardId: cardId, operator: "ALWAYS_FALSE", thresholdValue: 0, thresholdCardId: cardId, useThresholdCard: false }
+        };
+      }
+
+      function conditionField(id, label, controlHtml) {
+        return `<div class="field"><label for="${id}">${label}</label>${controlHtml}</div>`;
+      }
+
+      function renderConditionGroup(rootEl, prefix, block, fallbackCardId) {
+        const b = block || emptyConditionBlock(fallbackCardId);
+        const a = b.clauseA || emptyConditionBlock(fallbackCardId).clauseA;
+        const c = b.clauseB || emptyConditionBlock(fallbackCardId).clauseB;
+        const opOptions = CONDITION_OPERATORS.map((o) => `<option value="${o}" ${o === a.operator ? "selected" : ""}>${o}</option>`).join("");
+        const opOptionsB = CONDITION_OPERATORS.map((o) => `<option value="${o}" ${o === c.operator ? "selected" : ""}>${o}</option>`).join("");
+        const combOptions = COMBINERS.map((x) => `<option value="${x}" ${x === b.combiner ? "selected" : ""}>${x}</option>`).join("");
+
+        rootEl.innerHTML = [
+          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
+          conditionField(`${prefix}_a_source`, "ClauseA Source Card", `<input id="${prefix}_a_source" type="number" value="${a.sourceCardId ?? fallbackCardId}" />`),
+          conditionField(`${prefix}_a_operator`, "ClauseA Operator", `<select id="${prefix}_a_operator">${opOptions}</select>`),
+          conditionField(`${prefix}_a_thr`, "ClauseA Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
+          conditionField(`${prefix}_a_thr_card`, "ClauseA Threshold Card", `<input id="${prefix}_a_thr_card" type="number" value="${a.thresholdCardId ?? fallbackCardId}" />`),
+          conditionField(`${prefix}_a_use_card`, "ClauseA Use Threshold Card", `<select id="${prefix}_a_use_card">${boolOptions()}</select>`),
+          conditionField(`${prefix}_b_source`, "ClauseB Source Card", `<input id="${prefix}_b_source" type="number" value="${c.sourceCardId ?? fallbackCardId}" />`),
+          conditionField(`${prefix}_b_operator`, "ClauseB Operator", `<select id="${prefix}_b_operator">${opOptionsB}</select>`),
+          conditionField(`${prefix}_b_thr`, "ClauseB Threshold", `<input id="${prefix}_b_thr" type="number" value="${c.thresholdValue ?? 0}" />`),
+          conditionField(`${prefix}_b_thr_card`, "ClauseB Threshold Card", `<input id="${prefix}_b_thr_card" type="number" value="${c.thresholdCardId ?? fallbackCardId}" />`),
+          conditionField(`${prefix}_b_use_card`, "ClauseB Use Threshold Card", `<select id="${prefix}_b_use_card">${boolOptions()}</select>`) 
+        ].join("");
+
+        document.getElementById(`${prefix}_a_use_card`).value = String(!!a.useThresholdCard);
+        document.getElementById(`${prefix}_b_use_card`).value = String(!!c.useThresholdCard);
+
+        rootEl.querySelectorAll("input,select").forEach((el) => {
+          el.addEventListener("change", () => markDirty());
+          el.addEventListener("input", () => markDirty());
+        });
+      }
+
+      function loadSelectedCardToForm() {
+        const card = currentConfig?.cards?.[selectedCardIndex];
+        if (!card) return;
+        cId.value = card.id;
+        cFamily.value = card.family;
+        cEnabled.value = String(!!card.enabled);
+        renderFamilyFields(card);
+
+        const supportsEval = ["DI", "DO", "SIO", "MATH"].includes(card.family);
+        evalPanelEl.style.display = supportsEval ? "block" : "none";
+        if (supportsEval) {
+          renderConditionGroup(onGroupEl, "on", card.params?.turnOnCondition, card.id);
+          renderConditionGroup(offGroupEl, "off", card.params?.turnOffCondition, card.id);
+        }
+      }
+
+      function readBool(id) { return document.getElementById(id).value === "true"; }
+      function readNum(id, fallback) {
+        const n = Number(document.getElementById(id).value);
+        return Number.isNaN(n) ? fallback : n;
+      }
+
+      function readConditionGroup(prefix, fallbackCardId) {
+        return {
+          combiner: document.getElementById(`${prefix}_combiner`).value,
+          clauseA: {
+            sourceCardId: readNum(`${prefix}_a_source`, fallbackCardId),
+            operator: document.getElementById(`${prefix}_a_operator`).value,
+            thresholdValue: readNum(`${prefix}_a_thr`, 0),
+            thresholdCardId: readNum(`${prefix}_a_thr_card`, fallbackCardId),
+            useThresholdCard: readBool(`${prefix}_a_use_card`)
+          },
+          clauseB: {
+            sourceCardId: readNum(`${prefix}_b_source`, fallbackCardId),
+            operator: document.getElementById(`${prefix}_b_operator`).value,
+            thresholdValue: readNum(`${prefix}_b_thr`, 0),
+            thresholdCardId: readNum(`${prefix}_b_thr_card`, fallbackCardId),
+            useThresholdCard: readBool(`${prefix}_b_use_card`)
+          }
+        };
+      }
+
+      function applySelectedCardFromForm() {
+        const card = currentConfig?.cards?.[selectedCardIndex];
+        if (!card) return;
+        const params = card.params || {};
+        card.enabled = cEnabled.value === "true";
+
+        activeFieldDefs.forEach((def) => {
+          const el = document.getElementById(`f_${def.key}`);
+          if (!el) return;
+          if (def.type === "bool") {
+            params[def.key] = el.value === "true";
+          } else if (def.type === "enum") {
+            params[def.key] = Number(el.value);
+          } else {
+            params[def.key] = readNum(`f_${def.key}`, params[def.key] ?? 0);
+          }
+        });
+
+        if (["DI", "DO", "SIO", "MATH"].includes(card.family)) {
+          params.turnOnCondition = readConditionGroup("on", card.id);
+          params.turnOffCondition = readConditionGroup("off", card.id);
+        }
+
+        card.params = params;
       }
 
       async function api(path, method, payload) {
@@ -124,76 +454,122 @@
         const text = await resp.text();
         let data = null;
         try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
-        if (!resp.ok) {
-          throw new Error(`${resp.status} ${JSON.stringify(data)}`);
-        }
+        if (!resp.ok) throw new Error(`${resp.status} ${JSON.stringify(data)}`);
         return data;
       }
 
       async function loadActive() {
+        setBusy(true);
         const data = await api("/api/v3/config/active", "GET");
-        editor.value = JSON.stringify(data.config || {}, null, 2);
-        setLog(true, `Loaded activeVersion=${data.activeVersion}`, JSON.stringify(data, null, 2));
+        currentConfig = data.config || { schemaVersion: 300, scanPeriodMs: 10, system: {}, cards: [] };
+        selectedCardIndex = 0;
+        renderCardList();
+        loadSelectedCardToForm();
+        clearDirty();
+        setResult(true, "Loaded active config.", `version=${data.activeVersion}`);
+        setLog(true, `Loaded activeVersion=${data.activeVersion}`, "Card editor synchronized.");
+        setBusy(false);
       }
 
       async function validateStaged() {
-        const cfg = parseEditorConfig();
+        setBusy(true);
+        applySelectedCardFromForm();
         const data = await api("/api/v3/config/staged/validate", "POST", {
           requestId: `cfg-val-${Date.now()}`,
           apiVersion: "2.0",
-          config: cfg,
+          config: currentConfig,
         });
+        setResult(true, "Validation passed.", data.reason ? `reason=${data.reason}` : "");
         setLog(true, "Validate success", JSON.stringify(data, null, 2));
+        setBusy(false);
       }
 
       async function saveStaged() {
-        const cfg = parseEditorConfig();
+        setBusy(true);
+        applySelectedCardFromForm();
         const data = await api("/api/v3/config/staged/save", "POST", {
           requestId: `cfg-save-${Date.now()}`,
           apiVersion: "2.0",
-          config: cfg,
+          config: currentConfig,
         });
-        setLog(true, `Staged save success version=${data.stagedVersion}`, JSON.stringify(data, null, 2));
+        clearDirty();
+        setResult(true, "Staged config saved.", `version=${data.stagedVersion}`);
+        setLog(true, "Save staged success", JSON.stringify(data, null, 2));
+        setBusy(false);
       }
 
       async function commit() {
-        const cfg = parseEditorConfig();
+        if (!confirm("Commit this config to active runtime? Device restart may be required.")) {
+          setResult(false, "Commit cancelled.", "User cancelled confirmation.");
+          return;
+        }
+        setBusy(true);
+        applySelectedCardFromForm();
         const data = await api("/api/v3/config/commit", "POST", {
           requestId: `cfg-commit-${Date.now()}`,
           apiVersion: "2.0",
-          config: cfg,
+          config: currentConfig,
           options: { persist: false },
         });
-        setLog(true, "Commit success (requires restart)", JSON.stringify(data, null, 2));
+        clearDirty();
+        setResult(true, "Commit accepted.", "Runtime restart required to fully apply.");
+        setLog(true, "Commit success", JSON.stringify(data, null, 2));
+        setBusy(false);
       }
 
       async function restore(source) {
+        const msg = source === "FACTORY" ? "Restore FACTORY defaults?" : "Restore Last Known Good (LKG) config?";
+        if (!confirm(msg)) {
+          setResult(false, `Restore ${source} cancelled.`, "User cancelled confirmation.");
+          return;
+        }
+        setBusy(true);
         const data = await api("/api/v3/config/restore", "POST", {
           requestId: `cfg-restore-${Date.now()}`,
           apiVersion: "2.0",
           source,
         });
-        setLog(true, `Restore ${source} success (requires restart)`, JSON.stringify(data, null, 2));
+        setResult(true, `Restore ${source} accepted.`, "Reload active config after apply/restart.");
+        setLog(true, `Restore ${source} success`, JSON.stringify(data, null, 2));
+        setBusy(false);
       }
 
-      function formatEditor() {
-        try {
-          editor.value = JSON.stringify(parseEditorConfig(), null, 2);
-          setLog(true, "Editor formatted", "");
-        } catch (err) {
-          setLog(false, "Format failed", String(err));
+      async function runAction(label, fn) {
+        if (requestInFlight) return;
+        try { await fn(); } catch (e) {
+          setBusy(false);
+          setResult(false, `${label} failed.`, String(e));
+          setLog(false, `${label} failed`, String(e));
         }
       }
 
-      document.getElementById("btnLoad").addEventListener("click", () => loadActive().catch((e) => setLog(false, "Load failed", String(e))));
-      document.getElementById("btnValidate").addEventListener("click", () => validateStaged().catch((e) => setLog(false, "Validate failed", String(e))));
-      document.getElementById("btnSave").addEventListener("click", () => saveStaged().catch((e) => setLog(false, "Save staged failed", String(e))));
-      document.getElementById("btnCommit").addEventListener("click", () => commit().catch((e) => setLog(false, "Commit failed", String(e))));
-      document.getElementById("btnRestoreLkg").addEventListener("click", () => restore("LKG").catch((e) => setLog(false, "Restore LKG failed", String(e))));
-      document.getElementById("btnRestoreFactory").addEventListener("click", () => restore("FACTORY").catch((e) => setLog(false, "Restore FACTORY failed", String(e))));
-      document.getElementById("btnFormat").addEventListener("click", formatEditor);
+      document.getElementById("btnLoad").addEventListener("click", () => runAction("Load", loadActive));
+      document.getElementById("btnValidate").addEventListener("click", () => runAction("Validate", validateStaged));
+      document.getElementById("btnSave").addEventListener("click", () => runAction("Save staged", saveStaged));
+      document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
+      document.getElementById("btnRestoreLkg").addEventListener("click", () => runAction("Restore LKG", () => restore("LKG")));
+      document.getElementById("btnRestoreFactory").addEventListener("click", () => runAction("Restore FACTORY", () => restore("FACTORY")));
+      document.getElementById("btnApplyCard").addEventListener("click", () => {
+        applySelectedCardFromForm();
+        renderCardList();
+        markDirty();
+        setResult(true, "Card changes applied locally.", "Validate/Save to persist.");
+      });
 
-      loadActive().catch((e) => setLog(false, "Initial load failed", String(e)));
+      cEnabled.addEventListener("change", markDirty);
+
+      window.addEventListener("beforeunload", (ev) => {
+        if (!dirty) return;
+        ev.preventDefault();
+        ev.returnValue = "";
+      });
+
+      const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
+      themeSelect.value = savedTheme;
+      applyTheme(savedTheme);
+      themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
+      runAction("Initial load", loadActive);
     </script>
   </body>
 </html>

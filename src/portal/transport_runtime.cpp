@@ -173,10 +173,9 @@ void writeConditionBlock(JsonObject dst, const v3::storage::ConditionBlock& bloc
   dst["combiner"] = conditionCombinerToString(block.combiner);
   JsonObject clauseA = dst["clauseA"].to<JsonObject>();
   writeConditionClause(clauseA, block.clauseA);
-  if (block.combiner != v3::storage::ConditionCombiner::None) {
-    JsonObject clauseB = dst["clauseB"].to<JsonObject>();
-    writeConditionClause(clauseB, block.clauseB);
-  }
+  // Keep payload shape stable for all cards by always emitting clauseB.
+  JsonObject clauseB = dst["clauseB"].to<JsonObject>();
+  writeConditionClause(clauseB, block.clauseB);
 }
 
 void writeSystemConfigJson(JsonObject out,

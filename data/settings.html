@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -6,11 +6,11 @@
     <meta name="theme-color" content="#0e1719" id="themeColorMeta" />
     <title>AT-V3 Portal | Settings</title>
     <style>
-      :root { --bg:#0e1719; --bg-top:#1a3741; --panel:#16282d; --line:#2a535d; --text:#e6f4f6; --muted:#bad2d6; --muted-strong:#d4e8ec; --accent:#5eead4; --accent-2:#7dd3fc; --surface:#1d3840; --shadow:0 12px 28px rgba(2, 10, 14, 0.35); }
-      body[data-theme="light"] { --bg:#f4f7f8; --bg-top:#dbe9ee; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; --muted-strong:#26424e; --accent:#0ea5e9; --accent-2:#2563eb; --surface:#dce9ed; --shadow:0 10px 24px rgba(17, 38, 49, 0.13); }
-      body[data-theme="solarized"] { --bg:#002b36; --bg-top:#0b3b45; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; --muted-strong:#a8b9b9; --accent:#b58900; --accent-2:#2aa198; --surface:#0d4d5d; --shadow:0 12px 30px rgba(0, 16, 20, 0.35); }
-      body[data-theme="neon-orchid"] { --bg:#1a1231; --bg-top:#2b1a56; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; --muted-strong:#ded2fb; --accent:#f472b6; --accent-2:#22d3ee; --surface:#34245e; --shadow:0 14px 32px rgba(15, 9, 28, 0.45); }
-      body[data-theme="velvet-sand"] { --bg:#1b1412; --bg-top:#3b2a24; --panel:#2a1f1a; --line:#8f6e5f; --text:#f8eee8; --muted:#d6c1b4; --muted-strong:#e5d5cb; --accent:#e7a977; --accent-2:#d3b37a; --surface:#3a2a23; --shadow:0 14px 30px rgba(24, 16, 13, 0.45); }
+      :root { --bg:#0e1719; --bg-top:#1a3741; --panel:#16282d; --line:#2a535d; --text:#e6f4f6; --muted:#bad2d6; --muted-strong:#d4e8ec; --accent:#5eead4; --accent-2:#7dd3fc; --surface:#1d3840; --surface-hover:#274a54; --surface-field:#0f2025; --shadow:0 12px 28px rgba(2, 10, 14, 0.35); }
+      body[data-theme="light"] { --bg:#f4f7f8; --bg-top:#dbe9ee; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; --muted-strong:#26424e; --accent:#0ea5e9; --accent-2:#2563eb; --surface:#dce9ed; --surface-hover:#cfdee4; --surface-field:#f8fbfc; --shadow:0 10px 24px rgba(17, 38, 49, 0.13); }
+      body[data-theme="solarized"] { --bg:#002b36; --bg-top:#0b3b45; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; --muted-strong:#a8b9b9; --accent:#b58900; --accent-2:#2aa198; --surface:#0d4d5d; --surface-hover:#156273; --surface-field:#06303a; --shadow:0 12px 30px rgba(0, 16, 20, 0.35); }
+      body[data-theme="neon-orchid"] { --bg:#1a1231; --bg-top:#2b1a56; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; --muted-strong:#ded2fb; --accent:#f472b6; --accent-2:#22d3ee; --surface:#34245e; --surface-hover:#45337a; --surface-field:#1f153a; --shadow:0 14px 32px rgba(15, 9, 28, 0.45); }
+      body[data-theme="velvet-sand"] { --bg:#1b1412; --bg-top:#3b2a24; --panel:#2a1f1a; --line:#8f6e5f; --text:#f8eee8; --muted:#d6c1b4; --muted-strong:#e5d5cb; --accent:#e7a977; --accent-2:#d3b37a; --surface:#3a2a23; --surface-hover:#49362d; --surface-field:#241b17; --shadow:0 14px 30px rgba(24, 16, 13, 0.45); }
       * { box-sizing: border-box; }
       html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 16% 0%, var(--bg-top) 0%, transparent 35%), var(--bg); color: var(--text); }
       .app { max-width: 980px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
@@ -19,11 +19,24 @@
       .nav a { color: var(--muted-strong); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
       .nav a.active { color: var(--text); background: var(--surface); }
       .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; box-shadow: var(--shadow); }
-      .muted { color: var(--muted-strong); }
-      .pill { display:inline-block; margin:4px 6px 0 0; border:1px solid var(--line); background: var(--surface); color: var(--accent-2); padding:6px 10px; border-radius:999px; }
+      .grid { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+      .field { display: grid; gap: 4px; }
+      .field label { font-size: 12px; color: var(--muted-strong); }
+      .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 8px 11px; cursor: pointer; }
+      button:hover { background: var(--surface-hover); }
+      button:disabled { opacity: 0.65; cursor: wait; }
       .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 8px; font-size: 13px; }
+      .result { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; }
+      .result strong { color: var(--accent-2); }
+      .log { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); }
+      .ok { color: #4ade80; }
+      .bad { color: #ef4444; }
+      .muted { color: var(--muted-strong); }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--muted-strong); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body data-theme="dark">
@@ -44,30 +57,72 @@
           </select>
         </nav>
       </header>
+
       <section class="card">
-        <strong>Slice status:</strong> settings endpoint wiring is next after config API baseline.
-        <p class="muted">Scope is already locked in plan: WiFi, timezone/time server, scan stepping interval, theme presets, reboot, simulation-control toggle (default OFF).</p>
-        <div>
-          <span class="pill">&#x1F4F6; WiFi</span>
-          <span class="pill">&#x1F5FA; Timezone</span>
-          <span class="pill">&#x23F1; Time Server</span>
-          <span class="pill">&#x1F522; Step Interval</span>
-          <span class="pill">&#x1F3A8; Themes x5</span>
-          <span class="pill">&#x21BB; Reboot</span>
-          <span class="pill">&#x1F9EA; Simulation Toggle</span>
+        <div><strong>System Settings</strong> <span class="muted">(WiFi, time, scan)</span></div>
+        <div class="grid" style="margin-top:10px;">
+          <div class="field"><label>Schema Version</label><input id="fSchema" type="number" /></div>
+          <div class="field"><label>Scan Period (ms)</label><input id="fScan" type="number" /></div>
+          <div class="field"><label>Timezone</label><input id="fTz" type="text" /></div>
+          <div class="field"><label>Primary NTP Server</label><input id="fNtp1" type="text" /></div>
+          <div class="field"><label>Secondary NTP Server</label><input id="fNtp2" type="text" /></div>
+          <div class="field"><label>Tertiary NTP Server</label><input id="fNtp3" type="text" /></div>
+          <div class="field"><label>Sync Interval (sec)</label><input id="fSyncInt" type="number" /></div>
+          <div class="field"><label>Startup Timeout (sec)</label><input id="fStartupTimeout" type="number" /></div>
+          <div class="field"><label>Max Time Age (sec)</label><input id="fMaxAge" type="number" /></div>
+          <div class="field"><label>User WiFi SSID</label><input id="fSsid" type="text" /></div>
+          <div class="field"><label>User WiFi Password</label><input id="fPass" type="text" /></div>
+          <div class="field"><label>User Timeout (sec)</label><input id="fUserTimeout" type="number" /></div>
+          <div class="field"><label>Retry Delay (sec)</label><input id="fRetry" type="number" /></div>
+          <div class="field"><label>STA Only</label><select id="fStaOnly"><option value="true">true</option><option value="false">false</option></select></div>
         </div>
+
+        <div class="actions">
+          <button id="btnLoad">&#x1F4E5; Load Active</button>
+          <button id="btnValidate">&#x2705; Validate Staged</button>
+          <button id="btnSave">&#x1F4BE; Save Staged</button>
+          <button id="btnCommit">&#x1F680; Commit</button>
+        </div>
+
+        <div id="result" class="result"><strong>Status:</strong> Idle.</div>
+        <div id="log" class="log">Ready.</div>
       </section>
+
       <footer class="site-footer">
         <div>&copy; Advanced Timer V3</div>
         <div class="name">Developed by Yahya Tamim</div>
       </footer>
+
       <script>
         const themeSelect = document.getElementById("themeSelect");
+        const resultEl = document.getElementById("result");
+        const logEl = document.getElementById("log");
+        const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit"];
+        let requestInFlight = false;
+        let currentConfig = null;
+        let dirty = false;
+
+        const fSchema = document.getElementById("fSchema");
+        const fScan = document.getElementById("fScan");
+        const fTz = document.getElementById("fTz");
+        const fNtp1 = document.getElementById("fNtp1");
+        const fNtp2 = document.getElementById("fNtp2");
+        const fNtp3 = document.getElementById("fNtp3");
+        const fSyncInt = document.getElementById("fSyncInt");
+        const fStartupTimeout = document.getElementById("fStartupTimeout");
+        const fMaxAge = document.getElementById("fMaxAge");
+        const fSsid = document.getElementById("fSsid");
+        const fPass = document.getElementById("fPass");
+        const fUserTimeout = document.getElementById("fUserTimeout");
+        const fRetry = document.getElementById("fRetry");
+        const fStaOnly = document.getElementById("fStaOnly");
+
         function normalizeTheme(theme) {
           if (theme === "colorful-a") return "neon-orchid";
           if (theme === "colorful-b") return "velvet-sand";
           return theme;
         }
+
         function applyTheme(theme) {
           theme = normalizeTheme(theme);
           document.body.setAttribute("data-theme", theme);
@@ -76,10 +131,179 @@
           const bg = getComputedStyle(document.body).getPropertyValue("--bg").trim();
           if (meta && bg) meta.setAttribute("content", bg);
         }
+
+        function setBusy(busy) {
+          requestInFlight = busy;
+          actionIds.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = busy;
+          });
+        }
+
+        function stamp() { return new Date().toISOString(); }
+        function setResult(ok, title, detail) {
+          resultEl.className = ok ? "result ok" : "result bad";
+          resultEl.innerHTML = `<strong>${title}</strong>${detail ? ` ${detail}` : ""}`;
+        }
+        function setLog(ok, msg, body) {
+          logEl.className = ok ? "log ok" : "log bad";
+          logEl.textContent = `[${stamp()}] ${msg}${body ? "\n" + body : ""}`;
+        }
+
+        function markDirty() {
+          dirty = true;
+          document.title = "* AT-V3 Portal | Settings";
+        }
+        function clearDirty() {
+          dirty = false;
+          document.title = "AT-V3 Portal | Settings";
+        }
+
+        function loadFormFromConfig(cfg) {
+          fSchema.value = cfg.schemaVersion ?? "";
+          fScan.value = cfg.scanPeriodMs ?? "";
+          const wifi = cfg.system?.wifi || {};
+          const t = cfg.system?.time || {};
+          const ts = t.timeSync || {};
+          fTz.value = t.timezone ?? "";
+          fNtp1.value = ts.primaryTimeServer ?? "";
+          fNtp2.value = ts.secondaryServer ?? "";
+          fNtp3.value = ts.tertiaryServer ?? "";
+          fSyncInt.value = ts.syncIntervalSec ?? "";
+          fStartupTimeout.value = ts.startupTimeoutSec ?? "";
+          fMaxAge.value = ts.maxTimeAgeSec ?? "";
+          const user = wifi.userConfiguredNetwork || {};
+          fSsid.value = user.ssid ?? "";
+          fPass.value = user.password ?? "";
+          fUserTimeout.value = user.timeoutSec ?? "";
+          fRetry.value = wifi.retryDelaySec ?? "";
+          fStaOnly.value = String(!!wifi.staOnly);
+        }
+
+        function applyFormToConfig(cfg) {
+          cfg.schemaVersion = Number(fSchema.value || cfg.schemaVersion || 300);
+          cfg.scanPeriodMs = Number(fScan.value || cfg.scanPeriodMs || 10);
+          cfg.system = cfg.system || {};
+          cfg.system.wifi = cfg.system.wifi || {};
+          cfg.system.wifi.userConfiguredNetwork = cfg.system.wifi.userConfiguredNetwork || {};
+          cfg.system.wifi.userConfiguredNetwork.ssid = fSsid.value;
+          cfg.system.wifi.userConfiguredNetwork.password = fPass.value;
+          cfg.system.wifi.userConfiguredNetwork.timeoutSec = Number(fUserTimeout.value || cfg.system.wifi.userConfiguredNetwork.timeoutSec || 180);
+          cfg.system.wifi.retryDelaySec = Number(fRetry.value || cfg.system.wifi.retryDelaySec || 30);
+          cfg.system.wifi.staOnly = fStaOnly.value === "true";
+          cfg.system.time = cfg.system.time || {};
+          cfg.system.time.timezone = fTz.value;
+          cfg.system.time.timeSync = cfg.system.time.timeSync || {};
+          cfg.system.time.timeSync.primaryTimeServer = fNtp1.value;
+          cfg.system.time.timeSync.secondaryServer = fNtp2.value;
+          cfg.system.time.timeSync.tertiaryServer = fNtp3.value;
+          cfg.system.time.timeSync.syncIntervalSec = Number(fSyncInt.value || cfg.system.time.timeSync.syncIntervalSec || 3600);
+          cfg.system.time.timeSync.startupTimeoutSec = Number(fStartupTimeout.value || cfg.system.time.timeSync.startupTimeoutSec || 15);
+          cfg.system.time.timeSync.maxTimeAgeSec = Number(fMaxAge.value || cfg.system.time.timeSync.maxTimeAgeSec || 86400);
+          return cfg;
+        }
+
+        async function api(path, method, payload) {
+          const resp = await fetch(path, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: payload ? JSON.stringify(payload) : undefined,
+          });
+          const text = await resp.text();
+          let data = null;
+          try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
+          if (!resp.ok) throw new Error(`${resp.status} ${JSON.stringify(data)}`);
+          return data;
+        }
+
+        async function loadActive() {
+          setBusy(true);
+          const data = await api("/api/v3/config/active", "GET");
+          currentConfig = data.config || {};
+          loadFormFromConfig(currentConfig);
+          clearDirty();
+          setResult(true, "Loaded active settings.", `version=${data.activeVersion}`);
+          setLog(true, "Load success", "Settings form synchronized from active config.");
+          setBusy(false);
+        }
+
+        async function validateStaged() {
+          setBusy(true);
+          const cfg = applyFormToConfig(currentConfig || {});
+          const data = await api("/api/v3/config/staged/validate", "POST", {
+            requestId: `set-val-${Date.now()}`,
+            apiVersion: "2.0",
+            config: cfg,
+          });
+          setResult(true, "Validation passed.", "");
+          setLog(true, "Validate success", JSON.stringify(data, null, 2));
+          setBusy(false);
+        }
+
+        async function saveStaged() {
+          setBusy(true);
+          const cfg = applyFormToConfig(currentConfig || {});
+          const data = await api("/api/v3/config/staged/save", "POST", {
+            requestId: `set-save-${Date.now()}`,
+            apiVersion: "2.0",
+            config: cfg,
+          });
+          clearDirty();
+          setResult(true, "Settings staged.", `version=${data.stagedVersion}`);
+          setLog(true, "Save success", JSON.stringify(data, null, 2));
+          setBusy(false);
+        }
+
+        async function commit() {
+          if (!confirm("Commit settings to active runtime? Device restart may be required.")) {
+            setResult(false, "Commit cancelled.", "User cancelled confirmation.");
+            return;
+          }
+          setBusy(true);
+          const cfg = applyFormToConfig(currentConfig || {});
+          const data = await api("/api/v3/config/commit", "POST", {
+            requestId: `set-commit-${Date.now()}`,
+            apiVersion: "2.0",
+            config: cfg,
+            options: { persist: false },
+          });
+          clearDirty();
+          setResult(true, "Commit accepted.", "Runtime restart required to fully apply.");
+          setLog(true, "Commit success", JSON.stringify(data, null, 2));
+          setBusy(false);
+        }
+
+        async function runAction(label, fn) {
+          if (requestInFlight) return;
+          try { await fn(); } catch (e) {
+            setBusy(false);
+            setResult(false, `${label} failed.`, String(e));
+            setLog(false, `${label} failed`, String(e));
+          }
+        }
+
+        document.getElementById("btnLoad").addEventListener("click", () => runAction("Load", loadActive));
+        document.getElementById("btnValidate").addEventListener("click", () => runAction("Validate", validateStaged));
+        document.getElementById("btnSave").addEventListener("click", () => runAction("Save", saveStaged));
+        document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
+
+        [fSchema, fScan, fTz, fNtp1, fNtp2, fNtp3, fSyncInt, fStartupTimeout, fMaxAge, fSsid, fPass, fUserTimeout, fRetry, fStaOnly].forEach((el) => {
+          el.addEventListener("change", () => markDirty());
+        });
+
+        window.addEventListener("beforeunload", (ev) => {
+          if (!dirty) return;
+          ev.preventDefault();
+          ev.returnValue = "";
+        });
+
         const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
         themeSelect.value = savedTheme;
         applyTheme(savedTheme);
         themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
+        runAction("Initial load", loadActive);
       </script>
     </main>
   </body>
