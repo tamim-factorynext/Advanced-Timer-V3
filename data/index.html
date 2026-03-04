@@ -3,29 +3,211 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Portal UI Deprecated</title>
+    <title>AT-V3 Portal | Live Runtime</title>
     <style>
-      body { font-family: Segoe UI, Tahoma, sans-serif; margin: 0; background: #0b1220; color: #e5e7eb; }
-      .wrap { max-width: 760px; margin: 48px auto; padding: 0 16px; }
-      .card { background: #111827; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
-      h1 { margin-top: 0; }
-      code { background: #1f2937; padding: 2px 6px; border-radius: 6px; }
-      a { color: #38bdf8; }
+      :root {
+        --bg-0: #0b1418;
+        --bg-1: #112027;
+        --bg-2: #17313a;
+        --text-0: #e8f6f8;
+        --text-1: #b8d2d7;
+        --ok: #4ade80;
+        --warn: #f59e0b;
+        --bad: #ef4444;
+        --line: #28515e;
+        --chip: #16313a;
+      }
+      body[data-theme="light"] { --bg-0:#f4f7f8; --bg-1:#e6eef0; --bg-2:#d6e4e8; --text-0:#12242b; --text-1:#36535f; --line:#8eb0bb; --chip:#dfecef; }
+      body[data-theme="solarized"] { --bg-0:#002b36; --bg-1:#073642; --bg-2:#0e4553; --text-0:#eee8d5; --text-1:#93a1a1; --line:#2f6d7e; --chip:#083946; }
+      body[data-theme="colorful-a"] { --bg-0:#1a1231; --bg-1:#251a46; --bg-2:#32235f; --text-0:#f3ecff; --text-1:#cbb9f1; --line:#6b56a5; --chip:#2a1d50; }
+      body[data-theme="colorful-b"] { --bg-0:#13260f; --bg-1:#1f3818; --bg-2:#2b4f22; --text-0:#effbe8; --text-1:#bfd7b4; --line:#5f8a51; --chip:#223f1a; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: radial-gradient(circle at 20% 0%, #1a3741 0%, var(--bg-0) 45%); color: var(--text-0); }
+      body { min-height: 100vh; }
+      .app { max-width: 1100px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
+      .topbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0 12px; flex-wrap: wrap; }
+      .brand { font-weight: 700; letter-spacing: 0.3px; }
+      .brand small { display: block; color: var(--text-1); font-weight: 500; letter-spacing: 0; }
+      .nav { display: flex; gap: 8px; }
+      .nav a { color: var(--text-1); text-decoration: none; border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.2); font-size: 14px; }
+      .nav a.active { color: var(--text-0); background: var(--bg-2); }
+      .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--chip); color: var(--text-0); padding: 8px; font-size: 13px; }
+      .card { border: 1px solid var(--line); border-radius: 14px; background: rgba(10, 27, 33, 0.78); backdrop-filter: blur(2px); }
+      .status { padding: 12px; display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(140px, 1fr)); }
+      .kpi { background: var(--chip); border: 1px solid #224854; border-radius: 10px; padding: 8px 10px; }
+      .kpi .k { color: var(--text-1); font-size: 12px; }
+      .kpi .v { font-size: 18px; font-weight: 700; margin-top: 2px; }
+      .row { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: 1fr; }
+      .pane { padding: 12px; }
+      .title { font-weight: 700; margin-bottom: 10px; }
+      .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+      .chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--text-1); }
+      .chip strong { color: var(--text-0); }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .bad { color: var(--bad); }
+      .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+      .node { border: 1px solid #234b57; border-radius: 10px; background: rgba(12, 31, 38, 0.9); padding: 10px; }
+      .node h4 { margin: 0 0 7px; font-size: 14px; display: flex; justify-content: space-between; }
+      .node .meta { font-size: 12px; color: var(--text-1); display: grid; gap: 4px; }
+      .footer { margin-top: 10px; color: var(--text-1); font-size: 12px; }
+      @media (max-width: 760px) {
+        .status { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      }
     </style>
   </head>
-  <body>
-    <div class="wrap">
-      <div class="card">
-        <h1>Deprecated Portal UI</h1>
-        <p>This page is deprecated. The frontend is being rebuilt from scratch.</p>
-        <p>Backend V3 APIs remain active for the new portal implementation:</p>
-        <ul>
-          <li><code>POST /api/v3/command</code></li>
-          <li><code>GET /api/v3/snapshot</code></li>
-          <li><code>GET /api/v3/diagnostics</code></li>
-        </ul>
-        <p>Archived frontend reference is stored in <code>docs/archive/portal-frontend/</code>.</p>
+  <body data-theme="dark">
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">&#x2699; AT-V3 Portal<small>Live Runtime Slice (V3-only APIs)</small></div>
+        <nav class="nav">
+          <a class="active" href="/">&#x1F4CA; Live</a>
+          <a href="/config">&#x2692; Config</a>
+          <a href="/settings">&#x2699; Settings</a>
+          <a href="/learn">&#x1F393; Learn</a>
+          <select id="themeSelect" class="theme" aria-label="Theme">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="solarized">Solarized</option>
+            <option value="colorful-a">Colorful A</option>
+            <option value="colorful-b">Colorful B</option>
+          </select>
+        </nav>
+      </header>
+
+      <section class="card status" id="kpiRow">
+        <div class="kpi"><div class="k">Link</div><div class="v" id="kConn">...</div></div>
+        <div class="kpi"><div class="k">Scan</div><div class="v" id="kScan">...</div></div>
+        <div class="kpi"><div class="k">Overruns</div><div class="v" id="kOver">...</div></div>
+        <div class="kpi"><div class="k">Queue</div><div class="v" id="kQueue">...</div></div>
+      </section>
+
+      <div class="row">
+        <section class="card pane">
+          <div class="title">&#x1F4DD; Runtime Summary</div>
+          <div class="chips" id="summaryChips"></div>
+          <div class="footer" id="meta">Waiting for first snapshot...</div>
+        </section>
+
+        <section class="card pane">
+          <div class="title">&#x1F5C2; Cards</div>
+          <div class="cards" id="cards"></div>
+        </section>
       </div>
-    </div>
+    </main>
+
+    <script>
+      const state = {
+        connected: false,
+        lastOkMs: 0,
+        lastError: "none",
+      };
+
+      const el = {
+        conn: document.getElementById("kConn"),
+        scan: document.getElementById("kScan"),
+        over: document.getElementById("kOver"),
+        queue: document.getElementById("kQueue"),
+        chips: document.getElementById("summaryChips"),
+        cards: document.getElementById("cards"),
+        meta: document.getElementById("meta"),
+      };
+      const themeSelect = document.getElementById("themeSelect");
+
+      function applyTheme(theme) {
+        document.body.setAttribute("data-theme", theme);
+        localStorage.setItem("atv3_theme", theme);
+      }
+      const savedTheme = localStorage.getItem("atv3_theme") || "dark";
+      themeSelect.value = savedTheme;
+      applyTheme(savedTheme);
+      themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
+      function statusClass(ok, warn) {
+        if (!ok) return "bad";
+        return warn ? "warn" : "ok";
+      }
+
+      function renderSummary(s) {
+        const m = s.metrics || {};
+        const overWarn = Number(m.scanOverrunCount || 0) > 0;
+        const qWarn = Number(m.snapshotQueueDropCount || 0) > 0;
+
+        el.conn.className = statusClass(state.connected, false);
+        el.conn.textContent = state.connected ? "ONLINE" : "OFFLINE";
+
+        el.scan.className = statusClass(state.connected, overWarn);
+        el.scan.textContent = `${s.scanPeriodMs} ms`;
+
+        el.over.className = statusClass(state.connected, overWarn);
+        el.over.textContent = `${m.scanOverrunCount || 0}`;
+
+        el.queue.className = statusClass(state.connected, qWarn);
+        el.queue.textContent = `${m.snapshotQueueDepth || 0}/${m.snapshotQueueHighWater || 0}`;
+
+        const chipData = [
+          ["Mode", s.engineMode || "?"],
+          ["Cards", `${m.enabledCardCount || 0}/${m.configuredCardCount || 0}`],
+          ["Scan Last", `${m.scanLastUs || 0} us`],
+          ["Scan Max", `${m.scanMaxUs || 0} us`],
+          ["Budget", `${m.scanBudgetUs || 0} us`],
+          ["Drops", `${m.snapshotQueueDropCount || 0}`],
+          ["Seq", `${s.snapshotSeq || 0}`],
+        ];
+
+        el.chips.innerHTML = chipData.map(([k, v]) => `<div class="chip">${k}: <strong>${v}</strong></div>`).join("");
+        el.meta.textContent = `tsMs=${s.tsMs} | lastError=${state.lastError}`;
+      }
+
+      function renderCards(cards) {
+        if (!Array.isArray(cards) || cards.length === 0) {
+          el.cards.innerHTML = '<div class="node"><div class="meta">No card rows in snapshot.</div></div>';
+          return;
+        }
+        el.cards.innerHTML = cards.map((c) => {
+          const truth = c.actualState ? "ON" : "OFF";
+          const truthClass = c.actualState ? "ok" : "warn";
+          return `
+            <article class="node">
+              <h4><span>${c.type} #${c.id}</span><span class="${truthClass}">${truth}</span></h4>
+              <div class="meta">
+                <div>idx=${c.index} | mode=${c.mode}</div>
+                <div>state=${c.state} | value=${c.liveValue}</div>
+                <div>cmd=${c.commandState} act=${c.actualState} edge=${c.edgePulse}</div>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      async function fetchJson(path) {
+        const resp = await fetch(path, { cache: "no-store" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      }
+
+      async function tick() {
+        try {
+          const [snapshot] = await Promise.all([
+            fetchJson("/api/v3/snapshot"),
+            fetchJson("/api/v3/diagnostics").catch(() => null),
+          ]);
+          state.connected = true;
+          state.lastOkMs = Date.now();
+          state.lastError = "none";
+          renderSummary(snapshot);
+          renderCards(snapshot.cards || []);
+        } catch (err) {
+          state.connected = false;
+          state.lastError = String(err && err.message ? err.message : err);
+          el.conn.className = "bad";
+          el.conn.textContent = "OFFLINE";
+          el.meta.textContent = `Connection error: ${state.lastError}`;
+        }
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    </script>
   </body>
 </html>

@@ -210,7 +210,7 @@ Rules:
 
 ## 6.2 Config Lifecycle
 
-### `GET /api/config/active`
+### `GET /api/v3/config/active`
 
 ```json
 {
@@ -223,7 +223,7 @@ Rules:
 }
 ```
 
-### `POST /api/config/staged/save`
+### `POST /api/v3/config/staged/save`
 
 Request:
 ```json
@@ -246,7 +246,7 @@ Response:
 }
 ```
 
-### `POST /api/config/staged/validate`
+### `POST /api/v3/config/staged/validate`
 
 Request:
 ```json
@@ -272,7 +272,7 @@ Response:
 }
 ```
 
-### `POST /api/config/commit`
+### `POST /api/v3/config/commit`
 
 Request:
 ```json
@@ -300,7 +300,7 @@ Response:
 }
 ```
 
-### `POST /api/config/restore`
+### `POST /api/v3/config/restore`
 
 Request:
 ```json

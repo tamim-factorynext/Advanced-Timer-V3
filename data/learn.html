@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AT-V3 Portal | Learn</title>
+    <style>
+      :root {
+        --bg: #0d171c;
+        --panel: #12242b;
+        --line: #295261;
+        --text: #e7f5f8;
+        --muted: #b5d2d8;
+        --accent: #7dd3fc;
+      }
+      body[data-theme="light"] { --bg:#f4f7f8; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; --accent:#2563eb; }
+      body[data-theme="solarized"] { --bg:#002b36; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; --accent:#b58900; }
+      body[data-theme="colorful-a"] { --bg:#1a1231; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; --accent:#f472b6; }
+      body[data-theme="colorful-b"] { --bg:#13260f; --panel:#1f3818; --line:#5f8a51; --text:#effbe8; --muted:#bfd7b4; --accent:#f59e0b; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+      .app { max-width: 1080px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
+      .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .nav { display: flex; gap: 8px; }
+      .nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+      .nav a.active { color: var(--text); background: #17313a; }
+      .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; }
+      .title { margin: 0 0 8px; }
+      .muted { color: var(--muted); }
+      .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+      .tag { display: inline-block; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); padding: 4px 10px; font-size: 12px; margin-bottom: 8px; }
+      ol { margin: 8px 0 0 18px; }
+      li { margin: 6px 0; }
+      .theme { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 8px; font-size: 13px; }
+    </style>
+  </head>
+  <body data-theme="dark">
+    <main class="app">
+      <header class="top">
+        <h2 style="margin: 0">&#x1F393; Learn</h2>
+        <nav class="nav">
+          <a href="/">&#x1F4CA; Live</a>
+          <a href="/config">&#x2692; Config</a>
+          <a href="/settings">&#x2699; Settings</a>
+          <a class="active" href="/learn">&#x1F393; Learn</a>
+          <select id="themeSelect" class="theme" aria-label="Theme">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="solarized">Solarized</option>
+            <option value="colorful-a">Colorful A</option>
+            <option value="colorful-b">Colorful B</option>
+          </select>
+        </nav>
+      </header>
+
+      <section class="card">
+        <h3 class="title">Learning Hub (Placeholder)</h3>
+        <p class="muted">
+          This page combines three learning tracks for first release: Getting Started, Tutorial, and Curated Examples.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="tag">&#x1F680; Getting Started</div>
+          <h4 class="title">Start in 5 minutes</h4>
+          <ol>
+            <li>Power device and open the portal.</li>
+            <li>Check Live runtime connection state and card statuses.</li>
+            <li>Load active config in Config Studio.</li>
+            <li>Validate staged config before commit.</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <div class="tag">&#x1F4DA; Tutorial</div>
+          <h4 class="title">Linear walkthrough</h4>
+          <p class="muted">Planned as a strict step-by-step flow with a skip option. Non-persistent progress for first release.</p>
+          <ol>
+            <li>Live page orientation</li>
+            <li>Config edit and validation flow</li>
+            <li>Commit/restore safety model</li>
+            <li>Settings essentials</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <div class="tag">&#x1F9E0; Curated Examples</div>
+          <h4 class="title">Capability patterns</h4>
+          <p class="muted">Example scenarios to build user mental model before custom projects.</p>
+          <ol>
+            <li>Edge-triggered DI to timed DO</li>
+            <li>AI scaling plus MATH clamp</li>
+            <li>RTC schedule-driven control</li>
+          </ol>
+        </article>
+      </section>
+      <script>
+        const themeSelect = document.getElementById("themeSelect");
+        function applyTheme(theme) {
+          document.body.setAttribute("data-theme", theme);
+          localStorage.setItem("atv3_theme", theme);
+        }
+        const savedTheme = localStorage.getItem("atv3_theme") || "dark";
+        themeSelect.value = savedTheme;
+        applyTheme(savedTheme);
+        themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+      </script>
+    </main>
+  </body>
+</html>

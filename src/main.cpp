@@ -491,7 +491,7 @@ void setup() {
               gStorage.activeConfig().system.time);
   logSetupStage("18 wifi begin done");
   logSetupStage("19 transport init");
-  v3::portal::initTransportRuntime(gPortal);
+  v3::portal::initTransportRuntime(gPortal, gStorage);
   logSetupStage("20 transport init done");
 
   // Initialize watchdog after heavier bootstrap work so first-boot setup

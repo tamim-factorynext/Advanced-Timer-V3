@@ -3,23 +3,180 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Config UI Deprecated</title>
+    <title>AT-V3 Portal | Config Studio</title>
     <style>
-      body { font-family: Segoe UI, Tahoma, sans-serif; margin: 0; background: #0b1220; color: #e5e7eb; }
-      .wrap { max-width: 760px; margin: 48px auto; padding: 0 16px; }
-      .card { background: #111827; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
-      h1 { margin-top: 0; }
-      code { background: #1f2937; padding: 2px 6px; border-radius: 6px; }
+      :root { --bg:#0d171c; --panel:#12242b; --line:#295261; --text:#e7f5f8; --muted:#b5d2d8; --ok:#4ade80; --bad:#ef4444; }
+      body[data-theme="light"] { --bg:#f4f7f8; --panel:#e9f0f2; --line:#8eb0bb; --text:#12242b; --muted:#36535f; }
+      body[data-theme="solarized"] { --bg:#002b36; --panel:#073642; --line:#2f6d7e; --text:#eee8d5; --muted:#93a1a1; }
+      body[data-theme="colorful-a"] { --bg:#1a1231; --panel:#251a46; --line:#6b56a5; --text:#f3ecff; --muted:#cbb9f1; }
+      body[data-theme="colorful-b"] { --bg:#13260f; --panel:#1f3818; --line:#5f8a51; --text:#effbe8; --muted:#bfd7b4; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+      .app { max-width: 1080px; margin: 0 auto; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); }
+      .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .nav { display: flex; gap: 8px; }
+      .nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+      .nav a.active { color: var(--text); background: #17313a; }
+      .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; }
+      .muted { color: var(--muted); }
+      .row { display: grid; gap: 10px; grid-template-columns: 1fr; }
+      textarea { width: 100%; min-height: 360px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: #0e1d23; color: var(--text); padding: 10px; font-family: Consolas, monospace; font-size: 12px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      button { border: 1px solid var(--line); border-radius: 10px; background: #17343d; color: var(--text); padding: 8px 11px; cursor: pointer; }
+      button:hover { background: #1d404b; }
+      .theme { border: 1px solid var(--line); border-radius: 10px; background: #17343d; color: var(--text); padding: 8px; font-size: 13px; }
+      .log { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #102128; }
+      .ok { color: var(--ok); }
+      .bad { color: var(--bad); }
+      @media (max-width: 760px) { textarea { min-height: 280px; } }
     </style>
   </head>
-  <body>
-    <div class="wrap">
-      <div class="card">
-        <h1>Deprecated Config UI</h1>
-        <p>This configuration page is deprecated and no longer maintained.</p>
-        <p>The new portal frontend will define a fresh UX and payload flow on top of V3 backend APIs.</p>
-        <p>Archived reference: <code>docs/Deprecated/portal-frontend/config.html</code>.</p>
-      </div>
-    </div>
+  <body data-theme="dark">
+    <main class="app">
+      <header class="top">
+        <h2 style="margin: 0">&#x2692; Config Studio</h2>
+        <nav class="nav">
+          <a href="/">&#x1F4CA; Live</a>
+          <a class="active" href="/config">&#x2692; Config</a>
+          <a href="/settings">&#x2699; Settings</a>
+          <a href="/learn">&#x1F393; Learn</a>
+          <select id="themeSelect" class="theme" aria-label="Theme">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="solarized">Solarized</option>
+            <option value="colorful-a">Colorful A</option>
+            <option value="colorful-b">Colorful B</option>
+          </select>
+        </nav>
+      </header>
+
+      <section class="card">
+        <div><strong>Live endpoints:</strong> <span class="muted">/api/v3/config/*</span></div>
+        <div class="actions" style="margin-top:10px;">
+          <button id="btnLoad">&#x1F4E5; Load Active</button>
+          <button id="btnValidate">&#x2705; Validate Staged</button>
+          <button id="btnSave">&#x1F4BE; Save Staged</button>
+          <button id="btnCommit">&#x1F680; Commit</button>
+          <button id="btnRestoreLkg">&#x21A9; Restore LKG</button>
+          <button id="btnRestoreFactory">&#x267B; Restore Factory</button>
+          <button id="btnFormat">&#x1F4DD; Pretty Format</button>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <textarea id="editor" spellcheck="false"></textarea>
+        </div>
+        <div id="log" class="log">Ready.</div>
+      </section>
+    </main>
+
+    <script>
+      const editor = document.getElementById("editor");
+      const logEl = document.getElementById("log");
+      const themeSelect = document.getElementById("themeSelect");
+
+      function applyTheme(theme) {
+        document.body.setAttribute("data-theme", theme);
+        localStorage.setItem("atv3_theme", theme);
+      }
+      const savedTheme = localStorage.getItem("atv3_theme") || "dark";
+      themeSelect.value = savedTheme;
+      applyTheme(savedTheme);
+      themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
+      function stamp() {
+        return new Date().toISOString();
+      }
+
+      function setLog(ok, msg, body) {
+        logEl.className = ok ? "log ok" : "log bad";
+        logEl.textContent = `[${stamp()}] ${msg}${body ? "\n" + body : ""}`;
+      }
+
+      function parseEditorConfig() {
+        const raw = editor.value.trim();
+        if (!raw) throw new Error("Editor is empty");
+        return JSON.parse(raw);
+      }
+
+      async function api(path, method, payload) {
+        const resp = await fetch(path, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: payload ? JSON.stringify(payload) : undefined,
+        });
+        const text = await resp.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
+        if (!resp.ok) {
+          throw new Error(`${resp.status} ${JSON.stringify(data)}`);
+        }
+        return data;
+      }
+
+      async function loadActive() {
+        const data = await api("/api/v3/config/active", "GET");
+        editor.value = JSON.stringify(data.config || {}, null, 2);
+        setLog(true, `Loaded activeVersion=${data.activeVersion}`, JSON.stringify(data, null, 2));
+      }
+
+      async function validateStaged() {
+        const cfg = parseEditorConfig();
+        const data = await api("/api/v3/config/staged/validate", "POST", {
+          requestId: `cfg-val-${Date.now()}`,
+          apiVersion: "2.0",
+          config: cfg,
+        });
+        setLog(true, "Validate success", JSON.stringify(data, null, 2));
+      }
+
+      async function saveStaged() {
+        const cfg = parseEditorConfig();
+        const data = await api("/api/v3/config/staged/save", "POST", {
+          requestId: `cfg-save-${Date.now()}`,
+          apiVersion: "2.0",
+          config: cfg,
+        });
+        setLog(true, `Staged save success version=${data.stagedVersion}`, JSON.stringify(data, null, 2));
+      }
+
+      async function commit() {
+        const cfg = parseEditorConfig();
+        const data = await api("/api/v3/config/commit", "POST", {
+          requestId: `cfg-commit-${Date.now()}`,
+          apiVersion: "2.0",
+          config: cfg,
+          options: { persist: false },
+        });
+        setLog(true, "Commit success (requires restart)", JSON.stringify(data, null, 2));
+      }
+
+      async function restore(source) {
+        const data = await api("/api/v3/config/restore", "POST", {
+          requestId: `cfg-restore-${Date.now()}`,
+          apiVersion: "2.0",
+          source,
+        });
+        setLog(true, `Restore ${source} success (requires restart)`, JSON.stringify(data, null, 2));
+      }
+
+      function formatEditor() {
+        try {
+          editor.value = JSON.stringify(parseEditorConfig(), null, 2);
+          setLog(true, "Editor formatted", "");
+        } catch (err) {
+          setLog(false, "Format failed", String(err));
+        }
+      }
+
+      document.getElementById("btnLoad").addEventListener("click", () => loadActive().catch((e) => setLog(false, "Load failed", String(e))));
+      document.getElementById("btnValidate").addEventListener("click", () => validateStaged().catch((e) => setLog(false, "Validate failed", String(e))));
+      document.getElementById("btnSave").addEventListener("click", () => saveStaged().catch((e) => setLog(false, "Save staged failed", String(e))));
+      document.getElementById("btnCommit").addEventListener("click", () => commit().catch((e) => setLog(false, "Commit failed", String(e))));
+      document.getElementById("btnRestoreLkg").addEventListener("click", () => restore("LKG").catch((e) => setLog(false, "Restore LKG failed", String(e))));
+      document.getElementById("btnRestoreFactory").addEventListener("click", () => restore("FACTORY").catch((e) => setLog(false, "Restore FACTORY failed", String(e))));
+      document.getElementById("btnFormat").addEventListener("click", formatEditor);
+
+      loadActive().catch((e) => setLog(false, "Initial load failed", String(e)));
+    </script>
   </body>
 </html>

@@ -17,6 +17,7 @@ Notes:
 #pragma once
 
 #include "portal/portal_service.h"
+#include "storage/storage_service.h"
 
 namespace v3::portal {
 
@@ -24,10 +25,11 @@ namespace v3::portal {
  * @brief Initializes HTTP/WebSocket transport endpoints for portal APIs.
  * @details Binds route handlers and websocket callbacks to the provided portal service.
  * @param portal Portal service instance used for command/snapshot/diagnostics operations.
+ * @param storage Storage service instance used for config lifecycle endpoints.
  * @par Used By
  * - src/main.cpp
  */
-void initTransportRuntime(PortalService& portal);
+void initTransportRuntime(PortalService& portal, v3::storage::StorageService& storage);
 /**
  * @brief Services transport event loops for HTTP and WebSocket stacks.
  * @details Must be called from service loop to process ingress/egress traffic.

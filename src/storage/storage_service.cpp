@@ -119,6 +119,23 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
 
 }  // namespace
 
+StorageService::~StorageService() {
+  if (stagedConfig_ != nullptr) {
+    delete stagedConfig_;
+    stagedConfig_ = nullptr;
+  }
+  if (lkgConfig_ != nullptr) {
+    delete lkgConfig_;
+    lkgConfig_ = nullptr;
+  }
+}
+
+bool StorageService::ensureConfigBuffer(SystemConfig*& target) {
+  if (target != nullptr) return true;
+  target = new SystemConfig();
+  return target != nullptr;
+}
+
 /**
  * @brief Bootstraps active config from file or default template, then validates.
  * @details Establishes storage diagnostics state for runtime telemetry and
@@ -170,6 +187,16 @@ void StorageService::begin() {
 
   lastError_ = {ConfigErrorCode::None, 0};
   activeConfigPresent_ = true;
+  if (!lkgConfigPresent_ && ensureConfigBuffer(lkgConfig_)) {
+    *lkgConfig_ = activeConfig_.system;
+    lkgConfigPresent_ = true;
+    lkgRevision_ = 1;
+  }
+  if (activeRevision_ == 0) {
+    activeRevision_ = 1;
+  } else {
+    activeRevision_ += 1;
+  }
   logStorageStage("11 success exit");
 }
 
@@ -208,5 +235,82 @@ BootstrapDiagnostics StorageService::diagnostics() const {
   diagnostics.hasActiveConfig = activeConfigPresent_;
   return diagnostics;
 }
+
+const SystemConfig& StorageService::activeSystemConfig() const {
+  return activeConfig_.system;
+}
+
+const SystemConfig& StorageService::stagedSystemConfig() const {
+  if (stagedConfig_ != nullptr) return *stagedConfig_;
+  return activeConfig_.system;
+}
+
+bool StorageService::hasStagedConfig() const { return stagedConfigPresent_; }
+
+void StorageService::stageConfig(const ValidatedConfig& validated) {
+  if (!ensureConfigBuffer(stagedConfig_)) return;
+  *stagedConfig_ = validated.system;
+  stagedConfigPresent_ = true;
+  stagedRevision_ += 1;
+}
+
+bool StorageService::commitStaged() {
+  if (!stagedConfigPresent_ || stagedConfig_ == nullptr) return false;
+  if (activeConfigPresent_) {
+    if (!ensureConfigBuffer(lkgConfig_)) return false;
+    *lkgConfig_ = activeConfig_.system;
+    lkgConfigPresent_ = true;
+    lkgRevision_ += 1;
+  }
+  activeConfig_.system = *stagedConfig_;
+  activeConfigPresent_ = true;
+  stagedConfigPresent_ = false;
+  activeRevision_ += 1;
+  return true;
+}
+
+bool StorageService::restoreFactory() {
+  ValidatedConfig factoryValidated = {};
+  makeDefaultSystemConfig(factoryValidated.system);
+  ConfigValidationError validationError = {ConfigErrorCode::None, 0};
+  if (!validateSystemConfigLight(factoryValidated.system, validationError)) {
+    lastError_ = validationError;
+    return false;
+  }
+  if (activeConfigPresent_) {
+    if (!ensureConfigBuffer(lkgConfig_)) return false;
+    *lkgConfig_ = activeConfig_.system;
+    lkgConfigPresent_ = true;
+    lkgRevision_ += 1;
+  }
+  activeConfig_ = factoryValidated;
+  activeConfigPresent_ = true;
+  activeRevision_ += 1;
+  lastError_ = {ConfigErrorCode::None, 0};
+  stagedConfigPresent_ = false;
+  return true;
+}
+
+bool StorageService::restoreLkg() {
+  if (!lkgConfigPresent_ || lkgConfig_ == nullptr) return false;
+  if (activeConfigPresent_) {
+    if (ensureConfigBuffer(stagedConfig_)) {
+      *stagedConfig_ = activeConfig_.system;
+      stagedConfigPresent_ = true;
+      stagedRevision_ += 1;
+    }
+  }
+  activeConfig_.system = *lkgConfig_;
+  activeConfigPresent_ = true;
+  activeRevision_ += 1;
+  lastError_ = {ConfigErrorCode::None, 0};
+  return true;
+}
+
+uint32_t StorageService::activeRevision() const { return activeRevision_; }
+
+uint32_t StorageService::stagedRevision() const { return stagedRevision_; }
+
+uint32_t StorageService::lkgRevision() const { return lkgRevision_; }
 
 }  // namespace v3::storage

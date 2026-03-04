@@ -17,6 +17,8 @@ Notes:
 */
 #pragma once
 
+#include <WString.h>
+
 #include "storage/v3_config_validator.h"
 
 namespace v3::storage {
@@ -52,6 +54,7 @@ struct BootstrapDiagnostics {
  */
 class StorageService {
  public:
+  ~StorageService();
   /**
    * @brief Bootstraps active config and captures startup diagnostics.
    * @details Performs filesystem load attempt and validator gate before exposing config.
@@ -93,12 +96,74 @@ class StorageService {
    * - src/runtime/runtime_service.cpp
    */
   BootstrapDiagnostics diagnostics() const;
+  /**
+   * @brief Returns active system config contract view.
+   * @return Active typed system config.
+   */
+  const SystemConfig& activeSystemConfig() const;
+  /**
+   * @brief Returns staged system config contract view.
+   * @details Caller must check `hasStagedConfig()` before use.
+   * @return Staged typed system config.
+   */
+  const SystemConfig& stagedSystemConfig() const;
+  /**
+   * @brief Indicates whether a staged config is present.
+   * @return `true` when staged config exists.
+   */
+  bool hasStagedConfig() const;
+  /**
+   * @brief Stores staged config after validation.
+   * @param validated Validated config payload to stage.
+   */
+  void stageConfig(const ValidatedConfig& validated);
+  /**
+   * @brief Commits staged config into active slot.
+   * @details Current runtime consumes active config only at boot, so callers
+   * should treat this as requiring restart to apply kernel behavior.
+   * @return `true` when commit completed.
+   */
+  bool commitStaged();
+  /**
+   * @brief Restores active config from default contract values.
+   * @return `true` when restore completed.
+   */
+  bool restoreFactory();
+  /**
+   * @brief Restores active config from last-known-good slot.
+   * @return `true` when restore completed.
+   */
+  bool restoreLkg();
+  /**
+   * @brief Returns active revision counter.
+   * @return Monotonic active revision.
+   */
+  uint32_t activeRevision() const;
+  /**
+   * @brief Returns staged revision counter.
+   * @return Monotonic staged revision.
+   */
+  uint32_t stagedRevision() const;
+  /**
+   * @brief Returns LKG revision counter.
+   * @return Monotonic LKG revision.
+   */
+  uint32_t lkgRevision() const;
 
  private:
   BootstrapSource source_ = BootstrapSource::DefaultConfig;
   ValidatedConfig activeConfig_ = {};
+  SystemConfig* stagedConfig_ = nullptr;
+  SystemConfig* lkgConfig_ = nullptr;
   ConfigValidationError lastError_ = {ConfigErrorCode::None, 0};
   bool activeConfigPresent_ = false;
+  bool stagedConfigPresent_ = false;
+  bool lkgConfigPresent_ = false;
+  uint32_t activeRevision_ = 0;
+  uint32_t stagedRevision_ = 0;
+  uint32_t lkgRevision_ = 0;
+
+  bool ensureConfigBuffer(SystemConfig*& target);
 };
 
 }  // namespace v3::storage

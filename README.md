@@ -194,11 +194,11 @@ Typical endpoints include:
 - `/api/v3/snapshot`
 - `/api/v3/diagnostics`
 - `/api/v3/command`
-- `/api/config/active`
-- `/api/config/staged/save`
-- `/api/config/staged/validate`
-- `/api/config/commit`
-- `/api/config/restore`
+- `/api/v3/config/active`
+- `/api/v3/config/staged/save`
+- `/api/v3/config/staged/validate`
+- `/api/v3/config/commit`
+- `/api/v3/config/restore`
 
 UI pages currently include:
 - `/` (live/runtime)
