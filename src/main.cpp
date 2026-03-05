@@ -94,10 +94,10 @@ constexpr uint32_t kPortalProjectionIdleIntervalMs = 500;
 constexpr uint32_t kTransportActivityWindowMs = 15000;
 constexpr uint32_t kCore1IdleLoopDelayMs = 5;
 constexpr uint32_t kCore1StackStageLogIntervalMs = 5000;
-constexpr bool kLogSetupStages = false;
-constexpr bool kLogCoreTaskStartup = false;
-constexpr bool kLogCore1StageSummary = false;
-constexpr bool kLogWiFiHeartbeat = false;
+constexpr bool kLogSetupStages = true;
+constexpr bool kLogCoreTaskStartup = true;
+constexpr bool kLogCore1StageSummary = true;
+constexpr bool kLogWiFiHeartbeat = true;
 constexpr bool kLogBootSummary = true;
 
 void feedBootWatchdog() {

@@ -38,7 +38,7 @@ RTC_DS3231 gRtcDs3231;
 RTC_PCF8523 gRtcPcf8523;
 RTC_DS1307 gRtcDs1307;
 bool gRtcBackendReady = false;
-constexpr bool kLogPlatformInitStages = false;
+constexpr bool kLogPlatformInitStages = true;
 
 bool mapDateTimeToMinuteStamp(const DateTime& dt, LocalMinuteStamp& out) {
   if (!dt.isValid()) return false;
