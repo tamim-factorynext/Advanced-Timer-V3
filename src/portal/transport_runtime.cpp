@@ -23,6 +23,7 @@ Notes:
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 
+#include "kernel/enum_codec.h"
 #include "portal/transport_command_stub.h"
 #include "storage/v3_config_decoder.h"
 #include "storage/v3_config_validator.h"
@@ -353,27 +354,6 @@ void handleHttpCommandSubmit() {
   gHttpServer.send(response.statusCode, "application/json", response.body);
 }
 
-/**
- * @brief Handles HTTP runtime snapshot endpoint.
- * @par Used By
- * `GET /api/v3/snapshot`.
- */
-void handleHttpSnapshotGet() {
-  markTransportActivity();
-  if (gPortal == nullptr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
-    return;
-  }
-  const PortalSnapshotState state = gPortal->snapshotState();
-  if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
-    gHttpServer.send(503, "application/json",
-                     "{\"ok\":false,\"reason\":\"snapshot_not_ready\"}");
-    return;
-  }
-  gHttpServer.send(200, "application/json", state.json);
-}
-
 void handleHttpRuntimeMetricsGet() {
   markTransportActivity();
   if (gPortal == nullptr) {
@@ -382,50 +362,40 @@ void handleHttpRuntimeMetricsGet() {
     return;
   }
   const PortalSnapshotState state = gPortal->snapshotState();
-  if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
+  if (!state.ready) {
     gHttpServer.send(503, "application/json",
                      "{\"ok\":false,\"reason\":\"snapshot_not_ready\"}");
     return;
   }
-
-  JsonDocument snapshotDoc;
-  const DeserializationError parseErr = deserializeJson(snapshotDoc, state.json);
-  if (parseErr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"snapshot_parse_failed\"}");
-    return;
-  }
-  const JsonObjectConst snapshot = snapshotDoc.as<JsonObjectConst>();
+  const v3::runtime::RuntimeSnapshot& snapshot =
+      gPortal->latestRuntimeSnapshot();
 
   JsonDocument out;
   out["ok"] = true;
   out["apiVersion"] = "2.0";
   out["status"] = "SUCCESS";
-  out["tsMs"] = snapshot["tsMs"] | 0U;
+  out["tsMs"] = snapshot.nowMs;
   JsonObject runtime = out["runtime"].to<JsonObject>();
-  runtime["snapshotSeq"] = snapshot["snapshotSeq"] | 0U;
-  runtime["engineMode"] = snapshot["engineMode"].as<const char*>();
-  runtime["scanPeriodMs"] = snapshot["scanPeriodMs"] | 0U;
-  runtime["cardCount"] = snapshot["cards"].is<JsonArrayConst>()
-                             ? snapshot["cards"].as<JsonArrayConst>().size()
-                             : 0U;
+  runtime["snapshotSeq"] = snapshot.completedScans;
+  runtime["engineMode"] = toString(snapshot.mode);
+  runtime["scanPeriodMs"] = snapshot.scanPeriodMs;
+  runtime["cardCount"] = snapshot.enabledCardCount;
   JsonObject metrics = runtime["metrics"].to<JsonObject>();
-  JsonObjectConst inMetrics = snapshot["metrics"].as<JsonObjectConst>();
-  metrics["scanLastUs"] = inMetrics["scanLastUs"] | 0U;
-  metrics["scanMaxUs"] = inMetrics["scanMaxUs"] | 0U;
-  metrics["scanBudgetUs"] = inMetrics["scanBudgetUs"] | 0U;
-  metrics["scanOverrunLast"] = inMetrics["scanOverrunLast"] | false;
-  metrics["scanOverrunCount"] = inMetrics["scanOverrunCount"] | 0U;
-  metrics["queueDepth"] = inMetrics["queueDepth"] | 0U;
-  metrics["queueHighWaterMark"] = inMetrics["queueHighWaterMark"] | 0U;
-  metrics["queueCapacity"] = inMetrics["queueCapacity"] | 0U;
-  metrics["commandLatencyLastUs"] = inMetrics["commandLatencyLastUs"] | 0U;
-  metrics["commandLatencyMaxUs"] = inMetrics["commandLatencyMaxUs"] | 0U;
-  metrics["configuredCardCount"] = inMetrics["configuredCardCount"] | 0U;
-  metrics["enabledCardCount"] = inMetrics["enabledCardCount"] | 0U;
-  metrics["snapshotQueueDepth"] = inMetrics["snapshotQueueDepth"] | 0U;
-  metrics["snapshotQueueHighWater"] = inMetrics["snapshotQueueHighWater"] | 0U;
-  metrics["snapshotQueueDropCount"] = inMetrics["snapshotQueueDropCount"] | 0U;
+  metrics["scanLastUs"] = snapshot.scanLastUs;
+  metrics["scanMaxUs"] = snapshot.scanMaxUs;
+  metrics["scanBudgetUs"] = snapshot.scanPeriodMs * 1000U;
+  metrics["scanOverrunLast"] = snapshot.scanOverrunLast;
+  metrics["scanOverrunCount"] = snapshot.scanOverrunCount;
+  metrics["queueDepth"] = snapshot.queueTelemetry.commandQueueDepth;
+  metrics["queueHighWaterMark"] = snapshot.queueTelemetry.commandQueueHighWater;
+  metrics["queueCapacity"] = snapshot.queueTelemetry.commandQueueCapacity;
+  metrics["commandLatencyLastUs"] = snapshot.queueTelemetry.commandLastLatencyUs;
+  metrics["commandLatencyMaxUs"] = snapshot.queueTelemetry.commandMaxLatencyUs;
+  metrics["configuredCardCount"] = snapshot.configuredCardCount;
+  metrics["enabledCardCount"] = snapshot.enabledCardCount;
+  metrics["snapshotQueueDepth"] = snapshot.queueTelemetry.snapshotQueueDepth;
+  metrics["snapshotQueueHighWater"] = snapshot.queueTelemetry.snapshotQueueHighWater;
+  metrics["snapshotQueueDropCount"] = snapshot.queueTelemetry.snapshotQueueDropCount;
 
   String body;
   serializeJson(out, body);
@@ -440,31 +410,40 @@ void handleHttpRuntimeCardsGet() {
     return;
   }
   const PortalSnapshotState state = gPortal->snapshotState();
-  if (!state.ready || state.json == nullptr || state.json[0] == '\0') {
+  if (!state.ready) {
     gHttpServer.send(503, "application/json",
                      "{\"ok\":false,\"reason\":\"snapshot_not_ready\"}");
     return;
   }
-
-  JsonDocument snapshotDoc;
-  const DeserializationError parseErr = deserializeJson(snapshotDoc, state.json);
-  if (parseErr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"snapshot_parse_failed\"}");
-    return;
-  }
-  const JsonObjectConst snapshot = snapshotDoc.as<JsonObjectConst>();
-  JsonArrayConst inCards = snapshot["cards"].as<JsonArrayConst>();
+  const v3::runtime::RuntimeSnapshot& snapshot =
+      gPortal->latestRuntimeSnapshot();
+  uint8_t cardCount = 0;
+  const RuntimeSnapshotCard* cards = gPortal->latestRuntimeCards(cardCount);
 
   JsonDocument out;
   out["ok"] = true;
   out["apiVersion"] = "2.0";
   out["status"] = "SUCCESS";
-  out["tsMs"] = snapshot["tsMs"] | 0U;
-  out["snapshotSeq"] = snapshot["snapshotSeq"] | 0U;
-  JsonArray cards = out["cards"].to<JsonArray>();
-  for (JsonObjectConst item : inCards) {
-    cards.add(item);
+  out["tsMs"] = snapshot.nowMs;
+  out["snapshotSeq"] = snapshot.completedScans;
+  JsonArray cardsJson = out["cards"].to<JsonArray>();
+  for (uint8_t i = 0; i < cardCount; ++i) {
+    const RuntimeSnapshotCard& card = cards[i];
+    JsonObject item = cardsJson.add<JsonObject>();
+    item["id"] = card.id;
+    item["type"] = toString(card.type);
+    item["index"] = card.index;
+    item["commandState"] = card.commandState;
+    item["actualState"] = card.actualState;
+    item["edgePulse"] = card.edgePulse;
+    item["state"] = toString(card.state);
+    item["mode"] = toString(card.mode);
+    item["liveValue"] = card.liveValue;
+    item["startOnMs"] = card.startOnMs;
+    item["startOffMs"] = card.startOffMs;
+    item["repeatCounter"] = card.repeatCounter;
+    item["turnOnConditionMet"] = card.turnOnConditionMet;
+    item["turnOffConditionMet"] = card.turnOffConditionMet;
   }
   String body;
   serializeJson(out, body);
@@ -766,7 +745,7 @@ void handleHttpRootGet() {
   gHttpServer.send(
       200, "application/json",
       "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
-      "snapshot\",\"/api/v3/diagnostics\",\"/api/v3/command\","
+      "diagnostics\",\"/api/v3/command\","
       "\"/api/v3/runtime/metrics\",\"/api/v3/runtime/cards\","
       "\"/api/v3/settings\",\"/api/v3/cards\",\"/api/v3/cards/{id}\","
       "\"/api/v3/config/restore\"]}");
@@ -903,11 +882,6 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/api/v3/diagnostics/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/diagnostics", HTTP_GET, handleHttpDiagnosticsGet);
   gHttpServer.on("/api/v3/diagnostics/", HTTP_GET, handleHttpDiagnosticsGet);
-
-  gHttpServer.on("/api/v3/snapshot", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/v3/snapshot/", HTTP_OPTIONS, handleHttpCorsOptions);
-  gHttpServer.on("/api/v3/snapshot", HTTP_GET, handleHttpSnapshotGet);
-  gHttpServer.on("/api/v3/snapshot/", HTTP_GET, handleHttpSnapshotGet);
 
   gHttpServer.on("/api/v3/runtime/metrics", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/runtime/metrics/", HTTP_OPTIONS, handleHttpCorsOptions);

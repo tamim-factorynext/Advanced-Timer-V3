@@ -50,6 +50,8 @@ void PortalService::begin() {
   snapshotCapacityRejectCount_ = 0;
   snapshotJson_.remove(0);
   snapshotReserveReady_ = snapshotJson_.reserve(kSnapshotJsonReserve);
+  latestRuntimeSnapshot_ = {};
+  latestRuntimeCardCount_ = 0;
   head_ = 0;
   tail_ = 0;
   depth_ = 0;
@@ -62,6 +64,17 @@ void PortalService::tick(uint32_t nowMs,
                          const RuntimeSnapshotCard* cards, uint8_t cardCount) {
   lastTickMs_ = nowMs;
   observedScanCount_ = snapshot.completedScans;
+  latestRuntimeSnapshot_ = snapshot;
+  latestRuntimeCardCount_ = (cardCount <= v3::storage::kMaxCards)
+                                ? cardCount
+                                : v3::storage::kMaxCards;
+  if (cards != nullptr) {
+    for (uint8_t i = 0; i < latestRuntimeCardCount_; ++i) {
+      latestRuntimeCards_[i] = cards[i];
+    }
+  } else {
+    latestRuntimeCardCount_ = 0;
+  }
   rebuildDiagnosticsJson(snapshot);
   rebuildSnapshotJson(snapshot, cards, cardCount);
 }
@@ -180,6 +193,16 @@ PortalSnapshotState PortalService::snapshotState() const {
   state.revision = snapshotRevision_;
   state.json = snapshotFallbackActive_ ? kSnapshotFallbackJson : snapshotJson_.c_str();
   return state;
+}
+
+const v3::runtime::RuntimeSnapshot& PortalService::latestRuntimeSnapshot() const {
+  return latestRuntimeSnapshot_;
+}
+
+const RuntimeSnapshotCard* PortalService::latestRuntimeCards(
+    uint8_t& outCardCount) const {
+  outCardCount = latestRuntimeCardCount_;
+  return latestRuntimeCards_;
 }
 
 void PortalService::rebuildDiagnosticsJson(

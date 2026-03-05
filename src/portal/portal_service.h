@@ -229,6 +229,19 @@ class PortalService {
    * - src/portal/transport_runtime.cpp
    */
   PortalSnapshotState snapshotState() const;
+  /**
+   * @brief Returns latest structured runtime snapshot captured during portal tick.
+   * @details Enables transport handlers to project lightweight responses
+   * without reparsing cached snapshot JSON.
+   * @return Latest runtime snapshot value copy.
+   */
+  const v3::runtime::RuntimeSnapshot& latestRuntimeSnapshot() const;
+  /**
+   * @brief Returns latest structured per-card runtime rows.
+   * @param outCardCount Receives number of valid card rows.
+   * @return Pointer to internal card cache.
+   */
+  const RuntimeSnapshotCard* latestRuntimeCards(uint8_t& outCardCount) const;
 
  private:
   static constexpr size_t kDiagnosticsJsonReserve = 1024;
@@ -255,6 +268,9 @@ class PortalService {
   uint32_t snapshotSerializeFailureCount_ = 0;
   uint32_t snapshotCapacityRejectCount_ = 0;
   String snapshotJson_;
+  v3::runtime::RuntimeSnapshot latestRuntimeSnapshot_ = {};
+  RuntimeSnapshotCard latestRuntimeCards_[v3::storage::kMaxCards] = {};
+  uint8_t latestRuntimeCardCount_ = 0;
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};
   uint16_t head_ = 0;

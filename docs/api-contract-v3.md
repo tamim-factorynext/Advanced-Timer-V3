@@ -184,29 +184,44 @@ Message type: `command_result`
 
 ## 6. HTTP API Contract
 
-## 6.1 Snapshot Read
+## 6.1 Runtime Read (Split)
 
-`GET /api/v3/snapshot`
+`GET /api/v3/runtime/metrics`
 
 Success response:
 ```json
 {
-  "type": "runtime_snapshot",
-  "schemaVersion": 1,
+  "ok": true,
+  "apiVersion": "2.0",
+  "status": "SUCCESS",
+  "tsMs": 1740738600000,
+  "runtime": {
+    "snapshotSeq": 8124,
+    "engineMode": "RUN_NORMAL",
+    "scanPeriodMs": 10,
+    "cardCount": 6,
+    "metrics": {}
+  }
+}
+```
+
+`GET /api/v3/runtime/cards`
+
+Success response:
+```json
+{
+  "ok": true,
+  "apiVersion": "2.0",
+  "status": "SUCCESS",
   "tsMs": 1740738600000,
   "snapshotSeq": 8124,
-  "scanPeriodMs": 10,
-  "lastCompleteScanMs": 0.812,
-  "engineMode": "RUN_NORMAL",
-  "metrics": {},
-  "testMode": {},
   "cards": []
 }
 ```
 
 Rules:
-- HTTP snapshot payload shape mirrors WebSocket `runtime_snapshot` payload.
-- `snapshotSeq` returned by HTTP must be the latest complete snapshot revision at response time.
+- `/api/v3/snapshot` is removed from active routing.
+- Clients should compose runtime view from `runtime/metrics` + `runtime/cards`.
 
 ## 6.2 Config Lifecycle
 
