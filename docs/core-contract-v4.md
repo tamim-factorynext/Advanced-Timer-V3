@@ -400,21 +400,32 @@ Unified single-file persistence is not the V4 baseline.
 
 ### 12.2 Transaction and Atomicity Rules
 
-- Runtime activation MUST use a logically atomic commit view across both artifacts.
-- Device MUST NOT activate a mixed pair from different schema/commit revisions.
-- Both artifacts MUST carry compatible metadata (`schemaVersion`, revision/hash compatibility markers).
-- Commit operation MUST validate both artifacts together before activation.
+- Runtime activation MUST use a logically atomic pair view across `settings` and `card_config`.
+- Device MUST NOT activate a mixed pair from different `schemaVersion`/`commitId` revisions.
+- Both artifacts MUST carry compatible metadata (`schemaVersion`, `commitId`, compatibility markers/hashes).
+- Commit operation MUST validate both artifacts and cross-artifact dependencies before activation.
 
 ### 12.3 Boot and Recovery Rules
 
 - If either artifact is missing/invalid/incompatible, boot MUST fall back to last known good compatible pair.
 - Deterministic runtime MUST remain safe/offline-capable under persistence recovery paths.
 - Recovery events MUST be surfaced in diagnostics counters/logs.
+- LKG is an internal robustness mechanism and MUST NOT be exposed as a user rollback target.
 
 ### 12.4 Validation Scope
 
 - Settings validation and card-config validation MUST both pass before commit.
 - Cross-artifact constraints (for example backend/profile references used by card config) MUST be validated as a single transaction boundary.
+
+### 12.5 User Restore and Portal Action Placement
+
+- User/API restore operations MUST NOT offer "restore LKG".
+- User-facing restore targets are limited to factory reset and explicit import payloads.
+- Internal runtime/boot recovery MAY auto-activate LKG pair when integrity checks fail.
+- Any automatic LKG recovery MUST be reported in diagnostics and boot/recovery logs.
+- Portal action placement MUST be:
+  - `Config` page: export/import/import-validation/apply-commit config lifecycle actions.
+  - `Settings` page: factory reset and system/recovery status visibility.
 
 ## 13. Alignment Verdict and Next Improvement Targets
 

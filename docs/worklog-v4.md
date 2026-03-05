@@ -43,6 +43,9 @@ Status: Active
 - Updated `platformio.ini` with documented ESP32-S3 V4 GPIO profile defaults (UART/I2C/SPI plus initial DI/DO/AI logical pin lists) using compile-time build flags.
 - Updated `docs/core-contract-v4.md` with explicit hardware profile/backend-selection contract (GPIO/I2C expander/plugin paths + family capacities).
 - Added V4 persistence contract for split LittleFS artifacts (`settings` and `card_config`) including atomic commit, compatibility metadata, and LKG pair fallback rules.
+- Refined restore policy: LKG kept as internal robustness-only fallback; user-facing rollback to LKG is explicitly disallowed (factory/import only).
+- Added decisions `DEC-0002` (split artifacts with atomic pair activation) and `DEC-0003` (LKG internal-only + Config/Settings action placement).
+- Rewrote related persistence/restore contract sections for coherent flow and explicit portal page ownership of backup/restore vs settings actions.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
 - Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 
