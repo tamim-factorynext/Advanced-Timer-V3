@@ -93,13 +93,12 @@ constexpr uint32_t kPortalProjectionActiveIntervalMs = 10;
 constexpr uint32_t kPortalProjectionIdleIntervalMs = 500;
 constexpr uint32_t kTransportActivityWindowMs = 15000;
 constexpr uint32_t kCore1IdleLoopDelayMs = 5;
-constexpr uint32_t kCore1StackWarnBytes = 4096;
-constexpr uint32_t kCore1StackLogIntervalMs = 10000;
 constexpr uint32_t kCore1StackStageLogIntervalMs = 5000;
 constexpr bool kLogSetupStages = false;
 constexpr bool kLogCoreTaskStartup = false;
 constexpr bool kLogCore1StageSummary = false;
 constexpr bool kLogWiFiHeartbeat = false;
+constexpr bool kLogBootSummary = true;
 
 void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -110,24 +109,6 @@ void updateTaskStackHighWaterBytes(uint32_t& outBytes) {
   const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
   const uint32_t bytes = static_cast<uint32_t>(words) * sizeof(StackType_t);
   if (outBytes == 0 || bytes < outBytes) outBytes = bytes;
-}
-
-void logCore1StackCheckpoint(const char* stage, uint32_t nowMs) {
-  if (!kLogCore1StageSummary) return;
-  const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
-  const uint32_t bytes = static_cast<uint32_t>(words) * sizeof(StackType_t);
-  if (gCore1StackHighWaterBytes == 0 || bytes < gCore1StackHighWaterBytes) {
-    gCore1StackHighWaterBytes = bytes;
-  }
-  if (bytes <= kCore1StackWarnBytes ||
-      (nowMs - gCore1LastStackLogMs) >= kCore1StackLogIntervalMs) {
-    Serial.printf("[core1:stack] stage=%s free=%lu minFree=%lu warn<=%lu\n", stage,
-                  static_cast<unsigned long>(bytes),
-                  static_cast<unsigned long>(gCore1StackHighWaterBytes),
-                  static_cast<unsigned long>(kCore1StackWarnBytes));
-    Serial.flush();
-    gCore1LastStackLogMs = nowMs;
-  }
 }
 
 uint32_t core1CurrentFreeStackBytes() {
@@ -533,10 +514,12 @@ void core1ServiceTask(void*) {
 void setup() {
   Serial.begin(115200);
   delay(5000);  // Keep startup capture window without starving loop-task WDT.
-  Serial.println("Advanced Timer V3 Core bootstrap");
-  Serial.printf("[boot] reset reason=%d\n",
-                static_cast<int>(esp_reset_reason()));
-  Serial.flush();
+  if (kLogBootSummary) {
+    Serial.println("Advanced Timer V3 Core bootstrap");
+    Serial.printf("[boot] reset reason=%d\n",
+                  static_cast<int>(esp_reset_reason()));
+    Serial.flush();
+  }
   feedBootWatchdog();
 
   auto logSetupStage = [](const char *stage) {
@@ -554,21 +537,23 @@ void setup() {
   gPlatform.begin();
   logSetupStage("02 platform begin done");
   const v3::platform::HardwareProfile& hwProfile = gPlatform.profile();
-  Serial.printf(
-      "V3 hardware profile=%s variant=%s di=%u do=%u ai=%u sio=%u math=%u rtc=%u"
-      " backends(di/do/ai/rtc)=%u/%u/%u/%u\n",
-      hwProfile.profileName, hwProfile.platformVariant,
-      static_cast<unsigned>(hwProfile.diCount),
-      static_cast<unsigned>(hwProfile.doCount),
-      static_cast<unsigned>(hwProfile.aiCount),
-      static_cast<unsigned>(hwProfile.sioCapacity),
-      static_cast<unsigned>(hwProfile.mathCapacity),
-      static_cast<unsigned>(hwProfile.rtcCapacity),
-      static_cast<unsigned>(hwProfile.diBackend),
-      static_cast<unsigned>(hwProfile.doBackend),
-      static_cast<unsigned>(hwProfile.aiBackend),
-      static_cast<unsigned>(hwProfile.rtcBackend));
-  Serial.flush();
+  if (kLogBootSummary) {
+    Serial.printf(
+        "V3 hardware profile=%s variant=%s di=%u do=%u ai=%u sio=%u math=%u rtc=%u"
+        " backends(di/do/ai/rtc)=%u/%u/%u/%u\n",
+        hwProfile.profileName, hwProfile.platformVariant,
+        static_cast<unsigned>(hwProfile.diCount),
+        static_cast<unsigned>(hwProfile.doCount),
+        static_cast<unsigned>(hwProfile.aiCount),
+        static_cast<unsigned>(hwProfile.sioCapacity),
+        static_cast<unsigned>(hwProfile.mathCapacity),
+        static_cast<unsigned>(hwProfile.rtcCapacity),
+        static_cast<unsigned>(hwProfile.diBackend),
+        static_cast<unsigned>(hwProfile.doBackend),
+        static_cast<unsigned>(hwProfile.aiBackend),
+        static_cast<unsigned>(hwProfile.rtcBackend));
+    Serial.flush();
+  }
   logSetupStage("03 profile print done");
 
   logSetupStage("04 storage begin");
@@ -651,6 +636,10 @@ void setup() {
     haltBoot("V3 dual-core task bootstrap failed");
   }
   logSetupStage("30 setup complete");
+  if (kLogBootSummary) {
+    Serial.println("V3 boot complete");
+    Serial.flush();
+  }
 }
 
 void loop() {

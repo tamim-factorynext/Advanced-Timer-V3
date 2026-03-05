@@ -40,9 +40,11 @@ v3::storage::StorageService* gStorage = nullptr;
 bool gTransportInitialized = false;
 uint32_t gLastTransportActivityMs = 0;
 constexpr bool kLogHttpVerboseReads = false;
-constexpr bool kLogHttpPageNavigation = false;
+constexpr bool kLogHttpPageNavigation = true;
+constexpr bool kLogHttpMutations = false;
 constexpr bool kLogHttpActions = false;
-constexpr bool kLogTransport404 = true;
+constexpr bool kLogTransport404 = false;
+constexpr bool kLogClientConnections = true;
 
 void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
 void markTransportActivity() { gLastTransportActivityMs = millis(); }
@@ -304,6 +306,7 @@ void logHttpAccess(const char* routeTag) {
   const bool isGet = (gHttpServer.method() == HTTP_GET);
   const bool isPageRoute =
       (routeTag != nullptr) && (strncmp(routeTag, "page.", 5) == 0);
+  if (!isGet && !kLogHttpMutations) return;
   if (isGet && !kLogHttpVerboseReads) {
     if (!(kLogHttpPageNavigation && isPageRoute)) return;
   }
@@ -918,6 +921,24 @@ void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
                       size_t length) {
   markTransportActivity();
   if (gPortal == nullptr) return;
+  if (type == WStype_CONNECTED) {
+    if (kLogClientConnections) {
+      const IPAddress remoteIp = gWsServer.remoteIP(clientNum);
+      Serial.printf("[client] ws connected id=%u ip=%u.%u.%u.%u\n",
+                    static_cast<unsigned>(clientNum), remoteIp[0], remoteIp[1],
+                    remoteIp[2], remoteIp[3]);
+      Serial.flush();
+    }
+    return;
+  }
+  if (type == WStype_DISCONNECTED) {
+    if (kLogClientConnections) {
+      Serial.printf("[client] ws disconnected id=%u\n",
+                    static_cast<unsigned>(clientNum));
+      Serial.flush();
+    }
+    return;
+  }
   if (type != WStype_TEXT) return;
 
   String text;

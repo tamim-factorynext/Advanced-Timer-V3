@@ -38,6 +38,7 @@ RTC_DS3231 gRtcDs3231;
 RTC_PCF8523 gRtcPcf8523;
 RTC_DS1307 gRtcDs1307;
 bool gRtcBackendReady = false;
+constexpr bool kLogPlatformInitStages = false;
 
 bool mapDateTimeToMinuteStamp(const DateTime& dt, LocalMinuteStamp& out) {
   if (!dt.isValid()) return false;
@@ -53,47 +54,47 @@ bool mapDateTimeToMinuteStamp(const DateTime& dt, LocalMinuteStamp& out) {
 }  // namespace
 
 void PlatformService::begin() {
-  Serial.println("[platform] 01 begin()");
-  Serial.flush();
+  auto logPlatformStage = [](const char* stage) {
+    if (!kLogPlatformInitStages) return;
+    Serial.println(stage);
+    Serial.flush();
+  };
+
+  logPlatformStage("[platform] 01 begin()");
   profile_ = &activeHardwareProfile();
   gRtcBackendReady = false;
   if (profile_ == nullptr) {
-    Serial.println("[platform] 02 profile null");
-    Serial.flush();
+    logPlatformStage("[platform] 02 profile null");
     return;
   }
 
-  Serial.printf("[platform] 03 rtcBackend=%u\n",
-                static_cast<unsigned>(profile_->rtcBackend));
-  Serial.flush();
+  if (kLogPlatformInitStages) {
+    Serial.printf("[platform] 03 rtcBackend=%u\n",
+                  static_cast<unsigned>(profile_->rtcBackend));
+    Serial.flush();
+  }
 
   if (profile_->rtcBackend == RtcBackend::RtcMillis) {
     // Keep current behavior: RTC minute stamp source comes from system local time.
     gRtcBackendReady = true;
-    Serial.println("[platform] 04 RTC_MILLIS selected");
-    Serial.flush();
+    logPlatformStage("[platform] 04 RTC_MILLIS selected");
     return;
   }
 
-  Serial.println("[platform] 05 Wire.begin()");
-  Serial.flush();
+  logPlatformStage("[platform] 05 Wire.begin()");
   Wire.begin();
-  Serial.println("[platform] 06 Wire.begin done");
-  Serial.flush();
+  logPlatformStage("[platform] 06 Wire.begin done");
   switch (profile_->rtcBackend) {
     case RtcBackend::Ds3231:
-      Serial.println("[platform] 07 DS3231 begin()");
-      Serial.flush();
+      logPlatformStage("[platform] 07 DS3231 begin()");
       gRtcBackendReady = gRtcDs3231.begin();
       break;
     case RtcBackend::Pcf8523:
-      Serial.println("[platform] 08 PCF8523 begin()");
-      Serial.flush();
+      logPlatformStage("[platform] 08 PCF8523 begin()");
       gRtcBackendReady = gRtcPcf8523.begin();
       break;
     case RtcBackend::Ds1307:
-      Serial.println("[platform] 09 DS1307 begin()");
-      Serial.flush();
+      logPlatformStage("[platform] 09 DS1307 begin()");
       gRtcBackendReady = gRtcDs1307.begin();
       break;
     case RtcBackend::RtcMillis:
@@ -101,9 +102,11 @@ void PlatformService::begin() {
       gRtcBackendReady = true;
       break;
   }
-  Serial.printf("[platform] 10 rtc backend ready=%u\n",
-                gRtcBackendReady ? 1U : 0U);
-  Serial.flush();
+  if (kLogPlatformInitStages) {
+    Serial.printf("[platform] 10 rtc backend ready=%u\n",
+                  gRtcBackendReady ? 1U : 0U);
+    Serial.flush();
+  }
 }
 
 uint32_t PlatformService::nowMs() const { return millis(); }

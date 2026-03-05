@@ -277,7 +277,9 @@ bool writeJsonAtomic(const char* path, JsonDocument& doc) {
   if (LittleFS.rename(tmpPath, path)) {
     return true;
   }
-  LittleFS.remove(path);
+  if (LittleFS.exists(path)) {
+    LittleFS.remove(path);
+  }
   if (!LittleFS.rename(tmpPath, path)) {
     LittleFS.remove(tmpPath);
     return false;
@@ -390,6 +392,10 @@ bool tryLoadCandidateFromSplit(SystemConfig& outCandidate,
 
     char cardPath[64] = {};
     buildCardPath(cardId, cardPath, sizeof(cardPath));
+    if (!LittleFS.exists(cardPath)) {
+      outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
+      return true;
+    }
     File cardFile = LittleFS.open(cardPath, "r");
     if (!cardFile) {
       outError = {ConfigErrorCode::ConfigPayloadInvalidShape, cardIndex};
@@ -471,6 +477,14 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
     Serial.flush();
   }
   feedBootWatchdog();
+  if (!LittleFS.exists(kLegacyActiveConfigPath)) {
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 05 config file missing");
+      Serial.flush();
+    }
+    feedBootWatchdog();
+    return false;
+  }
   File file = LittleFS.open(kLegacyActiveConfigPath, "r");
   if (!file) {
     if (kLogStorageFileTrace) {
