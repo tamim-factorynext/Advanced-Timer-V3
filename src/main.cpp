@@ -3,7 +3,9 @@
 #include "core/platform/watchdog.hpp"
 #include "core/runtime/runtime_types.hpp"
 #include "core/runtime/service_manager.hpp"
+#include "core/runtime/status_snapshot.hpp"
 #include "core/services/telemetry_service.hpp"
+#include "core/services/http_api_service.hpp"
 #include "core/services/wifi_policy_service.hpp"
 
 namespace {
@@ -33,6 +35,7 @@ TaskHandle_t gCore1TaskHandle = nullptr;
 portMUX_TYPE gStatsMux = portMUX_INITIALIZER_UNLOCKED;
 at::runtime::LoopStats gCore0Stats;
 at::runtime::LoopStats gCore1Stats;
+at::runtime::StatusSnapshotModel gStatusSnapshotModel;
 
 at::runtime::ServiceManager gServiceManager;
 at::services::WifiPolicyService gWifiPolicyService(kWifiPolicyConfig);
@@ -42,9 +45,11 @@ at::services::TelemetryService gTelemetryService(
     gStatsMux,
     &gCore0TaskHandle,
     &gCore1TaskHandle,
+    &gStatusSnapshotModel,
     kCore0PeriodMs,
     kCore1PeriodMs,
     kMetricsLogIntervalMs);
+at::services::HttpApiService gHttpApiService(gStatusSnapshotModel);
 
 void core0KernelTask(void * /*arg*/) {
   at::platform::addCurrentTaskToWatchdog();
@@ -101,6 +106,7 @@ void setup() {
 
   gServiceManager.registerService(&gWifiPolicyService);
   gServiceManager.registerService(&gTelemetryService);
+  gServiceManager.registerService(&gHttpApiService);
   gServiceManager.initAll();
 
   BaseType_t c0Ok = xTaskCreatePinnedToCore(

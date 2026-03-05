@@ -8,6 +8,7 @@ TelemetryService::TelemetryService(runtime::LoopStats &core0Stats,
                                    portMUX_TYPE &statsMux,
                                    const TaskHandle_t *core0TaskHandle,
                                    const TaskHandle_t *core1TaskHandle,
+                                   runtime::StatusSnapshotModel *statusModel,
                                    uint32_t core0PeriodMs,
                                    uint32_t core1PeriodMs,
                                    uint32_t logIntervalMs)
@@ -16,6 +17,7 @@ TelemetryService::TelemetryService(runtime::LoopStats &core0Stats,
       statsMux_(statsMux),
       core0TaskHandle_(core0TaskHandle),
       core1TaskHandle_(core1TaskHandle),
+      statusModel_(statusModel),
       core0PeriodMs_(core0PeriodMs),
       core1PeriodMs_(core1PeriodMs),
       logIntervalMs_(logIntervalMs) {}
@@ -29,14 +31,6 @@ void TelemetryService::init() {
 }
 
 void TelemetryService::tick(uint32_t nowMs) {
-  if (nowMs - lastLogMs_ < logIntervalMs_) {
-    return;
-  }
-  logMetricsSnapshot();
-  lastLogMs_ = nowMs;
-}
-
-void TelemetryService::logMetricsSnapshot() {
   runtime::LoopStats core0Copy;
   runtime::LoopStats core1Copy;
   portENTER_CRITICAL(&statsMux_);
@@ -65,30 +59,65 @@ void TelemetryService::logMetricsSnapshot() {
   const UBaseType_t core1StackWords =
       (core1TaskHandle_ && *core1TaskHandle_) ? uxTaskGetStackHighWaterMark(*core1TaskHandle_) : 0;
 
+  if (statusModel_ != nullptr) {
+    runtime::SystemStatusSnapshot snapshot;
+    snapshot.uptimeMs = nowMs;
+    snapshot.wifiStatus = WiFi.status();
+    snapshot.wifiRssi = (snapshot.wifiStatus == WL_CONNECTED) ? WiFi.RSSI() : 0;
+    snapshot.ip = WiFi.localIP();
+    snapshot.core0AvgUs = core0AvgUs;
+    snapshot.core0MaxUs = core0Copy.maxBusyUs;
+    snapshot.core0Overruns = core0Copy.overrunCount;
+    snapshot.core0LoadPct = core0LoadPct;
+    snapshot.core1AvgUs = core1AvgUs;
+    snapshot.core1MaxUs = core1Copy.maxBusyUs;
+    snapshot.core1Overruns = core1Copy.overrunCount;
+    snapshot.core1LoadPct = core1LoadPct;
+    snapshot.heapFree = freeHeap;
+    snapshot.heapMin = minFreeHeap;
+    snapshot.psramPresent = hasPsram;
+    snapshot.psramFree = freePsram;
+    snapshot.psramMin = minFreePsram;
+    snapshot.core0StackWords = static_cast<uint32_t>(core0StackWords);
+    snapshot.core1StackWords = static_cast<uint32_t>(core1StackWords);
+    statusModel_->write(snapshot);
+  }
+
+  if (nowMs - lastLogMs_ < logIntervalMs_) {
+    return;
+  }
+  logMetricsSnapshot();
+  lastLogMs_ = nowMs;
+}
+
+void TelemetryService::logMetricsSnapshot() {
+  runtime::SystemStatusSnapshot snapshot;
+  if (statusModel_ != nullptr) {
+    snapshot = statusModel_->read();
+  }
   Serial.printf(
       "[METRICS] C0(avg/max/ovr): %lu/%lu/%lu us load=%.1f%% | "
       "C1(avg/max/ovr): %lu/%lu/%lu us load=%.1f%%\n",
-      static_cast<unsigned long>(core0AvgUs),
-      static_cast<unsigned long>(core0Copy.maxBusyUs),
-      static_cast<unsigned long>(core0Copy.overrunCount),
-      core0LoadPct,
-      static_cast<unsigned long>(core1AvgUs),
-      static_cast<unsigned long>(core1Copy.maxBusyUs),
-      static_cast<unsigned long>(core1Copy.overrunCount),
-      core1LoadPct);
+      static_cast<unsigned long>(snapshot.core0AvgUs),
+      static_cast<unsigned long>(snapshot.core0MaxUs),
+      static_cast<unsigned long>(snapshot.core0Overruns),
+      snapshot.core0LoadPct,
+      static_cast<unsigned long>(snapshot.core1AvgUs),
+      static_cast<unsigned long>(snapshot.core1MaxUs),
+      static_cast<unsigned long>(snapshot.core1Overruns),
+      snapshot.core1LoadPct);
 
   Serial.printf(
       "[MEM] heap free/min: %lu/%lu | psram present: %s free/min: %lu/%lu | "
       "stackHW words C0/C1: %lu/%lu\n",
-      static_cast<unsigned long>(freeHeap),
-      static_cast<unsigned long>(minFreeHeap),
-      hasPsram ? "yes" : "no",
-      static_cast<unsigned long>(freePsram),
-      static_cast<unsigned long>(minFreePsram),
-      static_cast<unsigned long>(core0StackWords),
-      static_cast<unsigned long>(core1StackWords));
+      static_cast<unsigned long>(snapshot.heapFree),
+      static_cast<unsigned long>(snapshot.heapMin),
+      snapshot.psramPresent ? "yes" : "no",
+      static_cast<unsigned long>(snapshot.psramFree),
+      static_cast<unsigned long>(snapshot.psramMin),
+      static_cast<unsigned long>(snapshot.core0StackWords),
+      static_cast<unsigned long>(snapshot.core1StackWords));
 }
 
 }  // namespace services
 }  // namespace at
-

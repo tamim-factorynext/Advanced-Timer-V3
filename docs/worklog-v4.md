@@ -57,6 +57,11 @@ Status: Active
   - Added platform modules for watchdog and boot diagnostics (`core/platform`).
   - Added first pluggable services for Wi-Fi policy and telemetry (`core/services`).
   - Reduced `main.cpp` to orchestration, task setup, and service wiring to keep backend transport as a future thin adapter layer.
+- Added first thin backend transport slice over core services:
+  - Added shared status snapshot model (`core/runtime/status_snapshot.hpp`).
+  - Published telemetry into snapshot model.
+  - Added HTTP API service exposing `GET /api/v4/status` (`core/services/http_api_service.*`).
+  - Added baseline API contract doc (`docs/api-contract-v4.md`) for frontend integration.
 - Updated build/runtime baseline for ESP32-S3 N16R8 profile: 16MB partition profile + PSRAM build flags/variant in `platformio.ini`, plus boot-time PSRAM probe and mismatch warning in `src/main.cpp`.
 - Replaced fragile N8+override approach with a project-local custom board definition (`boards/esp32-s3-r8n16-v4.json`) and switched env board target to that profile for safer reproducibility.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.

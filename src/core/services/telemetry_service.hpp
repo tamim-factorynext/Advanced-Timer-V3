@@ -5,6 +5,7 @@
 
 #include "core/contracts/core_service.hpp"
 #include "core/runtime/runtime_types.hpp"
+#include "core/runtime/status_snapshot.hpp"
 
 namespace at {
 namespace services {
@@ -16,6 +17,7 @@ class TelemetryService : public core::CoreService {
                    portMUX_TYPE &statsMux,
                    const TaskHandle_t *core0TaskHandle,
                    const TaskHandle_t *core1TaskHandle,
+                   runtime::StatusSnapshotModel *statusModel,
                    uint32_t core0PeriodMs,
                    uint32_t core1PeriodMs,
                    uint32_t logIntervalMs);
@@ -32,6 +34,7 @@ class TelemetryService : public core::CoreService {
   portMUX_TYPE &statsMux_;
   const TaskHandle_t *core0TaskHandle_;
   const TaskHandle_t *core1TaskHandle_;
+  runtime::StatusSnapshotModel *statusModel_;
   uint32_t core0PeriodMs_;
   uint32_t core1PeriodMs_;
   uint32_t logIntervalMs_;
@@ -40,4 +43,3 @@ class TelemetryService : public core::CoreService {
 
 }  // namespace services
 }  // namespace at
-
