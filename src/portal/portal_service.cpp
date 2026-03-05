@@ -28,8 +28,6 @@ namespace {
 
 const char* kDiagnosticsFallbackJson =
     "{\"ok\":false,\"reason\":\"diagnostics_memory_pressure\"}";
-const char* kSnapshotFallbackJson =
-    "{\"ok\":false,\"reason\":\"snapshot_memory_pressure\"}";
 
 }  // namespace
 
@@ -45,14 +43,12 @@ void PortalService::begin() {
   diagnosticsReserveReady_ = diagnosticsJson_.reserve(kDiagnosticsJsonReserve);
   snapshotRevision_ = 0;
   snapshotReady_ = false;
-  snapshotFallbackActive_ = false;
-  snapshotSerializeFailureCount_ = 0;
-  snapshotCapacityRejectCount_ = 0;
-  snapshotJson_.remove(0);
-  snapshotReserveReady_ = snapshotJson_.reserve(kSnapshotJsonReserve);
   latestRuntimeSnapshot_ = {};
   latestRuntimeCardsPtr_ = nullptr;
   latestRuntimeCardCount_ = 0;
+  latestRuntimeSnapshotSeq_ = 0;
+  previousRuntimeSnapshotSeq_ = 0;
+  previousRuntimeCardCount_ = 0;
   head_ = 0;
   tail_ = 0;
   depth_ = 0;
@@ -65,7 +61,16 @@ void PortalService::tick(uint32_t nowMs,
                          const RuntimeSnapshotCard* cards, uint8_t cardCount) {
   lastTickMs_ = nowMs;
   observedScanCount_ = snapshot.completedScans;
+
+  previousRuntimeSnapshotSeq_ = latestRuntimeSnapshotSeq_;
+  previousRuntimeCardCount_ = latestRuntimeCardCount_;
+  for (uint8_t i = 0; i < latestRuntimeCardCount_; ++i) {
+    previousCardIds_[i] = latestCardIds_[i];
+    previousCardSignatures_[i] = latestCardSignatures_[i];
+  }
+
   latestRuntimeSnapshot_ = snapshot;
+  latestRuntimeSnapshotSeq_ = snapshot.completedScans;
   if (cards == nullptr) {
     latestRuntimeCardsPtr_ = nullptr;
     latestRuntimeCardCount_ = 0;
@@ -75,8 +80,13 @@ void PortalService::tick(uint32_t nowMs,
                                   ? cardCount
                                   : v3::storage::kMaxCards;
   }
+  for (uint8_t i = 0; i < latestRuntimeCardCount_; ++i) {
+    latestCardIds_[i] = latestRuntimeCardsPtr_[i].id;
+    latestCardSignatures_[i] = cardSignature(latestRuntimeCardsPtr_[i]);
+  }
   rebuildDiagnosticsJson(snapshot);
-  rebuildSnapshotJson(snapshot, cards, cardCount);
+  snapshotRevision_ += 1;
+  snapshotReady_ = true;
 }
 
 bool PortalService::enqueueSetRunModeRequest(engineMode mode, uint32_t requestId,
@@ -191,7 +201,6 @@ PortalSnapshotState PortalService::snapshotState() const {
   PortalSnapshotState state = {};
   state.ready = snapshotReady_;
   state.revision = snapshotRevision_;
-  state.json = snapshotFallbackActive_ ? kSnapshotFallbackJson : snapshotJson_.c_str();
   return state;
 }
 
@@ -203,6 +212,36 @@ const RuntimeSnapshotCard* PortalService::latestRuntimeCards(
     uint8_t& outCardCount) const {
   outCardCount = latestRuntimeCardCount_;
   return latestRuntimeCardsPtr_;
+}
+
+uint32_t PortalService::previousRuntimeSnapshotSeq() const {
+  return previousRuntimeSnapshotSeq_;
+}
+
+bool PortalService::isRuntimeCardChangedSincePrevious(uint8_t index) const {
+  if (index >= latestRuntimeCardCount_) return false;
+  if (index >= previousRuntimeCardCount_) return true;
+  if (latestCardIds_[index] != previousCardIds_[index]) return true;
+  return latestCardSignatures_[index] != previousCardSignatures_[index];
+}
+
+uint32_t PortalService::cardSignature(const RuntimeSnapshotCard& card) {
+  uint32_t sig = 2166136261UL;
+  sig = (sig ^ card.id) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.type)) * 16777619UL;
+  sig = (sig ^ card.index) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.commandState)) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.actualState)) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.edgePulse)) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.state)) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.mode)) * 16777619UL;
+  sig = (sig ^ card.liveValue) * 16777619UL;
+  sig = (sig ^ card.startOnMs) * 16777619UL;
+  sig = (sig ^ card.startOffMs) * 16777619UL;
+  sig = (sig ^ card.repeatCounter) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.turnOnConditionMet)) * 16777619UL;
+  sig = (sig ^ static_cast<uint8_t>(card.turnOffConditionMet)) * 16777619UL;
+  return sig;
 }
 
 void PortalService::rebuildDiagnosticsJson(
@@ -314,14 +353,16 @@ void PortalService::rebuildDiagnosticsJson(
 
   JsonObject heapGuard = doc["heapGuard"].to<JsonObject>();
   heapGuard["diagnosticsReserveReady"] = diagnosticsReserveReady_;
-  heapGuard["snapshotReserveReady"] = snapshotReserveReady_;
   heapGuard["diagnosticsSerializeFailureCount"] =
       diagnosticsSerializeFailureCount_;
-  heapGuard["snapshotSerializeFailureCount"] = snapshotSerializeFailureCount_;
   heapGuard["diagnosticsCapacityRejectCount"] = diagnosticsCapacityRejectCount_;
-  heapGuard["snapshotCapacityRejectCount"] = snapshotCapacityRejectCount_;
   heapGuard["diagnosticsMaxBytes"] = kDiagnosticsJsonReserve;
-  heapGuard["snapshotMaxBytes"] = kSnapshotJsonReserve;
+
+  JsonObject memory = doc["memory"].to<JsonObject>();
+  memory["minFreeHeapBytes"] = snapshot.memory.minFreeHeapBytes;
+  memory["minLargestFreeBlockBytes"] = snapshot.memory.minLargestFreeBlockBytes;
+  memory["core0StackHighWaterBytes"] = snapshot.memory.core0StackHighWaterBytes;
+  memory["core1StackHighWaterBytes"] = snapshot.memory.core1StackHighWaterBytes;
 
   const size_t requiredBytes = measureJson(doc);
   if ((requiredBytes + 1U) > kDiagnosticsJsonReserve) {
@@ -341,104 +382,6 @@ void PortalService::rebuildDiagnosticsJson(
   }
   diagnosticsRevision_ += 1;
   diagnosticsReady_ = true;
-}
-
-void PortalService::rebuildSnapshotJson(
-    const v3::runtime::RuntimeSnapshot& snapshot, const RuntimeSnapshotCard* cards,
-    uint8_t cardCount) {
-  JsonDocument doc;
-
-  doc["type"] = "runtime_snapshot";
-  doc["apiVersion"] = "2.0";
-  doc["schemaVersion"] = 1;
-  doc["snapshotSeq"] = snapshot.completedScans;
-  doc["revision"] = snapshotRevision_ + 1;
-  doc["tsMs"] = snapshot.nowMs;
-  doc["scanPeriodMs"] = snapshot.scanPeriodMs;
-  doc["lastCompleteScanMs"] = static_cast<double>(snapshot.lastScanMs) / 1000.0;
-  doc["engineMode"] = toString(snapshot.mode);
-  JsonObject testMode = doc["testMode"].to<JsonObject>();
-  testMode["active"] = false;
-  testMode["outputMaskGlobal"] = false;
-  testMode["breakpointPaused"] = false;
-  testMode["scanCursor"] = 0;
-
-  JsonObject metrics = doc["metrics"].to<JsonObject>();
-  metrics["scanLastUs"] = snapshot.scanLastUs;
-  metrics["scanMaxUs"] = snapshot.scanMaxUs;
-  metrics["scanBudgetUs"] = snapshot.scanPeriodMs * 1000U;
-  metrics["scanOverrunLast"] = snapshot.scanOverrunLast;
-  metrics["scanOverrunCount"] = snapshot.scanOverrunCount;
-  metrics["queueDepth"] = snapshot.queueTelemetry.commandQueueDepth;
-  metrics["queueHighWaterMark"] = snapshot.queueTelemetry.commandQueueHighWater;
-  metrics["queueCapacity"] = snapshot.queueTelemetry.commandQueueCapacity;
-  metrics["commandLatencyLastUs"] = snapshot.queueTelemetry.commandLastLatencyUs;
-  metrics["commandLatencyMaxUs"] = snapshot.queueTelemetry.commandMaxLatencyUs;
-
-  // Compatibility aliases retained during portal migration window.
-  metrics["scanLastMs"] = snapshot.lastScanMs;
-  metrics["scanCompleted"] = snapshot.completedScans;
-  metrics["configuredCardCount"] = snapshot.configuredCardCount;
-  metrics["enabledCardCount"] = snapshot.enabledCardCount;
-  metrics["familyCountSum"] = snapshot.familyCountSum;
-  metrics["bindingConsistent"] = snapshot.bindingConsistent;
-  metrics["snapshotQueueDepth"] = snapshot.queueTelemetry.snapshotQueueDepth;
-  metrics["snapshotQueueHighWater"] =
-      snapshot.queueTelemetry.snapshotQueueHighWater;
-  metrics["snapshotQueueDropCount"] =
-      snapshot.queueTelemetry.snapshotQueueDropCount;
-
-  JsonArray cardsJson = doc["cards"].to<JsonArray>();
-  if (cards != nullptr) {
-    for (uint8_t i = 0; i < cardCount; ++i) {
-      const RuntimeSnapshotCard& card = cards[i];
-      JsonObject item = cardsJson.add<JsonObject>();
-      item["id"] = card.id;
-      item["type"] = toString(card.type);
-      item["familyOrder"] = card.id;
-      item["index"] = card.index;
-      item["commandState"] = card.commandState;
-      item["actualState"] = card.actualState;
-      item["edgePulse"] = card.edgePulse;
-      item["state"] = toString(card.state);
-      item["mode"] = toString(card.mode);
-      item["liveValue"] = card.liveValue;
-      item["startOnMs"] = card.startOnMs;
-      item["startOffMs"] = card.startOffMs;
-      item["repeatCounter"] = card.repeatCounter;
-      item["turnOnConditionMet"] = card.turnOnConditionMet;
-      item["turnOffConditionMet"] = card.turnOffConditionMet;
-      item["breakpointEnabled"] = false;
-      item["evalCounter"] = snapshot.completedScans;
-      JsonObject maskForced = item["maskForced"].to<JsonObject>();
-      maskForced["inputSource"] = "REAL";
-      maskForced["forcedAIValue"] = 0;
-      maskForced["outputMaskLocal"] = false;
-      maskForced["outputMasked"] = false;
-      JsonObject debug = item["debug"].to<JsonObject>();
-      debug["evalCounter"] = snapshot.completedScans;
-      debug["breakpointEnabled"] = false;
-    }
-  }
-
-  const size_t requiredBytes = measureJson(doc);
-  if ((requiredBytes + 1U) > kSnapshotJsonReserve) {
-    snapshotCapacityRejectCount_ += 1;
-    snapshotFallbackActive_ = true;
-    snapshotRevision_ += 1;
-    snapshotReady_ = true;
-    return;
-  }
-
-  snapshotJson_.remove(0);
-  if (serializeJson(doc, snapshotJson_) == 0) {
-    snapshotSerializeFailureCount_ += 1;
-    snapshotFallbackActive_ = true;
-  } else {
-    snapshotFallbackActive_ = false;
-  }
-  snapshotRevision_ += 1;
-  snapshotReady_ = true;
 }
 
 bool PortalService::enqueueRequest(const PortalCommandRequest& request) {

@@ -15,6 +15,7 @@ Notes:
 - Naming follows docs/naming-glossary-v3.md where applicable.
 */
 #include <Arduino.h>
+#include <esp_heap_caps.h>
 #include <esp_system.h>
 #include <esp_task_wdt.h>
 #include <freertos/FreeRTOS.h>
@@ -66,6 +67,10 @@ uint32_t gKernelLastAppliedRequestId = 0;
 uint32_t gControlDispatchQueueFullCount = 0;
 v3::platform::WiFiState gLastWiFiState = v3::platform::WiFiState::Offline;
 uint32_t gLastWiFiLogMs = 0;
+uint32_t gMinFreeHeapBytes = 0xFFFFFFFFUL;
+uint32_t gMinLargestFreeBlockBytes = 0xFFFFFFFFUL;
+uint32_t gCore0StackHighWaterBytes = 0;
+uint32_t gCore1StackHighWaterBytes = 0;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
@@ -83,6 +88,12 @@ constexpr uint32_t kCore1IdleLoopDelayMs = 5;
 void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
   (void)err;
+}
+
+void updateTaskStackHighWaterBytes(uint32_t& outBytes) {
+  const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
+  const uint32_t bytes = static_cast<uint32_t>(words) * sizeof(StackType_t);
+  if (outBytes == 0 || bytes < outBytes) outBytes = bytes;
 }
 
 [[noreturn]] void haltBoot(const char* message) {
@@ -275,6 +286,7 @@ void core0KernelTask(void*) {
     }
     const uint32_t nowUs = micros();
     const uint32_t nowMs = gPlatform.nowMs();
+    updateTaskStackHighWaterBytes(gCore0StackHighWaterBytes);
     applyKernelCommands(nowUs);
     gKernel.tick(nowMs);
     gCore0SnapshotBuffer.metrics = gKernel.metrics();
@@ -321,6 +333,14 @@ void core1ServiceTask(void*) {
       firstLoopLog = false;
     }
     const uint32_t nowMs = gPlatform.nowMs();
+    updateTaskStackHighWaterBytes(gCore1StackHighWaterBytes);
+    const uint32_t freeHeapBytes = ESP.getFreeHeap();
+    if (freeHeapBytes < gMinFreeHeapBytes) gMinFreeHeapBytes = freeHeapBytes;
+    const uint32_t largestFreeBlockBytes =
+        static_cast<uint32_t>(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    if (largestFreeBlockBytes < gMinLargestFreeBlockBytes) {
+      gMinLargestFreeBlockBytes = largestFreeBlockBytes;
+    }
     const bool transportActive = v3::portal::hasRecentTransportActivity(
         nowMs, kTransportActivityWindowMs);
     gWiFi.tick(nowMs);
@@ -388,8 +408,13 @@ void core1ServiceTask(void*) {
         (queueTelemetry.commandAppliedCount >
          queueTelemetry.controlAcceptedCount);
 
+    v3::runtime::MemoryTelemetry memoryTelemetry = {};
+    memoryTelemetry.minFreeHeapBytes = gMinFreeHeapBytes;
+    memoryTelemetry.minLargestFreeBlockBytes = gMinLargestFreeBlockBytes;
+    memoryTelemetry.core0StackHighWaterBytes = gCore0StackHighWaterBytes;
+    memoryTelemetry.core1StackHighWaterBytes = gCore1StackHighWaterBytes;
     gRuntime.tick(gCore1SnapshotBuffer.producedAtMs, gCore1SnapshotBuffer.metrics,
-                  gBootstrapDiagnostics, queueTelemetry);
+                  gBootstrapDiagnostics, queueTelemetry, memoryTelemetry);
     const uint32_t currentScanCount =
         gCore1SnapshotBuffer.metrics.completedScans;
     const bool hasNewScan =

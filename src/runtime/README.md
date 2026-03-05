@@ -7,4 +7,3 @@ Current interfaces:
 - `runtime_card_meta.h`
 - `runtime_snapshot_card.h`
 - `snapshot_card_builder.h`
-- `legacy_snapshot_json.h`

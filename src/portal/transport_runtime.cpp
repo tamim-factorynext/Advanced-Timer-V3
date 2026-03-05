@@ -295,6 +295,23 @@ void writeCardJson(JsonObject out, const v3::storage::CardConfig& card) {
   }
 }
 
+void writeRuntimeCardJson(JsonObject item, const RuntimeSnapshotCard& card) {
+  item["id"] = card.id;
+  item["type"] = toString(card.type);
+  item["index"] = card.index;
+  item["commandState"] = card.commandState;
+  item["actualState"] = card.actualState;
+  item["edgePulse"] = card.edgePulse;
+  item["state"] = toString(card.state);
+  item["mode"] = toString(card.mode);
+  item["liveValue"] = card.liveValue;
+  item["startOnMs"] = card.startOnMs;
+  item["startOffMs"] = card.startOffMs;
+  item["repeatCounter"] = card.repeatCounter;
+  item["turnOnConditionMet"] = card.turnOnConditionMet;
+  item["turnOffConditionMet"] = card.turnOffConditionMet;
+}
+
 int8_t findCardIndexById(const v3::storage::SystemConfig& cfg, uint8_t cardId) {
   for (uint8_t i = 0; i < cfg.cardCount; ++i) {
     if (cfg.cards[i].id == cardId) return static_cast<int8_t>(i);
@@ -396,6 +413,10 @@ void handleHttpRuntimeMetricsGet() {
   metrics["snapshotQueueDepth"] = snapshot.queueTelemetry.snapshotQueueDepth;
   metrics["snapshotQueueHighWater"] = snapshot.queueTelemetry.snapshotQueueHighWater;
   metrics["snapshotQueueDropCount"] = snapshot.queueTelemetry.snapshotQueueDropCount;
+  metrics["minFreeHeapBytes"] = snapshot.memory.minFreeHeapBytes;
+  metrics["minLargestFreeBlockBytes"] = snapshot.memory.minLargestFreeBlockBytes;
+  metrics["core0StackHighWaterBytes"] = snapshot.memory.core0StackHighWaterBytes;
+  metrics["core1StackHighWaterBytes"] = snapshot.memory.core1StackHighWaterBytes;
 
   String body;
   serializeJson(out, body);
@@ -428,22 +449,77 @@ void handleHttpRuntimeCardsGet() {
   out["snapshotSeq"] = snapshot.completedScans;
   JsonArray cardsJson = out["cards"].to<JsonArray>();
   for (uint8_t i = 0; i < cardCount; ++i) {
-    const RuntimeSnapshotCard& card = cards[i];
     JsonObject item = cardsJson.add<JsonObject>();
-    item["id"] = card.id;
-    item["type"] = toString(card.type);
-    item["index"] = card.index;
-    item["commandState"] = card.commandState;
-    item["actualState"] = card.actualState;
-    item["edgePulse"] = card.edgePulse;
-    item["state"] = toString(card.state);
-    item["mode"] = toString(card.mode);
-    item["liveValue"] = card.liveValue;
-    item["startOnMs"] = card.startOnMs;
-    item["startOffMs"] = card.startOffMs;
-    item["repeatCounter"] = card.repeatCounter;
-    item["turnOnConditionMet"] = card.turnOnConditionMet;
-    item["turnOffConditionMet"] = card.turnOffConditionMet;
+    writeRuntimeCardJson(item, cards[i]);
+  }
+  String body;
+  serializeJson(out, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
+void handleHttpRuntimeCardsDeltaGet() {
+  markTransportActivity();
+  if (gPortal == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
+    return;
+  }
+  const PortalSnapshotState state = gPortal->snapshotState();
+  if (!state.ready) {
+    gHttpServer.send(503, "application/json",
+                     "{\"ok\":false,\"reason\":\"snapshot_not_ready\"}");
+    return;
+  }
+
+  uint32_t sinceSeq = 0;
+  const String sinceRaw = gHttpServer.arg("since");
+  if (sinceRaw.length() > 0) {
+    for (size_t i = 0; i < sinceRaw.length(); ++i) {
+      const char c = sinceRaw.charAt(i);
+      if (c < '0' || c > '9') {
+        gHttpServer.send(400, "application/json",
+                         "{\"ok\":false,\"reason\":\"invalid_since\"}");
+        return;
+      }
+    }
+    sinceSeq = strtoul(sinceRaw.c_str(), nullptr, 10);
+  }
+
+  const v3::runtime::RuntimeSnapshot& snapshot =
+      gPortal->latestRuntimeSnapshot();
+  const uint32_t latestSeq = snapshot.completedScans;
+  const uint32_t previousSeq = gPortal->previousRuntimeSnapshotSeq();
+  uint8_t cardCount = 0;
+  const RuntimeSnapshotCard* cards = gPortal->latestRuntimeCards(cardCount);
+
+  bool resyncRequired = false;
+  bool emitAllCards = false;
+  if (sinceSeq == latestSeq) {
+    emitAllCards = false;
+  } else if (sinceSeq == previousSeq) {
+    emitAllCards = false;
+  } else {
+    resyncRequired = true;
+    emitAllCards = true;
+  }
+
+  JsonDocument out;
+  out["ok"] = true;
+  out["apiVersion"] = "2.0";
+  out["status"] = "SUCCESS";
+  out["tsMs"] = snapshot.nowMs;
+  out["sinceSeq"] = sinceSeq;
+  out["previousSeq"] = previousSeq;
+  out["snapshotSeq"] = latestSeq;
+  out["resyncRequired"] = resyncRequired;
+  JsonArray cardsJson = out["cards"].to<JsonArray>();
+  for (uint8_t i = 0; i < cardCount; ++i) {
+    if (!emitAllCards && sinceSeq == previousSeq &&
+        !gPortal->isRuntimeCardChangedSincePrevious(i)) {
+      continue;
+    }
+    JsonObject item = cardsJson.add<JsonObject>();
+    writeRuntimeCardJson(item, cards[i]);
   }
   String body;
   serializeJson(out, body);
@@ -746,6 +822,7 @@ void handleHttpRootGet() {
       "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
       "diagnostics\",\"/api/v3/command\","
       "\"/api/v3/runtime/metrics\",\"/api/v3/runtime/cards\","
+      "\"/api/v3/runtime/cards/delta\","
       "\"/api/v3/settings\",\"/api/v3/cards\",\"/api/v3/cards/{id}\","
       "\"/api/v3/config/restore\"]}");
 }
@@ -891,6 +968,14 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/api/v3/runtime/cards/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/runtime/cards", HTTP_GET, handleHttpRuntimeCardsGet);
   gHttpServer.on("/api/v3/runtime/cards/", HTTP_GET, handleHttpRuntimeCardsGet);
+  gHttpServer.on("/api/v3/runtime/cards/delta", HTTP_OPTIONS,
+                 handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/runtime/cards/delta/", HTTP_OPTIONS,
+                 handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/runtime/cards/delta", HTTP_GET,
+                 handleHttpRuntimeCardsDeltaGet);
+  gHttpServer.on("/api/v3/runtime/cards/delta/", HTTP_GET,
+                 handleHttpRuntimeCardsDeltaGet);
 
   gHttpServer.on("/api/v3/config/restore", HTTP_OPTIONS,
                  handleHttpCorsOptions);

@@ -39,7 +39,8 @@ void RuntimeService::tick(uint32_t nowMs,
                           const v3::kernel::KernelMetrics& kernelMetrics,
                           const v3::storage::BootstrapDiagnostics&
                               storageDiagnostics,
-                          const QueueTelemetry& queueTelemetry) {
+                          const QueueTelemetry& queueTelemetry,
+                          const MemoryTelemetry& memoryTelemetry) {
   snapshot_.nowMs = nowMs;
   snapshot_.completedScans = kernelMetrics.completedScans;
   snapshot_.lastScanMs = kernelMetrics.lastScanMs;
@@ -71,6 +72,7 @@ void RuntimeService::tick(uint32_t nowMs,
   snapshot_.storageHasActiveConfig = storageDiagnostics.hasActiveConfig;
   snapshot_.storageBootstrapError = storageDiagnostics.error.code;
   snapshot_.queueTelemetry = queueTelemetry;
+  snapshot_.memory = memoryTelemetry;
 }
 
 /**

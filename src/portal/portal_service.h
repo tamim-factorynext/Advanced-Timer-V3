@@ -113,12 +113,11 @@ struct PortalDiagnosticsState {
 struct PortalSnapshotState {
   bool ready;
   uint32_t revision;
-  const char* json;
 };
 
 /**
- * @brief Owns portal-side command ingress queue and JSON cache generation.
- * @details Decouples transport request handling from control dispatch and response payload building.
+ * @brief Owns portal-side command ingress queue and runtime cache projection.
+ * @details Decouples transport request handling from control dispatch and lightweight response building.
  * @par Used By
  * - src/main.cpp
  * - src/portal/transport_runtime.cpp
@@ -133,7 +132,7 @@ class PortalService {
    */
   void begin();
   /**
-   * @brief Rebuilds cached diagnostics and snapshot payloads from latest runtime data.
+   * @brief Rebuilds cached diagnostics payload and runtime delta markers from latest data.
    * @details Called in service loop after runtime snapshot projection update.
    * @param nowMs Current service-loop timestamp.
    * @param snapshot Latest runtime aggregate snapshot.
@@ -242,15 +241,24 @@ class PortalService {
    * @return Pointer to internal card cache.
    */
   const RuntimeSnapshotCard* latestRuntimeCards(uint8_t& outCardCount) const;
+  /**
+   * @brief Returns previous runtime snapshot sequence observed before current one.
+   * @return Previous completed-scan sequence.
+   */
+  uint32_t previousRuntimeSnapshotSeq() const;
+  /**
+   * @brief Indicates whether runtime card row changed from previous sequence.
+   * @param index Card row index in latest runtime card slice.
+   * @return `true` when row differs from previous snapshot row.
+   */
+  bool isRuntimeCardChangedSincePrevious(uint8_t index) const;
 
  private:
   static constexpr size_t kDiagnosticsJsonReserve = 1024;
-  static constexpr size_t kSnapshotJsonReserve = 12288;
 
   void rebuildDiagnosticsJson(const v3::runtime::RuntimeSnapshot& snapshot);
-  void rebuildSnapshotJson(const v3::runtime::RuntimeSnapshot& snapshot,
-                           const RuntimeSnapshotCard* cards, uint8_t cardCount);
   bool enqueueRequest(const PortalCommandRequest& request);
+  static uint32_t cardSignature(const RuntimeSnapshotCard& card);
 
   uint32_t lastTickMs_ = 0;
   uint32_t observedScanCount_ = 0;
@@ -263,14 +271,16 @@ class PortalService {
   String diagnosticsJson_;
   uint32_t snapshotRevision_ = 0;
   bool snapshotReady_ = false;
-  bool snapshotFallbackActive_ = false;
-  bool snapshotReserveReady_ = false;
-  uint32_t snapshotSerializeFailureCount_ = 0;
-  uint32_t snapshotCapacityRejectCount_ = 0;
-  String snapshotJson_;
   v3::runtime::RuntimeSnapshot latestRuntimeSnapshot_ = {};
   const RuntimeSnapshotCard* latestRuntimeCardsPtr_ = nullptr;
   uint8_t latestRuntimeCardCount_ = 0;
+  uint32_t latestRuntimeSnapshotSeq_ = 0;
+  uint32_t previousRuntimeSnapshotSeq_ = 0;
+  uint8_t previousRuntimeCardCount_ = 0;
+  uint8_t latestCardIds_[v3::storage::kMaxCards] = {};
+  uint8_t previousCardIds_[v3::storage::kMaxCards] = {};
+  uint32_t latestCardSignatures_[v3::storage::kMaxCards] = {};
+  uint32_t previousCardSignatures_[v3::storage::kMaxCards] = {};
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};
   uint16_t head_ = 0;

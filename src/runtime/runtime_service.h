@@ -71,6 +71,17 @@ struct QueueTelemetry {
 };
 
 /**
+ * @brief Runtime memory-governance telemetry snapshot.
+ * @details Tracks heap floor/fragmentation signals and task stack high-water marks.
+ */
+struct MemoryTelemetry {
+  uint32_t minFreeHeapBytes;
+  uint32_t minLargestFreeBlockBytes;
+  uint32_t core0StackHighWaterBytes;
+  uint32_t core1StackHighWaterBytes;
+};
+
+/**
  * @brief Runtime observability snapshot consumed by portal and diagnostics.
  * @details Projects kernel metrics, storage bootstrap status, and queue telemetry into one payload contract.
  * @par Used By
@@ -108,6 +119,7 @@ struct RuntimeSnapshot {
   bool storageHasActiveConfig;
   v3::storage::ConfigErrorCode storageBootstrapError;
   QueueTelemetry queueTelemetry;
+  MemoryTelemetry memory;
 };
 
 /**
@@ -138,7 +150,8 @@ class RuntimeService {
    */
   void tick(uint32_t nowMs, const v3::kernel::KernelMetrics& kernelMetrics,
             const v3::storage::BootstrapDiagnostics& storageDiagnostics,
-            const QueueTelemetry& queueTelemetry);
+            const QueueTelemetry& queueTelemetry,
+            const MemoryTelemetry& memoryTelemetry);
   /**
    * @brief Returns current runtime snapshot view.
    * @details Returned reference remains valid for service/portal read-only usage.

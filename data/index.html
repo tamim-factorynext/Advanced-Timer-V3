@@ -119,6 +119,7 @@
         lastOkMs: 0,
         lastError: "none",
         cardsSeq: 0,
+        cardsById: new Map(),
       };
 
       const el = {
@@ -189,7 +190,7 @@
 
       function renderCards(cards) {
         if (!Array.isArray(cards) || cards.length === 0) {
-          el.cards.innerHTML = '<div class="node"><div class="meta">No card rows in snapshot.</div></div>';
+          el.cards.innerHTML = '<div class="node"><div class="meta">No card rows in runtime cache.</div></div>';
           return;
         }
         el.cards.innerHTML = cards.map((c) => {
@@ -206,6 +207,10 @@
             </article>
           `;
         }).join("");
+      }
+
+      function sortedCardsFromStore() {
+        return Array.from(state.cardsById.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
       }
 
       async function fetchJson(path) {
@@ -233,11 +238,19 @@
         }
       }
 
-      async function tickCards() {
+      async function tickCardsDelta() {
         try {
-          const payload = await fetchJson("/api/v3/runtime/cards");
-          state.cardsSeq = Number(payload.snapshotSeq || 0);
-          renderCards(payload.cards || []);
+          const payload = await fetchJson(`/api/v3/runtime/cards/delta?since=${state.cardsSeq}`);
+          const resyncRequired = !!payload.resyncRequired;
+          const updates = Array.isArray(payload.cards) ? payload.cards : [];
+          if (resyncRequired) state.cardsById.clear();
+          for (const card of updates) {
+            if (card && typeof card.id === "number") {
+              state.cardsById.set(card.id, card);
+            }
+          }
+          state.cardsSeq = Number(payload.snapshotSeq || state.cardsSeq || 0);
+          renderCards(sortedCardsFromStore());
         } catch (err) {
           state.lastError = String(err && err.message ? err.message : err);
           el.meta.textContent = `Connection error: ${state.lastError}`;
@@ -245,9 +258,9 @@
       }
 
       tickMetrics();
-      tickCards();
+      tickCardsDelta();
       setInterval(tickMetrics, 1000);
-      setInterval(tickCards, 3000);
+      setInterval(tickCardsDelta, 1000);
     </script>
   </body>
 </html>
