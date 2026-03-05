@@ -217,95 +217,96 @@ Condition-block shape rule (applies to request/response config payloads):
   - `clauseB`
 - Even when `combiner = "NONE"`, `clauseB` must still be present as an inert clause (typically `ALWAYS_FALSE`) to keep payload shape deterministic for clients.
 
-### `GET /api/v3/config/active`
+### `GET /api/v3/settings`
 
 ```json
 {
   "apiVersion": "2.0",
   "status": "SUCCESS",
-  "timestamp": "2026-02-26T10:30:00Z",
-  "activeVersion": "v42",
-  "schemaVersion": "2.0.0",
-  "config": {}
+  "tsMs": 12345678,
+  "activeVersion": 42,
+  "settings": {}
 }
 ```
 
-### `POST /api/v3/config/staged/save`
+### `PUT /api/v3/settings`
 
 Request:
 ```json
 {
-  "requestId": "cfg-1001",
+  "requestId": "set-1001",
   "apiVersion": "2.0",
-  "schemaVersion": "2.0.0",
-  "config": {}
+  "settings": {}
 }
 ```
 
 Response:
 ```json
 {
-  "requestId": "cfg-1001",
+  "requestId": "set-1001",
   "apiVersion": "2.0",
   "status": "SUCCESS",
-  "timestamp": "2026-02-26T10:30:01Z",
-  "stagedVersion": "s19"
+  "tsMs": 12345679,
+  "activeVersion": 43,
+  "requiresRestart": true
 }
 ```
 
-### `POST /api/v3/config/staged/validate`
+### `GET /api/v3/cards`
 
 Request:
 ```json
 {
-  "requestId": "cfg-1002",
+  "ok": true,
   "apiVersion": "2.0",
-  "schemaVersion": "2.0.0",
-  "config": {}
+  "status": "SUCCESS",
+  "tsMs": 12345680,
+  "activeVersion": 43,
+  "cards": [
+    { "id": 0, "family": "DI", "enabled": true }
+  ]
+}
+```
+
+### `GET /api/v3/cards/{id}`
+
+```json
+{
+  "ok": true,
+  "apiVersion": "2.0",
+  "status": "SUCCESS",
+  "tsMs": 12345681,
+  "activeVersion": 43,
+  "card": {}
+}
+```
+
+### `PUT /api/v3/cards/{id}`
+
+Request:
+```json
+{
+  "requestId": "card-1003",
+  "apiVersion": "2.0",
+  "card": {}
 }
 ```
 
 Response:
 ```json
 {
-  "requestId": "cfg-1002",
+  "requestId": "card-1003",
   "apiVersion": "2.0",
   "status": "SUCCESS",
-  "timestamp": "2026-02-26T10:30:02Z",
-  "validation": {
-    "errors": [],
-    "warnings": []
-  }
+  "tsMs": 12345682,
+  "activeVersion": 44,
+  "requiresRestart": true
 }
 ```
 
-### `POST /api/v3/config/commit`
-
-Request:
-```json
-{
-  "requestId": "cfg-1003",
-  "apiVersion": "2.0",
-  "schemaVersion": "2.0.0",
-  "config": {},
-  "options": { "persist": true }
-}
-```
-
-Response:
-```json
-{
-  "requestId": "cfg-1003",
-  "apiVersion": "2.0",
-  "status": "SUCCESS",
-  "timestamp": "2026-02-26T10:30:03Z",
-  "activeVersion": "v43",
-  "historyHead": {
-    "lkgVersion": "v42"
-  },
-  "requiresRestart": false
-}
-```
+Legacy note:
+- `/api/v3/config/restore` remains available for factory/LKG restore.
+- `/api/v3/config/active`, `/api/v3/config/staged/save`, `/api/v3/config/staged/validate`, and `/api/v3/config/commit` are removed from active transport routing.
 
 ### `POST /api/v3/config/restore`
 

@@ -118,6 +118,7 @@
         connected: false,
         lastOkMs: 0,
         lastError: "none",
+        cardsSeq: 0,
       };
 
       const el = {
@@ -155,8 +156,8 @@
         return warn ? "warn" : "ok";
       }
 
-      function renderSummary(s) {
-        const m = s.metrics || {};
+      function renderSummary(runtime) {
+        const m = runtime.metrics || {};
         const overWarn = Number(m.scanOverrunCount || 0) > 0;
         const qWarn = Number(m.snapshotQueueDropCount || 0) > 0;
 
@@ -164,7 +165,7 @@
         el.conn.textContent = state.connected ? "ONLINE" : "OFFLINE";
 
         el.scan.className = statusClass(state.connected, overWarn);
-        el.scan.textContent = `${s.scanPeriodMs} ms`;
+        el.scan.textContent = `${runtime.scanPeriodMs} ms`;
 
         el.over.className = statusClass(state.connected, overWarn);
         el.over.textContent = `${m.scanOverrunCount || 0}`;
@@ -173,17 +174,17 @@
         el.queue.textContent = `${m.snapshotQueueDepth || 0}/${m.snapshotQueueHighWater || 0}`;
 
         const chipData = [
-          ["Mode", s.engineMode || "?"],
+          ["Mode", runtime.engineMode || "?"],
           ["Cards", `${m.enabledCardCount || 0}/${m.configuredCardCount || 0}`],
           ["Scan Last", `${m.scanLastUs || 0} us`],
           ["Scan Max", `${m.scanMaxUs || 0} us`],
           ["Budget", `${m.scanBudgetUs || 0} us`],
           ["Drops", `${m.snapshotQueueDropCount || 0}`],
-          ["Seq", `${s.snapshotSeq || 0}`],
+          ["Seq", `${runtime.snapshotSeq || 0}`],
         ];
 
         el.chips.innerHTML = chipData.map(([k, v]) => `<div class="chip">${k}: <strong>${v}</strong></div>`).join("");
-        el.meta.textContent = `tsMs=${s.tsMs} | lastError=${state.lastError}`;
+        el.meta.textContent = `tsMs=${runtime.tsMs || 0} | lastError=${state.lastError}`;
       }
 
       function renderCards(cards) {
@@ -213,17 +214,16 @@
         return resp.json();
       }
 
-      async function tick() {
+      async function tickMetrics() {
         try {
-          const [snapshot] = await Promise.all([
-            fetchJson("/api/v3/snapshot"),
-            fetchJson("/api/v3/diagnostics").catch(() => null),
-          ]);
+          const metrics = await fetchJson("/api/v3/runtime/metrics");
           state.connected = true;
           state.lastOkMs = Date.now();
           state.lastError = "none";
-          renderSummary(snapshot);
-          renderCards(snapshot.cards || []);
+          renderSummary({
+            ...(metrics.runtime || {}),
+            tsMs: metrics.tsMs,
+          });
         } catch (err) {
           state.connected = false;
           state.lastError = String(err && err.message ? err.message : err);
@@ -233,8 +233,21 @@
         }
       }
 
-      tick();
-      setInterval(tick, 1000);
+      async function tickCards() {
+        try {
+          const payload = await fetchJson("/api/v3/runtime/cards");
+          state.cardsSeq = Number(payload.snapshotSeq || 0);
+          renderCards(payload.cards || []);
+        } catch (err) {
+          state.lastError = String(err && err.message ? err.message : err);
+          el.meta.textContent = `Connection error: ${state.lastError}`;
+        }
+      }
+
+      tickMetrics();
+      tickCards();
+      setInterval(tickMetrics, 1000);
+      setInterval(tickCards, 3000);
     </script>
   </body>
 </html>
