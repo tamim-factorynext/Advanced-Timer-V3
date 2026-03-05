@@ -30,3 +30,20 @@ Purpose: Track runtime resource usage in project history (not in LittleFS) as V4
 - Notes:
   - Board showed unstable Wi-Fi behavior across runs; cool-mode retry policy applied.
   - Thermal suspicion remains open until validation on replacement module.
+
+### 2026-03-05 - Wi-Fi diagnostics pass (user SSID only)
+
+- Profile: `esp32-s3-r8n16-v4`, `board_build.f_cpu=160000000L`
+- Scenario: cool-mode + disconnect-reason instrumentation
+- Snapshot sample:
+  - `C0(avg/max/ovr): 47/41198/1 us`
+  - `C1(avg/max/ovr): 891/70857/1 us`
+  - `heap free/min: 309380/286584`
+  - `psram present: yes free/min: 8386035/7337443`
+  - `stackHW words C0/C1: 3312/3820`
+- Wi-Fi diagnostics:
+  - Disconnect reason `2` (`AUTH_EXPIRE`)
+  - Disconnect reason `39` (`TIMEOUT`)
+- Notes:
+  - Policy remained stable (no crash/reboot), but association/auth intermittently failed.
+  - Backup SSID path disabled to test only user SSID in next run.

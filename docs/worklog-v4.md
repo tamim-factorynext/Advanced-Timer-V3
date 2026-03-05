@@ -83,3 +83,20 @@ Status: Active
 1. Add acceptance-test IDs per major core-contract clause (`AT-*` / `HIL-*`) for traceability.
 2. Split transport/API and config lifecycle into dedicated V4 contract files and cross-link from core contract.
 3. Add a single per-field min/max appendix for all card config parameters to remove parser ambiguity.
+
+## Session Update (2026-03-05)
+
+- Kept UART-serial workflow with custom S3 R8N16 board profile and validated builds.
+- Applied Wi-Fi cool-mode policy tuning for unstable hardware behavior:
+  - Longer retry backoff and radio cooldown.
+  - Added Wi-Fi disconnect reason event logging.
+  - Switched to user-SSID-only mode for cleaner diagnosis.
+- Added V4 modular runtime scaffold and moved logic out of `main.cpp` into:
+  - `core/platform`: watchdog, boot diagnostics
+  - `core/runtime`: service manager, status snapshot model
+  - `core/services`: Wi-Fi policy, telemetry, HTTP API service
+- Added first thin backend endpoint over core snapshot:
+  - `GET /api/v4/status`
+- Added V4 API baseline documentation:
+  - `docs/api-contract-v4.md`
+- Build status after these changes: `SUCCESS`.

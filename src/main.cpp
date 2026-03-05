@@ -20,8 +20,8 @@ constexpr bool kExpectPsram = true;
 constexpr size_t kPsramProbeBytes = 1 * 1024 * 1024;
 
 const at::services::WifiPolicyConfig kWifiPolicyConfig = {
-    "factorynext",
-    "12345678",
+    "",
+    "",
     8000,
     "FactoryNext",
     "FactoryNext20$22#",

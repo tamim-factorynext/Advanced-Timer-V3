@@ -7,11 +7,23 @@ namespace services {
 
 WifiPolicyService::WifiPolicyService(const WifiPolicyConfig &config) : config_(config) {}
 
+namespace {
+bool hasNetworkConfig(const char *ssid, const char *pass) {
+  return ssid != nullptr && pass != nullptr && ssid[0] != '\0';
+}
+}  // namespace
+
 const char *WifiPolicyService::name() const {
   return "wifi_policy";
 }
 
 void WifiPolicyService::init() {
+  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+      Serial.printf("[WIFI][EVT] STA disconnected, reason=%d\n",
+                    static_cast<int>(info.wifi_sta_disconnected.reason));
+    }
+  });
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_OFF);
@@ -22,8 +34,8 @@ void WifiPolicyService::init() {
 
 void WifiPolicyService::startWifiAttempt(const char *ssid, const char *pass, uint32_t nowMs) {
   WiFi.mode(WIFI_STA);
-  // Keep RF power draw lower while trying to connect on marginal hardware.
-  WiFi.setSleep(true);
+  // Keep modem sleep disabled during association/auth to improve join reliability.
+  WiFi.setSleep(false);
   WiFi.begin(ssid, pass);
   stateStartedMs_ = nowMs;
   Serial.printf("[WIFI] Attempting connect: %s\n", ssid);
@@ -40,12 +52,17 @@ void WifiPolicyService::scheduleCooldownThen(State nextState, uint32_t nowMs) {
 void WifiPolicyService::tick(uint32_t nowMs) {
   switch (state_) {
     case State::IdleStartBackup:
-      startWifiAttempt(config_.backupSsid, config_.backupPass, nowMs);
-      state_ = State::WaitingBackup;
+      if (hasNetworkConfig(config_.backupSsid, config_.backupPass)) {
+        startWifiAttempt(config_.backupSsid, config_.backupPass, nowMs);
+        state_ = State::WaitingBackup;
+      } else {
+        state_ = State::StartUser;
+      }
       break;
 
     case State::WaitingBackup:
       if (WiFi.status() == WL_CONNECTED) {
+        WiFi.setSleep(true);
         Serial.printf("[WIFI] Connected via backup. IP=%s RSSI=%d dBm\n",
                       WiFi.localIP().toString().c_str(),
                       WiFi.RSSI());
@@ -56,12 +73,19 @@ void WifiPolicyService::tick(uint32_t nowMs) {
       break;
 
     case State::StartUser:
-      startWifiAttempt(config_.userSsid, config_.userPass, nowMs);
-      state_ = State::WaitingUser;
+      if (hasNetworkConfig(config_.userSsid, config_.userPass)) {
+        startWifiAttempt(config_.userSsid, config_.userPass, nowMs);
+        state_ = State::WaitingUser;
+      } else {
+        state_ = State::OfflineBackoff;
+        stateStartedMs_ = nowMs;
+        Serial.println("[WIFI] No user SSID configured, entering offline mode.");
+      }
       break;
 
     case State::WaitingUser:
       if (WiFi.status() == WL_CONNECTED) {
+        WiFi.setSleep(true);
         Serial.printf("[WIFI] Connected via user network. IP=%s RSSI=%d dBm\n",
                       WiFi.localIP().toString().c_str(),
                       WiFi.RSSI());
@@ -101,4 +125,3 @@ void WifiPolicyService::tick(uint32_t nowMs) {
 
 }  // namespace services
 }  // namespace at
-
