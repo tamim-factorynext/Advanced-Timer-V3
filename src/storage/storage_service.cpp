@@ -35,6 +35,8 @@ constexpr const char* kSplitRootDir = "/cfg";
 constexpr const char* kSplitCardsDir = "/cfg/cards";
 constexpr const char* kSplitSettingsPath = "/cfg/settings.json";
 constexpr const char* kSplitCardsIndexPath = "/cfg/cards/index.json";
+constexpr bool kLogStorageBootstrapStages = false;
+constexpr bool kLogStorageFileTrace = false;
 
 inline void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -272,6 +274,9 @@ bool writeJsonAtomic(const char* path, JsonDocument& doc) {
     LittleFS.remove(tmpPath);
     return false;
   }
+  if (LittleFS.rename(tmpPath, path)) {
+    return true;
+  }
   LittleFS.remove(path);
   if (!LittleFS.rename(tmpPath, path)) {
     LittleFS.remove(tmpPath);
@@ -281,11 +286,11 @@ bool writeJsonAtomic(const char* path, JsonDocument& doc) {
 }
 
 bool ensureSplitDirs() {
-  if (!LittleFS.exists(kSplitRootDir)) {
-    if (!LittleFS.mkdir(kSplitRootDir)) return false;
+  if (!LittleFS.mkdir(kSplitRootDir) && !LittleFS.exists(kSplitRootDir)) {
+    return false;
   }
-  if (!LittleFS.exists(kSplitCardsDir)) {
-    if (!LittleFS.mkdir(kSplitCardsDir)) return false;
+  if (!LittleFS.mkdir(kSplitCardsDir) && !LittleFS.exists(kSplitCardsDir)) {
+    return false;
   }
   return true;
 }
@@ -321,7 +326,9 @@ bool persistSplitConfig(const SystemConfig& cfg) {
   }
   if (!writeJsonAtomic(kSplitCardsIndexPath, indexDoc)) return false;
 
-  LittleFS.remove(kLegacyActiveConfigPath);
+  if (LittleFS.exists(kLegacyActiveConfigPath)) {
+    LittleFS.remove(kLegacyActiveConfigPath);
+  }
   return true;
 }
 
@@ -426,41 +433,57 @@ bool tryLoadCandidateFromSplit(SystemConfig& outCandidate,
 bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
                               ConfigValidationError& outError) {
   feedBootWatchdog();
-  Serial.println("[storage:file] 01 LittleFS.begin()");
-  Serial.printf("[storage:file] heap before begin=%lu\n",
-                static_cast<unsigned long>(ESP.getFreeHeap()));
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 01 LittleFS.begin()");
+    Serial.printf("[storage:file] heap before begin=%lu\n",
+                  static_cast<unsigned long>(ESP.getFreeHeap()));
+    Serial.flush();
+  }
   feedBootWatchdog();
   if (!LittleFS.begin()) {
-    Serial.println("[storage:file] 02 LittleFS.begin failed");
-    Serial.println("[storage:file] 02b retry LittleFS.begin(true) to format");
-    Serial.flush();
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 02 LittleFS.begin failed");
+      Serial.println("[storage:file] 02b retry LittleFS.begin(true) to format");
+      Serial.flush();
+    }
     feedBootWatchdog();
     if (!LittleFS.begin(true)) {
-      Serial.println("[storage:file] 02c LittleFS.begin(true) failed");
-      Serial.flush();
+      if (kLogStorageFileTrace) {
+        Serial.println("[storage:file] 02c LittleFS.begin(true) failed");
+        Serial.flush();
+      }
       feedBootWatchdog();
       return false;
     }
-    Serial.println("[storage:file] 02d LittleFS formatted + mounted");
-    Serial.flush();
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 02d LittleFS formatted + mounted");
+      Serial.flush();
+    }
     feedBootWatchdog();
   }
-  Serial.println("[storage:file] 03 LittleFS.begin ok");
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 03 LittleFS.begin ok");
+    Serial.flush();
+  }
   feedBootWatchdog();
-  Serial.println("[storage:file] 04 open /config_v3.json (read)");
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 04 open /config_v3.json (read)");
+    Serial.flush();
+  }
   feedBootWatchdog();
   File file = LittleFS.open(kLegacyActiveConfigPath, "r");
   if (!file) {
-    Serial.println("[storage:file] 05 config file missing");
-    Serial.flush();
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 05 config file missing");
+      Serial.flush();
+    }
     feedBootWatchdog();
     return false;
   }
-  Serial.println("[storage:file] 06 open ok, deserialize");
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 06 open ok, deserialize");
+    Serial.flush();
+  }
   feedBootWatchdog();
 
   JsonDocument doc;
@@ -468,28 +491,36 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
   feedBootWatchdog();
   file.close();
   if (jsonError) {
-    Serial.println("[storage:file] 07 json invalid");
-    Serial.flush();
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 07 json invalid");
+      Serial.flush();
+    }
     feedBootWatchdog();
     outError = {ConfigErrorCode::ConfigPayloadInvalidJson, 0};
     return true;
   }
 
-  Serial.println("[storage:file] 08 decodeSystemConfig");
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 08 decodeSystemConfig");
+    Serial.flush();
+  }
   feedBootWatchdog();
   ConfigValidationError decodeError = {ConfigErrorCode::None, 0};
   if (!decodeSystemConfigLight(doc.as<JsonObjectConst>(), outCandidate,
                                decodeError)) {
-    Serial.println("[storage:file] 09 decode failed");
-    Serial.flush();
+    if (kLogStorageFileTrace) {
+      Serial.println("[storage:file] 09 decode failed");
+      Serial.flush();
+    }
     feedBootWatchdog();
     outError = decodeError;
     return true;
   }
 
-  Serial.println("[storage:file] 10 decode ok");
-  Serial.flush();
+  if (kLogStorageFileTrace) {
+    Serial.println("[storage:file] 10 decode ok");
+    Serial.flush();
+  }
   feedBootWatchdog();
   return true;
 }
@@ -518,6 +549,10 @@ bool StorageService::ensureConfigBuffer(SystemConfig*& target) {
  */
 void StorageService::begin() {
   auto logStorageStage = [](const char* stage) {
+    if (!kLogStorageBootstrapStages) {
+      feedBootWatchdog();
+      return;
+    }
     Serial.print("[storage] ");
     Serial.println(stage);
     Serial.flush();
@@ -633,10 +668,22 @@ const SystemConfig& StorageService::stagedSystemConfig() const {
 bool StorageService::hasStagedConfig() const { return stagedConfigPresent_; }
 
 void StorageService::stageConfig(const ValidatedConfig& validated) {
-  if (!ensureConfigBuffer(stagedConfig_)) return;
-  *stagedConfig_ = validated.system;
+  (void)stageSystemConfig(validated.system);
+}
+
+bool StorageService::stageSystemConfig(const SystemConfig& config) {
+  if (!ensureConfigBuffer(stagedConfig_)) return false;
+  *stagedConfig_ = config;
   stagedConfigPresent_ = true;
   stagedRevision_ += 1;
+  return true;
+}
+
+SystemConfig* StorageService::prepareStagedFromActive() {
+  if (!ensureConfigBuffer(stagedConfig_)) return nullptr;
+  *stagedConfig_ = activeConfig_.system;
+  stagedConfigPresent_ = false;
+  return stagedConfig_;
 }
 
 bool StorageService::commitStaged() {

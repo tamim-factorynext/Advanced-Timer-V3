@@ -39,6 +39,10 @@ PortalService* gPortal = nullptr;
 v3::storage::StorageService* gStorage = nullptr;
 bool gTransportInitialized = false;
 uint32_t gLastTransportActivityMs = 0;
+constexpr bool kLogHttpVerboseReads = false;
+constexpr bool kLogHttpPageNavigation = false;
+constexpr bool kLogHttpActions = false;
+constexpr bool kLogTransport404 = true;
 
 void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
 void markTransportActivity() { gLastTransportActivityMs = millis(); }
@@ -296,6 +300,21 @@ void writeCardJson(JsonObject out, const v3::storage::CardConfig& card) {
   }
 }
 
+void logHttpAccess(const char* routeTag) {
+  const bool isGet = (gHttpServer.method() == HTTP_GET);
+  const bool isPageRoute =
+      (routeTag != nullptr) && (strncmp(routeTag, "page.", 5) == 0);
+  if (isGet && !kLogHttpVerboseReads) {
+    if (!(kLogHttpPageNavigation && isPageRoute)) return;
+  }
+  const IPAddress remoteIp = gHttpServer.client().remoteIP();
+  const String uri = gHttpServer.uri();
+  Serial.printf("[http] %s %s from %u.%u.%u.%u route=%s\n",
+                methodToString(gHttpServer.method()), uri.c_str(), remoteIp[0],
+                remoteIp[1], remoteIp[2], remoteIp[3], routeTag);
+  Serial.flush();
+}
+
 void writeRuntimeCardJson(JsonObject item, const RuntimeSnapshotCard& card) {
   item["id"] = card.id;
   item["type"] = toString(card.type);
@@ -358,6 +377,7 @@ void sendConfigError(int statusCode, const char* errorCode, const String& reques
  */
 void handleHttpCommandSubmit() {
   markTransportActivity();
+  logHttpAccess("api.command.submit");
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -372,6 +392,7 @@ void handleHttpCommandSubmit() {
 
 void handleHttpRuntimeMetricsGet() {
   markTransportActivity();
+  logHttpAccess("api.runtime.metrics.get");
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -424,6 +445,7 @@ void handleHttpRuntimeMetricsGet() {
 
 void handleHttpRuntimeCardsGet() {
   markTransportActivity();
+  logHttpAccess("api.runtime.cards.get");
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -458,6 +480,7 @@ void handleHttpRuntimeCardsGet() {
 
 void handleHttpRuntimeCardsDeltaGet() {
   markTransportActivity();
+  logHttpAccess("api.runtime.cards.delta.get");
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -532,6 +555,7 @@ void handleHttpRuntimeCardsDeltaGet() {
  */
 void handleHttpDiagnosticsGet() {
   markTransportActivity();
+  logHttpAccess("api.diagnostics.get");
   if (gPortal == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
@@ -548,6 +572,7 @@ void handleHttpDiagnosticsGet() {
 
 void handleHttpConfigRestorePost() {
   markTransportActivity();
+  logHttpAccess("api.config.restore.post");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -568,6 +593,11 @@ void handleHttpConfigRestorePost() {
   if (source == nullptr) {
     sendConfigError(400, "INVALID_REQUEST", requestId, "source is required");
     return;
+  }
+  if (kLogHttpActions) {
+    Serial.printf("[http-action] config.restore requestId=%s source=%s\n",
+                  requestId.c_str(), source);
+    Serial.flush();
   }
   bool restored = false;
   if (strcmp(source, "FACTORY") == 0) {
@@ -597,6 +627,7 @@ void handleHttpConfigRestorePost() {
 
 void handleHttpSettingsGet() {
   markTransportActivity();
+  logHttpAccess("api.settings.get");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -617,6 +648,7 @@ void handleHttpSettingsGet() {
 
 void handleHttpSettingsPut() {
   markTransportActivity();
+  logHttpAccess("api.settings.put");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -636,11 +668,20 @@ void handleHttpSettingsPut() {
   String requestId = root["requestId"].is<const char*>()
                          ? String(root["requestId"].as<const char*>())
                          : String();
+  if (kLogHttpActions) {
+    Serial.printf("[http-action] settings.put requestId=%s\n", requestId.c_str());
+    Serial.flush();
+  }
 
-  v3::storage::SystemConfig candidate = gStorage->activeSystemConfig();
+  v3::storage::SystemConfig* candidate = gStorage->prepareStagedFromActive();
+  if (candidate == nullptr) {
+    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
+                    "settings staging buffer unavailable");
+    return;
+  }
   v3::storage::ConfigValidationError decodeError = {
       v3::storage::ConfigErrorCode::None, 0};
-  if (!v3::storage::decodeSystemSettingsLight(settingsObj, candidate,
+  if (!v3::storage::decodeSystemSettingsLight(settingsObj, *candidate,
                                               decodeError)) {
     sendConfigError(422, "VALIDATION_FAILED", requestId,
                     v3::storage::configErrorCodeToString(decodeError.code));
@@ -648,15 +689,17 @@ void handleHttpSettingsPut() {
   }
   v3::storage::ConfigValidationError validationError = {
       v3::storage::ConfigErrorCode::None, 0};
-  if (!v3::storage::validateSystemConfigLight(candidate, validationError)) {
+  if (!v3::storage::validateSystemConfigLight(*candidate, validationError)) {
     sendConfigError(422, "VALIDATION_FAILED", requestId,
                     v3::storage::configErrorCodeToString(validationError.code));
     return;
   }
 
-  v3::storage::ValidatedConfig staged = {};
-  staged.system = candidate;
-  gStorage->stageConfig(staged);
+  if (!gStorage->stageSystemConfig(*candidate)) {
+    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
+                    "settings staging buffer unavailable");
+    return;
+  }
   if (!gStorage->commitStaged()) {
     sendConfigError(409, "COMMIT_FAILED", requestId, "settings commit failed");
     return;
@@ -676,6 +719,7 @@ void handleHttpSettingsPut() {
 
 void handleHttpCardsIndexGet() {
   markTransportActivity();
+  logHttpAccess("api.cards.index.get");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -702,6 +746,7 @@ void handleHttpCardsIndexGet() {
 
 void handleHttpCardGetById(uint8_t cardId) {
   markTransportActivity();
+  logHttpAccess("api.cards.by-id.get");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -729,6 +774,7 @@ void handleHttpCardGetById(uint8_t cardId) {
 
 void handleHttpCardPutById(uint8_t cardId) {
   markTransportActivity();
+  logHttpAccess("api.cards.by-id.put");
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -748,6 +794,11 @@ void handleHttpCardPutById(uint8_t cardId) {
   String requestId = root["requestId"].is<const char*>()
                          ? String(root["requestId"].as<const char*>())
                          : String();
+  if (kLogHttpActions) {
+    Serial.printf("[http-action] card.put id=%u requestId=%s\n",
+                  static_cast<unsigned>(cardId), requestId.c_str());
+    Serial.flush();
+  }
 
   v3::storage::CardConfig decodedCard = {};
   v3::storage::ConfigValidationError decodeError = {
@@ -762,25 +813,32 @@ void handleHttpCardPutById(uint8_t cardId) {
     return;
   }
 
-  v3::storage::SystemConfig candidate = gStorage->activeSystemConfig();
-  const int8_t index = findCardIndexById(candidate, cardId);
+  v3::storage::SystemConfig* candidate = gStorage->prepareStagedFromActive();
+  if (candidate == nullptr) {
+    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
+                    "card staging buffer unavailable");
+    return;
+  }
+  const int8_t index = findCardIndexById(*candidate, cardId);
   if (index < 0) {
     sendConfigError(404, "CARD_NOT_FOUND", requestId, "card not found");
     return;
   }
-  candidate.cards[static_cast<uint8_t>(index)] = decodedCard;
+  candidate->cards[static_cast<uint8_t>(index)] = decodedCard;
 
   v3::storage::ConfigValidationError validationError = {
       v3::storage::ConfigErrorCode::None, 0};
-  if (!v3::storage::validateSystemConfigLight(candidate, validationError)) {
+  if (!v3::storage::validateSystemConfigLight(*candidate, validationError)) {
     sendConfigError(422, "VALIDATION_FAILED", requestId,
                     v3::storage::configErrorCodeToString(validationError.code));
     return;
   }
 
-  v3::storage::ValidatedConfig staged = {};
-  staged.system = candidate;
-  gStorage->stageConfig(staged);
+  if (!gStorage->stageSystemConfig(*candidate)) {
+    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
+                    "card staging buffer unavailable");
+    return;
+  }
   if (!gStorage->commitStaged()) {
     sendConfigError(409, "COMMIT_FAILED", requestId, "card commit failed");
     return;
@@ -828,6 +886,7 @@ void handleHttpCardPutByPathArg() {
  */
 void handleHttpRootGet() {
   markTransportActivity();
+  logHttpAccess("page.root");
   if (sendLittleFsFile("/index.html")) {
     return;
   }
@@ -891,6 +950,7 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/", HTTP_GET, handleHttpRootGet);
   gHttpServer.on("/index.html", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.index");
     if (!sendLittleFsFile("/index.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/index.html\"}");
@@ -898,6 +958,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/config", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.config");
     if (!sendLittleFsFile("/config.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/config\"}");
@@ -905,6 +966,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/config.html", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.config.html");
     if (!sendLittleFsFile("/config.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/config.html\"}");
@@ -912,6 +974,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/settings", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.settings");
     if (!sendLittleFsFile("/settings.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/settings\"}");
@@ -919,6 +982,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/settings.html", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.settings.html");
     if (!sendLittleFsFile("/settings.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/settings.html\"}");
@@ -926,6 +990,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/learn", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.learn");
     if (!sendLittleFsFile("/learn.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/learn\"}");
@@ -933,6 +998,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/learn.html", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.learn.html");
     if (!sendLittleFsFile("/learn.html")) {
       gHttpServer.send(404, "application/json",
                        "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/learn.html\"}");
@@ -940,6 +1006,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/getting-started", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.getting-started");
     if (!sendLittleFsFile("/learn.html")) {
       gHttpServer.send(
           404, "application/json",
@@ -948,6 +1015,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/tutorial", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.tutorial");
     if (!sendLittleFsFile("/learn.html")) {
       gHttpServer.send(
           404, "application/json",
@@ -956,6 +1024,7 @@ void initTransportRuntime(PortalService& portal,
   });
   gHttpServer.on("/examples", HTTP_GET, []() {
     markTransportActivity();
+    logHttpAccess("page.examples");
     if (!sendLittleFsFile("/learn.html")) {
       gHttpServer.send(
           404, "application/json",
@@ -1033,9 +1102,14 @@ void initTransportRuntime(PortalService& portal,
     markTransportActivity();
     const HTTPMethod method = gHttpServer.method();
     const String uri = gHttpServer.uri();
-    Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),
-                  uri.c_str());
-    Serial.flush();
+    if (kLogTransport404) {
+      Serial.printf("[transport] 404 method=%s path=%s\n",
+                    methodToString(method), uri.c_str());
+      const IPAddress remoteIp = gHttpServer.client().remoteIP();
+      Serial.printf("[transport] 404 from %u.%u.%u.%u\n", remoteIp[0],
+                    remoteIp[1], remoteIp[2], remoteIp[3]);
+      Serial.flush();
+    }
 
     String body = "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"";
     body += uri;

@@ -118,6 +118,19 @@ class StorageService {
    */
   void stageConfig(const ValidatedConfig& validated);
   /**
+   * @brief Stores staged system config payload.
+   * @param config Typed system config payload to stage.
+   * @return `true` when staging buffer is available.
+   */
+  bool stageSystemConfig(const SystemConfig& config);
+  /**
+   * @brief Prepares staged config as a mutable copy of current active config.
+   * @details Does not mark staged config as present until `stageSystemConfig()`
+   * is called by the caller after validation.
+   * @return Mutable staged config pointer, or `nullptr` on allocation failure.
+   */
+  SystemConfig* prepareStagedFromActive();
+  /**
    * @brief Commits staged config into active slot.
    * @details Current runtime consumes active config only at boot, so callers
    * should treat this as requiring restart to apply kernel behavior.

@@ -71,6 +71,15 @@ uint32_t gMinFreeHeapBytes = 0xFFFFFFFFUL;
 uint32_t gMinLargestFreeBlockBytes = 0xFFFFFFFFUL;
 uint32_t gCore0StackHighWaterBytes = 0;
 uint32_t gCore1StackHighWaterBytes = 0;
+uint32_t gCore1LastStackLogMs = 0;
+uint32_t gCore1StageMinLoopStart = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterWifi = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterSnapshotQueue = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterControl = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterDispatch = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterRuntime = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterPortalTick = 0xFFFFFFFFUL;
+uint32_t gCore1StageMinAfterTransport = 0xFFFFFFFFUL;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
@@ -84,6 +93,13 @@ constexpr uint32_t kPortalProjectionActiveIntervalMs = 10;
 constexpr uint32_t kPortalProjectionIdleIntervalMs = 500;
 constexpr uint32_t kTransportActivityWindowMs = 15000;
 constexpr uint32_t kCore1IdleLoopDelayMs = 5;
+constexpr uint32_t kCore1StackWarnBytes = 4096;
+constexpr uint32_t kCore1StackLogIntervalMs = 10000;
+constexpr uint32_t kCore1StackStageLogIntervalMs = 5000;
+constexpr bool kLogSetupStages = false;
+constexpr bool kLogCoreTaskStartup = false;
+constexpr bool kLogCore1StageSummary = false;
+constexpr bool kLogWiFiHeartbeat = false;
 
 void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -94,6 +110,53 @@ void updateTaskStackHighWaterBytes(uint32_t& outBytes) {
   const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
   const uint32_t bytes = static_cast<uint32_t>(words) * sizeof(StackType_t);
   if (outBytes == 0 || bytes < outBytes) outBytes = bytes;
+}
+
+void logCore1StackCheckpoint(const char* stage, uint32_t nowMs) {
+  if (!kLogCore1StageSummary) return;
+  const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
+  const uint32_t bytes = static_cast<uint32_t>(words) * sizeof(StackType_t);
+  if (gCore1StackHighWaterBytes == 0 || bytes < gCore1StackHighWaterBytes) {
+    gCore1StackHighWaterBytes = bytes;
+  }
+  if (bytes <= kCore1StackWarnBytes ||
+      (nowMs - gCore1LastStackLogMs) >= kCore1StackLogIntervalMs) {
+    Serial.printf("[core1:stack] stage=%s free=%lu minFree=%lu warn<=%lu\n", stage,
+                  static_cast<unsigned long>(bytes),
+                  static_cast<unsigned long>(gCore1StackHighWaterBytes),
+                  static_cast<unsigned long>(kCore1StackWarnBytes));
+    Serial.flush();
+    gCore1LastStackLogMs = nowMs;
+  }
+}
+
+uint32_t core1CurrentFreeStackBytes() {
+  const UBaseType_t words = uxTaskGetStackHighWaterMark(nullptr);
+  return static_cast<uint32_t>(words) * sizeof(StackType_t);
+}
+
+void updateCore1StageMin(uint32_t& stageMin) {
+  const uint32_t freeBytes = core1CurrentFreeStackBytes();
+  if (freeBytes < stageMin) stageMin = freeBytes;
+}
+
+void logCore1StageSummary(uint32_t nowMs) {
+  if (!kLogCore1StageSummary) return;
+  if ((nowMs - gCore1LastStackLogMs) < kCore1StackStageLogIntervalMs) return;
+  Serial.printf(
+      "[core1:stage-min] loop=%lu wifi=%lu snapQ=%lu ctrl=%lu dispatch=%lu "
+      "runtime=%lu portal=%lu transport=%lu globalMin=%lu\n",
+      static_cast<unsigned long>(gCore1StageMinLoopStart),
+      static_cast<unsigned long>(gCore1StageMinAfterWifi),
+      static_cast<unsigned long>(gCore1StageMinAfterSnapshotQueue),
+      static_cast<unsigned long>(gCore1StageMinAfterControl),
+      static_cast<unsigned long>(gCore1StageMinAfterDispatch),
+      static_cast<unsigned long>(gCore1StageMinAfterRuntime),
+      static_cast<unsigned long>(gCore1StageMinAfterPortalTick),
+      static_cast<unsigned long>(gCore1StageMinAfterTransport),
+      static_cast<unsigned long>(gCore1StackHighWaterBytes));
+  Serial.flush();
+  gCore1LastStackLogMs = nowMs;
 }
 
 [[noreturn]] void haltBoot(const char* message) {
@@ -260,15 +323,19 @@ void latestKernelSnapshotFromQueue(KernelSnapshotMessage& latest) {
 }
 
 void core0KernelTask(void*) {
-  Serial.println("[core0] 01 task entry");
-  Serial.flush();
+  if (kLogCoreTaskStartup) {
+    Serial.println("[core0] 01 task entry");
+    Serial.flush();
+  }
   if (!gPlatform.addCurrentTaskToWatchdog()) {
     Serial.println("V3 watchdog add failed: core0");
     vTaskDelete(nullptr);
     return;
   }
-  Serial.println("[core0] 02 watchdog registered");
-  Serial.flush();
+  if (kLogCoreTaskStartup) {
+    Serial.println("[core0] 02 watchdog registered");
+    Serial.flush();
+  }
 
   bool firstLoopLog = true;
   uint32_t lastPublishedScanCount = 0;
@@ -276,12 +343,14 @@ void core0KernelTask(void*) {
 
   while (true) {
     if (firstLoopLog) {
-      Serial.println("[core0] 03 first loop tick");
-      const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
-      Serial.printf("[core0] stack high-water words=%lu bytes=%lu\n",
-                    static_cast<unsigned long>(hw),
-                    static_cast<unsigned long>(hw * sizeof(StackType_t)));
-      Serial.flush();
+      if (kLogCoreTaskStartup) {
+        Serial.println("[core0] 03 first loop tick");
+        const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
+        Serial.printf("[core0] stack high-water words=%lu bytes=%lu\n",
+                      static_cast<unsigned long>(hw),
+                      static_cast<unsigned long>(hw * sizeof(StackType_t)));
+        Serial.flush();
+      }
       firstLoopLog = false;
     }
     const uint32_t nowUs = micros();
@@ -307,15 +376,19 @@ void core0KernelTask(void*) {
 }
 
 void core1ServiceTask(void*) {
-  Serial.println("[core1] 01 task entry");
-  Serial.flush();
+  if (kLogCoreTaskStartup) {
+    Serial.println("[core1] 01 task entry");
+    Serial.flush();
+  }
   if (!gPlatform.addCurrentTaskToWatchdog()) {
     Serial.println("V3 watchdog add failed: core1");
     vTaskDelete(nullptr);
     return;
   }
-  Serial.println("[core1] 02 watchdog registered");
-  Serial.flush();
+  if (kLogCoreTaskStartup) {
+    Serial.println("[core1] 02 watchdog registered");
+    Serial.flush();
+  }
 
   bool firstLoopLog = true;
   uint32_t lastProjectedScanCount = 0;
@@ -324,16 +397,19 @@ void core1ServiceTask(void*) {
 
   while (true) {
     if (firstLoopLog) {
-      Serial.println("[core1] 03 first loop tick");
-      const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
-      Serial.printf("[core1] stack high-water words=%lu bytes=%lu\n",
-                    static_cast<unsigned long>(hw),
-                    static_cast<unsigned long>(hw * sizeof(StackType_t)));
-      Serial.flush();
+      if (kLogCoreTaskStartup) {
+        Serial.println("[core1] 03 first loop tick");
+        const UBaseType_t hw = uxTaskGetStackHighWaterMark(nullptr);
+        Serial.printf("[core1] stack high-water words=%lu bytes=%lu\n",
+                      static_cast<unsigned long>(hw),
+                      static_cast<unsigned long>(hw * sizeof(StackType_t)));
+        Serial.flush();
+      }
       firstLoopLog = false;
     }
     const uint32_t nowMs = gPlatform.nowMs();
     updateTaskStackHighWaterBytes(gCore1StackHighWaterBytes);
+    updateCore1StageMin(gCore1StageMinLoopStart);
     const uint32_t freeHeapBytes = ESP.getFreeHeap();
     if (freeHeapBytes < gMinFreeHeapBytes) gMinFreeHeapBytes = freeHeapBytes;
     const uint32_t largestFreeBlockBytes =
@@ -344,9 +420,11 @@ void core1ServiceTask(void*) {
     const bool transportActive = v3::portal::hasRecentTransportActivity(
         nowMs, kTransportActivityWindowMs);
     gWiFi.tick(nowMs);
+    updateCore1StageMin(gCore1StageMinAfterWifi);
     const v3::platform::WiFiStatus& wifi = gWiFi.status();
     if (wifi.state != gLastWiFiState ||
-        (nowMs - gLastWiFiLogMs) >= kWiFiStatusLogIntervalMs) {
+        (kLogWiFiHeartbeat &&
+         (nowMs - gLastWiFiLogMs) >= kWiFiStatusLogIntervalMs)) {
       Serial.printf("V3 WiFi state=%u connected=%u retries=%lu ip=%s\n",
                     static_cast<unsigned>(wifi.state),
                     wifi.staConnected ? 1U : 0U,
@@ -356,10 +434,13 @@ void core1ServiceTask(void*) {
     }
 
     latestKernelSnapshotFromQueue(gCore1SnapshotBuffer);
+    updateCore1StageMin(gCore1StageMinAfterSnapshotQueue);
     gControl.tick(nowMs);
+    updateCore1StageMin(gCore1StageMinAfterControl);
 
     dispatchPortalRequestsToControl();
     dispatchControlCommandsToKernelQueue();
+    updateCore1StageMin(gCore1StageMinAfterDispatch);
 
     v3::runtime::QueueTelemetry queueTelemetry = {};
     queueTelemetry.snapshotQueueDepth = gKernelSnapshotQueueDepth;
@@ -415,6 +496,7 @@ void core1ServiceTask(void*) {
     memoryTelemetry.core1StackHighWaterBytes = gCore1StackHighWaterBytes;
     gRuntime.tick(gCore1SnapshotBuffer.producedAtMs, gCore1SnapshotBuffer.metrics,
                   gBootstrapDiagnostics, queueTelemetry, memoryTelemetry);
+    updateCore1StageMin(gCore1StageMinAfterRuntime);
     const uint32_t currentScanCount =
         gCore1SnapshotBuffer.metrics.completedScans;
     const bool hasNewScan =
@@ -430,11 +512,14 @@ void core1ServiceTask(void*) {
     if (shouldProject) {
       gPortal.tick(nowMs, gRuntime.snapshot(), gCore1SnapshotBuffer.cards,
                    gCore1SnapshotBuffer.cardCount);
+      updateCore1StageMin(gCore1StageMinAfterPortalTick);
       lastProjectedScanCount = currentScanCount;
       lastPortalProjectionMs = nowMs;
       projectionInitialized = true;
     }
     v3::portal::serviceTransportRuntime();
+    updateCore1StageMin(gCore1StageMinAfterTransport);
+    logCore1StageSummary(nowMs);
 
     gPlatform.resetTaskWatchdog();
     const uint32_t core1DelayMs =
@@ -455,6 +540,10 @@ void setup() {
   feedBootWatchdog();
 
   auto logSetupStage = [](const char *stage) {
+    if (!kLogSetupStages) {
+      feedBootWatchdog();
+      return;
+    }
     Serial.print("[setup] ");
     Serial.println(stage);
     Serial.flush();
