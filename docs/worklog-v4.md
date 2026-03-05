@@ -38,6 +38,11 @@ Status: Active
 - Aligned user guide counter and numeric-limit wording with the new V4 ceiling policy.
 - Rewrote `docs/core-contract-v4.md` into a coherent single-flow V4 contract with consolidated clauses (architecture, numeric model, cards, set/reset, force/mask, topology, Wi-Fi, observability).
 - Added explicit alignment verdict and next improvement targets inside the core contract.
+- Expanded `README.md` with project identity, core intent, target users, why/market gap rationale, and competition-positioning snapshot.
+- Extended README identity documentation with additional legacy-derived context: explicit goals/non-goals, behavior promise, stakeholder profile, and operating principles.
+- Updated `platformio.ini` with documented ESP32-S3 V4 GPIO profile defaults (UART/I2C/SPI plus initial DI/DO/AI logical pin lists) using compile-time build flags.
+- Updated `docs/core-contract-v4.md` with explicit hardware profile/backend-selection contract (GPIO/I2C expander/plugin paths + family capacities).
+- Added V4 persistence contract for split LittleFS artifacts (`settings` and `card_config`) including atomic commit, compatibility metadata, and LKG pair fallback rules.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
 - Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 

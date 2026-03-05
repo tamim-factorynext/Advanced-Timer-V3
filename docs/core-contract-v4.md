@@ -97,6 +97,31 @@ Rules:
 - Disabled/zero-capacity families MUST be rejected at validation.
 - Kernel card logic MUST remain hardware-agnostic via adapters.
 
+### 5.1.1 Hardware Profile and Backend Selection
+
+Hardware profile selection MUST be compile-time explicit and adapter-driven.
+
+Required profile constants include:
+
+- platform/profile identity (`DAT_PLATFORM_VARIANT`, `DAT_PROFILE_NAME`)
+- logical channel maps (`DAT_DI_GPIO_LIST`, `DAT_DO_GPIO_LIST`, `DAT_AI_GPIO_LIST`)
+- family capacities (`DAT_SIO_CAPACITY`, `DAT_MATH_CAPACITY`, `DAT_RTC_CAPACITY`)
+- transport pin defaults (`UART/I2C/SPI` profile constants)
+
+Backend selection MUST be profile-configurable, with runtime logic unchanged across backends.
+
+Backend code model:
+
+- `DI/DO`: `0=GPIO_DIRECT`, `1=I2C_EXPANDER`, `2=PLUGIN`
+- `AI`: `0=INTERNAL_ADC`, `1=I2C_ADC`, `2=PLUGIN`
+- `RTC`: `0=RTC_MILLIS`, `1=DS3231`, `2=PCF8523`, `3=DS1307`, `4=PLUGIN`
+
+Validation/runtime rules:
+
+- unsupported backend code for the active build MUST fail validation/boot profile checks.
+- switching backend MUST NOT alter card logic semantics, only adapter path.
+- plugin backends MUST pass through the same determinism, timeout, and telemetry constraints as built-in backends.
+
 ### 5.2 Shared Card Fields and Runtime Signals
 
 Every card config MUST include:
@@ -362,7 +387,36 @@ Runtime MUST expose at minimum:
 
 Metrics collection and publication MUST remain bounded and MUST NOT break Core0 timing guarantees.
 
-## 12. Alignment Verdict and Next Improvement Targets
+## 12. Configuration Persistence Contract (Split Artifacts)
+
+### 12.1 Artifact Model
+
+V4 persistence uses separate LittleFS JSON artifacts:
+
+- `settings` artifact (system/network/time/profile settings)
+- `card_config` artifact (card topology, parameters, bindings)
+
+Unified single-file persistence is not the V4 baseline.
+
+### 12.2 Transaction and Atomicity Rules
+
+- Runtime activation MUST use a logically atomic commit view across both artifacts.
+- Device MUST NOT activate a mixed pair from different schema/commit revisions.
+- Both artifacts MUST carry compatible metadata (`schemaVersion`, revision/hash compatibility markers).
+- Commit operation MUST validate both artifacts together before activation.
+
+### 12.3 Boot and Recovery Rules
+
+- If either artifact is missing/invalid/incompatible, boot MUST fall back to last known good compatible pair.
+- Deterministic runtime MUST remain safe/offline-capable under persistence recovery paths.
+- Recovery events MUST be surfaced in diagnostics counters/logs.
+
+### 12.4 Validation Scope
+
+- Settings validation and card-config validation MUST both pass before commit.
+- Cross-artifact constraints (for example backend/profile references used by card config) MUST be validated as a single transaction boundary.
+
+## 13. Alignment Verdict and Next Improvement Targets
 
 Current verdict: This contract is aligned with V4 goals (determinism, resilience, observability, maintainability).
 
