@@ -51,6 +51,7 @@ void PortalService::begin() {
   snapshotJson_.remove(0);
   snapshotReserveReady_ = snapshotJson_.reserve(kSnapshotJsonReserve);
   latestRuntimeSnapshot_ = {};
+  latestRuntimeCardsPtr_ = nullptr;
   latestRuntimeCardCount_ = 0;
   head_ = 0;
   tail_ = 0;
@@ -65,15 +66,14 @@ void PortalService::tick(uint32_t nowMs,
   lastTickMs_ = nowMs;
   observedScanCount_ = snapshot.completedScans;
   latestRuntimeSnapshot_ = snapshot;
-  latestRuntimeCardCount_ = (cardCount <= v3::storage::kMaxCards)
-                                ? cardCount
-                                : v3::storage::kMaxCards;
-  if (cards != nullptr) {
-    for (uint8_t i = 0; i < latestRuntimeCardCount_; ++i) {
-      latestRuntimeCards_[i] = cards[i];
-    }
-  } else {
+  if (cards == nullptr) {
+    latestRuntimeCardsPtr_ = nullptr;
     latestRuntimeCardCount_ = 0;
+  } else {
+    latestRuntimeCardsPtr_ = cards;
+    latestRuntimeCardCount_ = (cardCount <= v3::storage::kMaxCards)
+                                  ? cardCount
+                                  : v3::storage::kMaxCards;
   }
   rebuildDiagnosticsJson(snapshot);
   rebuildSnapshotJson(snapshot, cards, cardCount);
@@ -202,7 +202,7 @@ const v3::runtime::RuntimeSnapshot& PortalService::latestRuntimeSnapshot() const
 const RuntimeSnapshotCard* PortalService::latestRuntimeCards(
     uint8_t& outCardCount) const {
   outCardCount = latestRuntimeCardCount_;
-  return latestRuntimeCards_;
+  return latestRuntimeCardsPtr_;
 }
 
 void PortalService::rebuildDiagnosticsJson(

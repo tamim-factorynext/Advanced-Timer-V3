@@ -320,7 +320,7 @@ Response:
 ```
 
 Legacy note:
-- `/api/v3/config/restore` remains available for factory/LKG restore.
+- `/api/v3/config/restore` remains available for factory restore.
 - `/api/v3/config/active`, `/api/v3/config/staged/save`, `/api/v3/config/staged/validate`, and `/api/v3/config/commit` are removed from active transport routing.
 
 ### `POST /api/v3/config/restore`
@@ -330,12 +330,11 @@ Request:
 {
   "requestId": "cfg-1004",
   "apiVersion": "2.0",
-  "source": "LKG"
+  "source": "FACTORY"
 }
 ```
 
 Allowed `source` values:
-- `LKG`
 - `FACTORY`
 
 Response:
@@ -345,7 +344,7 @@ Response:
   "apiVersion": "2.0",
   "status": "SUCCESS",
   "timestamp": "2026-02-26T10:30:04Z",
-  "restoredFrom": "LKG",
+  "restoredFrom": "FACTORY",
   "activeVersion": "v44",
   "requiresRestart": false
 }
@@ -409,7 +408,7 @@ Rules:
 - `AT-API-008`: runtime snapshot metrics object shape and required field presence.
 - `AT-API-009`: `metrics.scanBudgetUs == scanPeriodMs * 1000` invariant.
 - `AT-API-010`: queue depth invariant (`metrics.queueDepth <= metrics.queueCapacity`).
-- `AT-CFG-006`: restore source constraints (`LKG|FACTORY`).
+- `AT-CFG-006`: restore source constraints (`FACTORY`).
 
 
 

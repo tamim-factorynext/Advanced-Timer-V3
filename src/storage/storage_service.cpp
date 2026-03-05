@@ -500,10 +500,6 @@ StorageService::~StorageService() {
     delete stagedConfig_;
     stagedConfig_ = nullptr;
   }
-  if (lkgConfig_ != nullptr) {
-    delete lkgConfig_;
-    lkgConfig_ = nullptr;
-  }
 }
 
 bool StorageService::ensureConfigBuffer(SystemConfig*& target) {
@@ -580,11 +576,6 @@ void StorageService::begin() {
 
   lastError_ = {ConfigErrorCode::None, 0};
   activeConfigPresent_ = true;
-  if (!lkgConfigPresent_ && ensureConfigBuffer(lkgConfig_)) {
-    *lkgConfig_ = activeConfig_.system;
-    lkgConfigPresent_ = true;
-    lkgRevision_ = 1;
-  }
   if (activeRevision_ == 0) {
     activeRevision_ = 1;
   } else {
@@ -649,13 +640,7 @@ void StorageService::stageConfig(const ValidatedConfig& validated) {
 
 bool StorageService::commitStaged() {
   if (!stagedConfigPresent_ || stagedConfig_ == nullptr) return false;
-  if (activeConfigPresent_ && !ensureConfigBuffer(lkgConfig_)) return false;
   if (!persistSplitConfig(*stagedConfig_)) return false;
-  if (activeConfigPresent_) {
-    *lkgConfig_ = activeConfig_.system;
-    lkgConfigPresent_ = true;
-    lkgRevision_ += 1;
-  }
   activeConfig_.system = *stagedConfig_;
   activeConfigPresent_ = true;
   stagedConfigPresent_ = false;
@@ -671,13 +656,7 @@ bool StorageService::restoreFactory() {
     lastError_ = validationError;
     return false;
   }
-  if (activeConfigPresent_ && !ensureConfigBuffer(lkgConfig_)) return false;
   if (!persistSplitConfig(factoryValidated.system)) return false;
-  if (activeConfigPresent_) {
-    *lkgConfig_ = activeConfig_.system;
-    lkgConfigPresent_ = true;
-    lkgRevision_ += 1;
-  }
   activeConfig_ = factoryValidated;
   activeConfigPresent_ = true;
   activeRevision_ += 1;
@@ -686,27 +665,8 @@ bool StorageService::restoreFactory() {
   return true;
 }
 
-bool StorageService::restoreLkg() {
-  if (!lkgConfigPresent_ || lkgConfig_ == nullptr) return false;
-  if (!persistSplitConfig(*lkgConfig_)) return false;
-  if (activeConfigPresent_) {
-    if (ensureConfigBuffer(stagedConfig_)) {
-      *stagedConfig_ = activeConfig_.system;
-      stagedConfigPresent_ = true;
-      stagedRevision_ += 1;
-    }
-  }
-  activeConfig_.system = *lkgConfig_;
-  activeConfigPresent_ = true;
-  activeRevision_ += 1;
-  lastError_ = {ConfigErrorCode::None, 0};
-  return true;
-}
-
 uint32_t StorageService::activeRevision() const { return activeRevision_; }
 
 uint32_t StorageService::stagedRevision() const { return stagedRevision_; }
-
-uint32_t StorageService::lkgRevision() const { return lkgRevision_; }
 
 }  // namespace v3::storage

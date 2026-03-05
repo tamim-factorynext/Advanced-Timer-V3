@@ -497,10 +497,9 @@ void handleHttpConfigRestorePost() {
   bool restored = false;
   if (strcmp(source, "FACTORY") == 0) {
     restored = gStorage->restoreFactory();
-  } else if (strcmp(source, "LKG") == 0) {
-    restored = gStorage->restoreLkg();
   } else {
-    sendConfigError(422, "RESTORE_FAILED", requestId, "unsupported source");
+    sendConfigError(422, "RESTORE_FAILED", requestId,
+                    "unsupported source: only FACTORY");
     return;
   }
   if (!restored) {

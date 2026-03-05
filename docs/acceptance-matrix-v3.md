@@ -85,8 +85,8 @@ Status: Draft for implementation kickoff
 | AT-CFG-002 | Sec 11.2 | Legacy schema migration to current | Migration deterministic and auditable | Yes | No | Yes |
 | AT-CFG-003 | Sec 11.3, 12.2 | Full config lifecycle state flow | ACTIVE->STAGED->VALIDATED->COMMITTED transitions valid | Yes | No | Yes |
 | AT-CFG-004 | Sec 12.2 | Failure at each commit protocol step | Active remains previous valid config; error surfaced | Yes | Yes | Yes |
-| AT-CFG-005 | Sec 12.1, 12.2 | Single rollback slot rotation and LKG preservation | Active/LKG rotation remains atomic with valid rollback target | Yes | Yes | Yes |
-| AT-CFG-006 | Sec 12.1, 15.1 | Restore source constraints | Only `LKG` and `FACTORY` restore sources are accepted; others rejected | Yes | No | Yes |
+| AT-CFG-005 | Sec 12.1, 12.2 | Factory restore persistence | Factory restore rewrites active split config atomically and remains boot-valid | Yes | Yes | Yes |
+| AT-CFG-006 | Sec 12.1, 15.1 | Restore source constraints | Only `FACTORY` restore source is accepted; others rejected | Yes | No | Yes |
 | AT-CFG-007 | Sec 8.x condition model | Numeric clause uses `useThresholdCard=true` with valid `thresholdCardId` | Condition evaluation accepts card `liveValue` as compare RHS | Yes | No | Yes |
 | AT-CFG-008 | Sec 8.x condition model | `useThresholdCard=true` with non-numeric operator | Validation rejects payload with machine-readable error | Yes | No | Yes |
 | AT-CFG-009 | Sec 8.x condition model | `useThresholdCard=true` with `thresholdCardId` self-reference/out-of-range | Validation rejects payload; active config unchanged | Yes | No | Yes |

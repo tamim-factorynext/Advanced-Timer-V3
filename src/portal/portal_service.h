@@ -269,7 +269,7 @@ class PortalService {
   uint32_t snapshotCapacityRejectCount_ = 0;
   String snapshotJson_;
   v3::runtime::RuntimeSnapshot latestRuntimeSnapshot_ = {};
-  RuntimeSnapshotCard latestRuntimeCards_[v3::storage::kMaxCards] = {};
+  const RuntimeSnapshotCard* latestRuntimeCardsPtr_ = nullptr;
   uint8_t latestRuntimeCardCount_ = 0;
   static constexpr uint16_t kPendingCapacity = 16;
   PortalCommandRequest pending_[kPendingCapacity] = {};

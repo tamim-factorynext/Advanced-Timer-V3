@@ -77,7 +77,6 @@
           <button id="btnValidate">&#x2705; Local Validate</button>
           <button id="btnSave">&#x1F4BE; Save Active Cards</button>
           <button id="btnCommit">&#x1F680; Refresh From Active</button>
-          <button id="btnRestoreLkg">&#x21A9; Restore LKG</button>
           <button id="btnRestoreFactory">&#x267B; Restore Factory</button>
         </div>
 
@@ -134,7 +133,7 @@
       const onGroupEl = document.getElementById("onGroup");
       const offGroupEl = document.getElementById("offGroup");
 
-      const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit", "btnRestoreLkg", "btnRestoreFactory", "btnApplyCard"];
+      const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit", "btnRestoreFactory", "btnApplyCard"];
       let requestInFlight = false;
       let currentConfig = null;
       let selectedCardIndex = 0;
@@ -545,7 +544,7 @@
       }
 
       async function restore(source) {
-        const msg = source === "FACTORY" ? "Restore FACTORY defaults?" : "Restore Last Known Good (LKG) config?";
+        const msg = "Restore FACTORY defaults?";
         if (!confirm(msg)) {
           setResult(false, `Restore ${source} cancelled.`, "User cancelled confirmation.");
           return;
@@ -574,7 +573,6 @@
       document.getElementById("btnValidate").addEventListener("click", () => runAction("Validate", validateStaged));
       document.getElementById("btnSave").addEventListener("click", () => runAction("Save staged", saveStaged));
       document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
-      document.getElementById("btnRestoreLkg").addEventListener("click", () => runAction("Restore LKG", () => restore("LKG")));
       document.getElementById("btnRestoreFactory").addEventListener("click", () => runAction("Restore FACTORY", () => restore("FACTORY")));
       document.getElementById("btnApplyCard").addEventListener("click", () => {
         applySelectedCardFromForm();

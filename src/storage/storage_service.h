@@ -130,11 +130,6 @@ class StorageService {
    */
   bool restoreFactory();
   /**
-   * @brief Restores active config from last-known-good slot.
-   * @return `true` when restore completed.
-   */
-  bool restoreLkg();
-  /**
    * @brief Returns active revision counter.
    * @return Monotonic active revision.
    */
@@ -144,24 +139,16 @@ class StorageService {
    * @return Monotonic staged revision.
    */
   uint32_t stagedRevision() const;
-  /**
-   * @brief Returns LKG revision counter.
-   * @return Monotonic LKG revision.
-   */
-  uint32_t lkgRevision() const;
 
  private:
   BootstrapSource source_ = BootstrapSource::DefaultConfig;
   ValidatedConfig activeConfig_ = {};
   SystemConfig* stagedConfig_ = nullptr;
-  SystemConfig* lkgConfig_ = nullptr;
   ConfigValidationError lastError_ = {ConfigErrorCode::None, 0};
   bool activeConfigPresent_ = false;
   bool stagedConfigPresent_ = false;
-  bool lkgConfigPresent_ = false;
   uint32_t activeRevision_ = 0;
   uint32_t stagedRevision_ = 0;
-  uint32_t lkgRevision_ = 0;
 
   bool ensureConfigBuffer(SystemConfig*& target);
 };
