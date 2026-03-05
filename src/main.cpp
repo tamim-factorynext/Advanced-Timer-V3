@@ -74,8 +74,8 @@ uint32_t gCore1StackHighWaterBytes = 0;
 
 constexpr uint32_t kCore0LoopDelayMs = 1;
 constexpr uint32_t kCore1LoopDelayMs = 1;
-constexpr uint32_t kCore0TaskStackBytes = 12288;
-constexpr uint32_t kCore1TaskStackBytes = 16384;
+constexpr uint32_t kCore0TaskStackBytes = 14336;
+constexpr uint32_t kCore1TaskStackBytes = 32768;
 constexpr uint8_t kKernelSnapshotQueueCapacity = 8;
 constexpr uint8_t kKernelCommandQueueCapacity = 16;
 constexpr uint32_t kTaskWatchdogTimeoutSeconds = 16;

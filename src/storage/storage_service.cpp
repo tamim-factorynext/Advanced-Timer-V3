@@ -21,6 +21,7 @@ Notes:
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <esp_task_wdt.h>
+#include <new>
 #include <stdio.h>
 
 #include "storage/v3_config_decoder.h"
@@ -504,7 +505,7 @@ StorageService::~StorageService() {
 
 bool StorageService::ensureConfigBuffer(SystemConfig*& target) {
   if (target != nullptr) return true;
-  target = new SystemConfig();
+  target = new (std::nothrow) SystemConfig();
   return target != nullptr;
 }
 

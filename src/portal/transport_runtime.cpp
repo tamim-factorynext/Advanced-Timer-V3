@@ -22,6 +22,7 @@ Notes:
 #include <LittleFS.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
+#include <uri/UriBraces.h>
 
 #include "kernel/enum_codec.h"
 #include "portal/transport_command_stub.h"
@@ -319,16 +320,14 @@ int8_t findCardIndexById(const v3::storage::SystemConfig& cfg, uint8_t cardId) {
   return -1;
 }
 
-bool parseCardIdFromCardsUri(const String& uri, uint8_t& outCardId) {
-  const String prefix = "/api/v3/cards/";
-  if (!uri.startsWith(prefix)) return false;
-  const String suffix = uri.substring(prefix.length());
-  if (suffix.length() == 0) return false;
-  for (size_t i = 0; i < suffix.length(); ++i) {
-    const char c = suffix.charAt(i);
+bool parseCardIdFromPathArg(uint8_t& outCardId) {
+  const String idArg = gHttpServer.pathArg(0);
+  if (idArg.length() == 0) return false;
+  for (size_t i = 0; i < idArg.length(); ++i) {
+    const char c = idArg.charAt(i);
     if (c < '0' || c > '9') return false;
   }
-  const unsigned long value = strtoul(suffix.c_str(), nullptr, 10);
+  const unsigned long value = strtoul(idArg.c_str(), nullptr, 10);
   if (value > 255UL) return false;
   outCardId = static_cast<uint8_t>(value);
   return true;
@@ -800,6 +799,26 @@ void handleHttpCardPutById(uint8_t cardId) {
   gHttpServer.send(200, "application/json", body);
 }
 
+void handleHttpCardGetByPathArg() {
+  uint8_t cardId = 0;
+  if (!parseCardIdFromPathArg(cardId)) {
+    gHttpServer.send(400, "application/json",
+                     "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
+    return;
+  }
+  handleHttpCardGetById(cardId);
+}
+
+void handleHttpCardPutByPathArg() {
+  uint8_t cardId = 0;
+  if (!parseCardIdFromPathArg(cardId)) {
+    gHttpServer.send(400, "application/json",
+                     "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
+    return;
+  }
+  handleHttpCardPutById(cardId);
+}
+
 /**
  * @brief Handles root landing endpoint.
  * @details Returns a tiny discovery payload with primary API routes so raw-IP
@@ -997,35 +1016,23 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/api/v3/cards/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/cards", HTTP_GET, handleHttpCardsIndexGet);
   gHttpServer.on("/api/v3/cards/", HTTP_GET, handleHttpCardsIndexGet);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}"), HTTP_OPTIONS,
+                 handleHttpCorsOptions);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}/"), HTTP_OPTIONS,
+                 handleHttpCorsOptions);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}"), HTTP_GET,
+                 handleHttpCardGetByPathArg);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}/"), HTTP_GET,
+                 handleHttpCardGetByPathArg);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}"), HTTP_PUT,
+                 handleHttpCardPutByPathArg);
+  gHttpServer.on(UriBraces("/api/v3/cards/{}/"), HTTP_PUT,
+                 handleHttpCardPutByPathArg);
 
   gHttpServer.onNotFound([]() {
     markTransportActivity();
     const HTTPMethod method = gHttpServer.method();
     const String uri = gHttpServer.uri();
-    if (uri.startsWith("/api/v3/cards/")) {
-      uint8_t cardId = 0;
-      if (!parseCardIdFromCardsUri(uri, cardId)) {
-        gHttpServer.send(400, "application/json",
-                         "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
-        return;
-      }
-      if (method == HTTP_OPTIONS) {
-        handleHttpCorsOptions();
-        return;
-      }
-      if (method == HTTP_GET) {
-        handleHttpCardGetById(cardId);
-        return;
-      }
-      if (method == HTTP_PUT) {
-        handleHttpCardPutById(cardId);
-        return;
-      }
-      gHttpServer.send(405, "application/json",
-                       "{\"ok\":false,\"reason\":\"method_not_allowed\"}");
-      return;
-    }
-
     Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),
                   uri.c_str());
     Serial.flush();

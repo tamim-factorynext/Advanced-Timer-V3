@@ -74,9 +74,7 @@
         <div><strong>Live endpoints:</strong> <span class="muted">/api/v3/settings, /api/v3/cards, /api/v3/cards/{id}</span></div>
         <div class="actions" style="margin-top:10px;">
           <button id="btnLoad">&#x1F4E5; Load Active</button>
-          <button id="btnValidate">&#x2705; Local Validate</button>
-          <button id="btnSave">&#x1F4BE; Save Active Cards</button>
-          <button id="btnCommit">&#x1F680; Refresh From Active</button>
+          <button id="btnRefresh">&#x1F504; Refresh From Active</button>
           <button id="btnRestoreFactory">&#x267B; Restore Factory</button>
         </div>
 
@@ -109,7 +107,7 @@
               </div>
             </div>
 
-            <div class="actions" style="margin-top:10px;"><button id="btnApplyCard">Apply Card Changes</button></div>
+            <div class="actions" style="margin-top:10px;"><button id="btnApplyCard">Apply + Save Card</button></div>
           </section>
         </div>
 
@@ -133,7 +131,7 @@
       const onGroupEl = document.getElementById("onGroup");
       const offGroupEl = document.getElementById("offGroup");
 
-      const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit", "btnRestoreFactory", "btnApplyCard"];
+      const actionIds = ["btnLoad", "btnRefresh", "btnRestoreFactory", "btnApplyCard"];
       let requestInFlight = false;
       let currentConfig = null;
       let selectedCardIndex = 0;
@@ -481,14 +479,12 @@
         };
       }
 
-      async function persistAllCardsToActive() {
-        for (const card of (currentConfig?.cards || [])) {
-          await api(`/api/v3/cards/${card.id}`, "PUT", {
-            requestId: `card-put-${card.id}-${Date.now()}`,
-            apiVersion: "2.0",
-            card,
-          });
-        }
+      async function persistSelectedCardToActive(card) {
+        return api(`/api/v3/cards/${card.id}`, "PUT", {
+          requestId: `card-put-${card.id}-${Date.now()}`,
+          apiVersion: "2.0",
+          card,
+        });
       }
 
       async function loadActive() {
@@ -504,42 +500,17 @@
         setBusy(false);
       }
 
-      async function validateStaged() {
+      async function applyAndSaveSelectedCard() {
         setBusy(true);
         applySelectedCardFromForm();
-        if (!currentConfig?.cards?.length) {
-          throw new Error("No cards available for validation.");
-        }
-        setResult(true, "Validation passed.", "Local shape checks passed.");
-        setLog(true, "Validate success", "Split API has no staged validate endpoint.");
-        setBusy(false);
-      }
-
-      async function saveStaged() {
-        setBusy(true);
-        applySelectedCardFromForm();
-        await persistAllCardsToActive();
-        clearDirty();
-        setResult(true, "Card config saved.", "Persisted to active split card records.");
-        setLog(true, "Save success", "All card records persisted via /api/v3/cards/{id}.");
-        setBusy(false);
-      }
-
-      async function commit() {
-        if (!confirm("Commit this config to active runtime? Device restart may be required.")) {
-          setResult(false, "Commit cancelled.", "User cancelled confirmation.");
-          return;
-        }
-        setBusy(true);
-        applySelectedCardFromForm();
-        await persistAllCardsToActive();
-        const data = await loadConfigFromSplit();
-        currentConfig = data.config || currentConfig;
+        const card = currentConfig?.cards?.[selectedCardIndex];
+        if (!card) throw new Error("No selected card.");
+        const data = await persistSelectedCardToActive(card);
         renderCardList();
         loadSelectedCardToForm();
         clearDirty();
-        setResult(true, "Commit accepted.", "Active card records refreshed from split storage.");
-        setLog(true, "Commit success", `activeVersion=${data.activeVersion ?? "n/a"}`);
+        setResult(true, "Card validated and saved.", "Persisted selected card to active storage.");
+        setLog(true, "Apply+Save success", JSON.stringify(data, null, 2));
         setBusy(false);
       }
 
@@ -570,16 +541,9 @@
       }
 
       document.getElementById("btnLoad").addEventListener("click", () => runAction("Load", loadActive));
-      document.getElementById("btnValidate").addEventListener("click", () => runAction("Validate", validateStaged));
-      document.getElementById("btnSave").addEventListener("click", () => runAction("Save staged", saveStaged));
-      document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
+      document.getElementById("btnRefresh").addEventListener("click", () => runAction("Refresh", loadActive));
       document.getElementById("btnRestoreFactory").addEventListener("click", () => runAction("Restore FACTORY", () => restore("FACTORY")));
-      document.getElementById("btnApplyCard").addEventListener("click", () => {
-        applySelectedCardFromForm();
-        renderCardList();
-        markDirty();
-        setResult(true, "Card changes applied locally.", "Validate/Save to persist.");
-      });
+      document.getElementById("btnApplyCard").addEventListener("click", () => runAction("Apply+Save", applyAndSaveSelectedCard));
 
       cEnabled.addEventListener("change", markDirty);
 
