@@ -2,120 +2,102 @@
 
 Date: 2026-03-05
 Status: Draft (active)
-Supersedes for active work: V3 runtime-core + Wi-Fi sections
+Supersedes for active work: V3 runtime-core, Wi-Fi, and card behavior baseline sections
 
-## 1. Purpose
+## 1. Purpose and Scope
 
-Define the V4 runtime core contract for ESP32-S3, with focus on:
+This is the active implementation contract for V4 runtime behavior on ESP32-S3.
+It defines mandatory rules for:
 
-- dual-core ownership and scheduling boundaries
-- Wi-Fi connectivity behavior and constraints
-- card-family behavior contract for deterministic runtime cards
+- dual-core runtime architecture and deterministic boundaries
+- Wi-Fi connectivity behavior
+- card-family behavior and validation rules
+- force/mask and set/reset semantics
+- numeric representation, ranges, and units
+- observability and telemetry obligations
 
-This contract imports V3 baseline rules and applies V4-specific adjustments.
+When this document conflicts with legacy V3 docs, this V4 contract is authoritative for V4 implementation.
 
-## 2. Imported Baseline (From V3)
+## 2. V4 Design Intent (Normative)
 
-Imported from `legacy/requirements-legacy-v3-contract.md`:
+All implementation choices MUST follow this order:
 
-- Core ownership model:
-  - Core0 owns deterministic kernel state and scan execution.
-  - Core1 owns network/portal/storage/control transport.
-  - Cross-core communication must use bounded channels.
-- Wi-Fi constraints:
-  - STA mode only.
-  - Non-blocking networking behavior must not interfere with Core0 timing.
-- Connectivity fallback:
-  - Dual-SSID strategy (backup + user-configured).
-  - Boot-time connection sequence with offline-mode fallback.
-- Card model baseline:
-  - Profile-gated card families (`DI`, `AI`, `DO`, `SIO`, `MATH`, `RTC`).
-  - Shared set/reset semantics for stateful cards.
-  - Per-card deterministic evaluation rules.
+1. Correctness
+2. Determinism
+3. Safety and robustness
+4. Resource efficiency (CPU, SRAM, PSRAM, flash, network, thermal)
+5. Maintainability
+6. Migration cost
 
-## 3. V4 Core Runtime Contract
+Any option that fails 1-3 MUST be rejected.
 
-### 3.1 Dual-Core Ownership (Mandatory)
+## 3. Runtime Architecture Contract
 
-- Core0 MUST run deterministic scan/runtime logic only.
-- Core1 MUST run non-deterministic services (Wi-Fi, HTTP/WebSocket, config I/O, diagnostics transport).
-- Kernel logic on Core0 MUST NOT call Wi-Fi/HTTP/filesystem APIs directly.
-- Core1 -> Core0 commands MUST be queued through bounded, non-blocking interfaces.
-- Core0 -> Core1 snapshots/events MUST be published through bounded queues with drop/overwrite policy defined in code.
+### 3.1 Dual-Core Ownership
+
+- Core0 MUST run deterministic scan/kernel logic only.
+- Core1 MUST run variable-latency services (Wi-Fi, transport, config I/O, diagnostics publishing).
+- Core0 logic MUST NOT directly call network/socket/filesystem APIs.
+- Cross-core interaction MUST use bounded non-blocking queues.
+- Queue/backpressure policy MUST be explicit and instrumented.
 
 ### 3.2 Scheduling and Blocking Rules
 
-- Core0 loop MUST be periodic and bounded by configured scan interval.
-- Core0 MUST avoid unbounded waits, socket calls, and filesystem operations.
-- Core1 MAY perform variable-latency operations, but MUST use timeouts and retry backoff.
-- Any cross-core lock that can block Core0 is forbidden.
+- Core0 scan loop MUST be periodic and bounded by configured scan interval.
+- Core0 MUST avoid unbounded waits and blocking cross-core locks.
+- Core1 is allowed variable-latency work but MUST use bounded timeout/backoff behavior.
 
-### 3.3 Wi-Fi Connectivity Contract (V4)
+## 4. Numeric and Unit Contract
 
-- Device MUST operate in `WIFI_STA` mode for production runtime.
-- Device MUST support two credentials:
-  - `backupAccessNetwork` (factory recovery path, non-editable by normal user flow)
-  - `userConfiguredNetwork` (primary runtime network)
-- Boot connect order MUST be:
-  1. backup network (short timeout)
-  2. user network (longer timeout)
-  3. offline mode with periodic background retries
-- Offline mode MUST keep deterministic runtime fully functional.
-- Reconnect attempts MUST be non-blocking to Core0 and rate-limited.
+### 4.1 Fixed-Point Representation
 
-### 3.4 Observability Hooks (Required by DEC-0001)
+- Decimal-capable numeric values MUST use integer centiunits (`stored = value * 100`).
+- Kernel/runtime MUST operate on integer values.
+- UI/portal MUST handle decimal conversion to/from centiunits.
 
-- Runtime MUST expose at least:
-  - per-core CPU load estimate
-  - heap/SRAM headroom
-  - PSRAM usage/headroom (when present)
-  - per-task stack high-water marks
-  - flash and LittleFS usage
-- Metrics collection MUST be low-overhead and interval-based.
-- Metrics publishing MUST NOT violate Core0 timing guarantees.
+### 4.2 Range and Sign Constraints
 
-## 4. V4 Modifications vs V3 (Core + Wi-Fi)
+- Numeric values covered by this contract MUST be non-negative.
+- Validation MUST reject negative values.
 
-- V3 clause "Core1 owns portal/network/filesystem/control transport" is kept, but V4 makes queue/backpressure behavior explicit as a required implementation contract.
-- V3 Wi-Fi dual-SSID strategy is kept, but V4 formalizes retry rate-limiting and offline-first continuity as explicit mandatory behavior.
-- V4 adds mandatory health telemetry hooks as part of core contract (from `docs/decisions.md`, DEC-0001).
+Global ceiling for AI/MATH/counter `liveValue` domain:
 
-## 5. Alignment Check with V4 Goals
+- min: `0` centiunits
+- max: `100,000,000` centiunits
+- display max: `1,000,000.00`
 
-Goal: deterministic ESP32-S3 rebuild with strong observability and resilient connectivity.
+Validation MUST reject values above the ceiling for governed fields.
 
-- Determinism: aligned
-  - strict Core0 isolation from variable-latency subsystems
-- Connectivity resilience: aligned
-  - retained dual-SSID + offline fallback + retry policy
-- Telemetry-first workflow: aligned
-  - observability hooks included as contract requirements
-- Migration practicality: aligned
-  - reuses proven V3 rules, narrows and clarifies for V4 implementation
+### 4.3 Standard Units
 
-Verdict: This contract aligns with current V4 goals and can be used as the active implementation baseline for core scheduling and Wi-Fi runtime behavior.
+- `ms` for durations and timers (`debounceMs`, `delayBeforeOnMs`, `activeDurationMs`, `triggerDurationMs`)
+- `us` for eval diagnostics (`lastEvalUs`)
+- `sec` for next-time/time-sync diagnostics where applicable
+- `centiunits` for fixed-point numeric pipelines
+- booleans as `0/1` state values
 
-## 6. Card Families Contract (Imported + Adapted)
+Counter-style `liveValue` outputs (`DI/DO/SIO`) MUST saturate at `100,000,000` centiunits (no wrap in contract-facing value path).
 
-### 6.1 Profile-Gated Families
+## 5. Card Family Contract
 
-Supported card families for V4:
+### 5.1 Profile-Gated Families
 
-- `DI` (Digital Input)
-- `AI` (Analog Input)
-- `DO` (Digital Output)
-- `SIO` (Soft IO)
-- `MATH` (deterministic numeric compute)
-- `RTC` (time scheduler)
+V4 supports these profile-gated families:
+
+- `DI`
+- `AI`
+- `DO`
+- `SIO`
+- `MATH`
+- `RTC`
 
 Rules:
 
-- Every family is optional per build profile.
-- Family capacities are compile-time bounded (`0..N`).
-- Validation MUST reject card types whose family is disabled or has zero capacity in the active profile.
-- Kernel logic MUST stay hardware-agnostic through adapters.
+- Family capacity is compile-time bounded (`0..N`).
+- Disabled/zero-capacity families MUST be rejected at validation.
+- Kernel card logic MUST remain hardware-agnostic via adapters.
 
-### 6.2 Shared Card Configuration Contract
+### 5.2 Shared Card Fields and Runtime Signals
 
 Every card config MUST include:
 
@@ -124,7 +106,7 @@ Every card config MUST include:
 - `enabled`
 - `label`
 - `faultPolicy`
-- family-specific config block
+- family-specific config
 
 Every card runtime state MUST include at least:
 
@@ -132,226 +114,260 @@ Every card runtime state MUST include at least:
 - `health` (`OK|WARN|FAULT`)
 - `lastEvalUs`
 - `faultCounters`
-- `liveValue` (authoritative output variable for the family)
+- `liveValue` (family-authoritative output)
 
-Family semantics:
+Runtime signal projection by family:
 
-- `DI/DO/SIO` expose mission/stateful behavior.
-- `AI` is transducer style and does not use mission semantics.
-- `RTC` is schedule evaluator and does not use set/reset condition blocks.
+- `DI/DO/SIO`: `commandState`, `actualState`, `edgePulse`, `liveValue` are active family signals.
+- `AI`: `liveValue` is authoritative; `commandState`/`actualState`/`edgePulse` are non-authoritative defaults.
+- `RTC`: `commandState` and `edgePulse` are authoritative scheduler signals; `actualState`/`liveValue` are non-authoritative defaults.
 
-### 6.3 Set/Reset Condition Contract
+## 6. Set/Reset Contract
 
-Set/reset semantics apply to `DI`, `DO`, `SIO`, and `MATH`.
+### 6.1 Applicability
+
+- Set/reset logic applies only to `DI`, `DO`, `SIO`, `MATH`.
+- `AI` and `RTC` MUST NOT define or evaluate set/reset blocks.
+- Validation MUST reject set/reset fields on `AI` and `RTC`.
+
+### 6.2 Condition Block Structure
+
+Each set/reset block MUST contain:
+
+- `clauseA`
+- `clauseB`
+- `combiner` (`None|AND|OR`)
 
 Rules:
 
-- `reset` is dominant over `set` in the same scan.
-- For `DO/SIO`, set behavior is mode-dependent:
-  - `Normal` and `Immediate`: edge-triggered mission start.
-  - `Gated`: level-triggered; set must remain true through mission window.
-- `AI` and `RTC` do not evaluate set/reset blocks internally.
-- Validation MUST reject `set/reset` blocks on `AI` and `RTC`.
+- `None` evaluates only `clauseA`.
+- `AND`/`OR` combine `clauseA` + `clauseB`.
 
-### 6.4 Set/Reset Impact Matrix (Per Card Type)
+### 6.3 Compare-Source and State Rules
+
+Numeric compare source MUST be exactly one of:
+
+- constant threshold value
+- another card `liveValue` threshold reference
+
+Validation rules:
+
+- self-reference in same clause is invalid.
+- `STATE` compare is allowed only for `DO/SIO missionState` (`IDLE|ACTIVE|FINISHED`).
+- `STATE` compare operator MUST be equality.
+
+### 6.4 Per-Family Set/Reset Impact
 
 - `DI`:
-  - `reset=true`: counter reset, qualification blocked for that scan.
-  - `set=false` with `reset=false`: no qualification/increment.
-  - `set=true` with `reset=false`: normal qualification and edge counting.
+  - `reset=true` clears counter/filter state and blocks qualification for that scan.
+  - `set=false` with `reset=false` inhibits qualification/increment.
+  - `set=true` with `reset=false` enables normal edge qualification/increment.
 - `DO`:
-  - `reset=true`: immediate mission abort to idle-safe state.
-  - `set` trigger behavior depends on mode (`Normal/Immediate` edge-triggered, `Gated` level-held).
-  - if both set and reset are true in same scan, reset wins.
-- `SIO`:
-  - same set/reset semantics as DO mission engine.
-  - reset aborts virtual mission immediately.
+  - `reset=true` aborts mission immediately to idle-safe path.
+  - `set` behavior is mode-dependent (`Normal/Immediate` edge-triggered, `Gated` level-held).
+  - if set and reset are both true, reset wins.
+- `SIO`: same set/reset semantics as DO mission engine.
 - `MATH`:
-  - `reset=true`: output forced to `fallbackValue`.
-  - `set=false` and `reset=false`: hold last output.
-  - `set=true` and `reset=false`: execute compute pipeline.
-- `AI`:
-  - no set/reset behavior exists.
-  - any set/reset config for AI is invalid and must be rejected.
-- `RTC`:
-  - no set/reset behavior exists.
-  - state is schedule/time driven only; set/reset config is invalid.
+  - `reset=true` forces `fallbackValue`.
+  - `set=false` holds last output.
+  - `set=true` executes compute pipeline.
 
-### 6.5 Missing/Unsupported Set/Reset Blocks
+### 6.5 Presence Rules
 
-- For card families that support set/reset (`DI`, `DO`, `SIO`, `MATH`), both blocks MUST be present in validated config.
-- If a card supports set/reset and either block is missing, validation MUST reject the card configuration.
-- For card families that do not support set/reset (`AI`, `RTC`), set/reset fields MUST be absent.
+- For `DI/DO/SIO/MATH`, both `set` and `reset` blocks MUST be present.
+- Missing required block(s) MUST fail validation.
+- Factory/default baseline for set/reset-capable families MUST initialize both blocks as inert-false.
 
-## 7. Card-Specific Requirements (V4 Baseline)
+## 7. Force and Mask Contract
 
-### 7.0 Common Units and Value Conventions
+### 7.1 Scope and Precedence
 
-- `ms`: milliseconds for timer/duration fields (`delayBeforeOnMs`, `activeDurationMs`, debounce fields).
-- `us`: microseconds for internal timing diagnostics (`lastEvalUs`).
-- `sec`: seconds for time-until diagnostics and sync settings where specified.
-- `centiunits`: scaled integer numeric value (`value * 100`) for deterministic numeric pipelines.
-- boolean states: `0/1` semantics for `commandState`/`actualState`.
-- counters: unsigned 32-bit (`0..4294967295`, wrap on overflow unless otherwise specified).
+- Force applies to supported input/value-source paths (`DI`, `AI`, and explicitly permitted command surfaces).
+- Mask applies to physical output gating (`DO`) only.
 
-### 7.1 DI
+Precedence order:
 
-- Config sub-parameters:
-  - `channel` (digital input channel index)
-  - `invert` (`bool`)
-  - `edgeMode` (`RISING|FALLING|CHANGE`)
-  - `debounceMs` (`ms`, range validated by profile/contract)
-  - `set` condition block
-  - `reset` condition block
-- Runtime outputs/signals:
-  - `actualState` (effective sampled input after force + invert)
-  - `commandState` (qualified logical state)
-  - `liveValue` (qualified edge counter, count)
-  - `edgePulse` (one-scan pulse on qualified increment)
-- Rules:
-  - counter increments only on qualified edges when set gate is active.
-  - reset clears counter and dominates set.
-  - force transitions must not corrupt edge qualification behavior.
+1. Safety/reset policy
+2. Force source/value selection (where supported)
+3. Mission/logic evaluation
+4. Mask-based physical drive gating (DO only)
 
-### 7.2 AI
+### 7.2 Per-Family Rules
 
-- Config sub-parameters:
-  - `channel` (analog input channel index)
-  - `inputRange.min`, `inputRange.max` (engineering input domain; unit defined per channel profile)
-  - `clampRange.min`, `clampRange.max` (same base unit as input)
-  - `outputRange.min`, `outputRange.max` (target engineering unit, typically centiunits)
-  - `emaAlpha` (`0..100`, centiunits of filter alpha `0.00..1.00`)
-- Runtime pipeline:
-  - `raw -> clamp -> map/scale -> EMA -> liveValue`
-- Runtime outputs/signals:
-  - `liveValue` (scaled filtered numeric output)
-  - quality metadata (`GOOD|CLAMPED|INVALID`) when enabled by snapshot contract
-- Rules:
-  - AI is always transducer/evaluator, not mission-state card.
-  - AI MUST NOT include or evaluate `set/reset` style logic.
-  - invalid forced values are rejected by command validation.
-
-### 7.3 DO
-
-- Config sub-parameters:
-  - `channel` (digital output channel index)
-  - `invert` (`bool`)
-  - `mode` (`Normal|Immediate|Gated`)
-  - `delayBeforeOnMs` (`ms`)
-  - `activeDurationMs` (`ms`)
-  - `repeatCount` (count; `0` = infinite repeat)
-  - `set` condition block
-  - `reset` condition block
-- Runtime outputs/signals:
-  - `missionState` (`IDLE|ACTIVE|FINISHED`)
-  - `commandState` (logical mission output before mask/invert handling)
-  - `actualState` (effective output state after mode/invert evaluation)
-  - physical drive state (after mask policy)
-  - `liveValue` (completed-cycle counter)
-  - `edgePulse` (one-scan pulse on configured output transition event)
-- Rules:
-  - reset always aborts mission immediately.
-  - masking affects physical drive only, not logical mission evaluation.
-  - retrigger while active is ignored in `Normal` and `Immediate`.
-
-### 7.4 SIO
-
-- Config sub-parameters:
-  - `mode` (`Normal|Immediate|Gated`)
-  - `delayBeforeOnMs` (`ms`)
-  - `activeDurationMs` (`ms`)
-  - `repeatCount` (count; `0` = infinite repeat)
-  - `set` condition block
-  - `reset` condition block
-- Runtime outputs/signals:
-  - `missionState` (`IDLE|ACTIVE|FINISHED`)
-  - `commandState`
-  - `actualState`
-  - `liveValue` (completed-cycle counter)
-  - `edgePulse`
-- Rules:
-  - semantics match DO mission engine and timer/cycle behavior.
-  - no physical GPIO drive.
-  - SIO mask semantics are not applicable.
-
-### 7.5 MATH
-
-- Config sub-parameters:
-  - `mode` (standard pipeline baseline; optional PID by profile/contract gate)
-  - `set` condition block
-  - `reset` condition block
-  - `fallbackValue` (numeric safe output, typically centiunits)
-  - standard-pipeline parameters (operator, input sources, clamp/scale ranges, `emaAlpha`, optional rate limit)
-  - PID parameters when enabled (gains, output limits, source bindings)
-- Runtime outputs/signals:
-  - `liveValue` (numeric output, typically centiunits)
-  - intermediate stage telemetry (when diagnostics enabled)
-  - fault status/flags
-- Rules:
-  - reset forces `fallbackValue`.
-  - set false holds last value.
-  - fault paths must produce deterministic safe output (fallback) and fault signal.
-
-### 7.6 RTC
-
-- Config sub-parameters:
-  - schedule fields: `minute` required; `hour/weekday/day/month/year` optional wildcard-enabled fields
-  - `triggerDurationMs` (`ms`)
-- Runtime outputs/signals:
-  - `commandState` (active window boolean)
-  - `edgePulse` (trigger pulse)
-  - `timeUntilNextStartSec`, `timeUntilNextEndSec` (`sec`)
-- Rules:
-  - schedule-driven boolean source using authoritative system time service.
-  - minute-level schedule granularity.
-  - no set/reset evaluation.
-  - unsynced/invalid time must prevent schedule firing.
-
-## 8. V4 Card Adaptations vs Legacy V3
-
-- Imported V3 family behavior and precedence rules are retained as baseline.
-- V4 narrows the contract to deterministic, profile-gated implementation order and explicit runtime observability.
-- V4 keeps `MATH` mode expansion possible, but requires mode gates through profile/config contract before enabling in production.
-- V4 keeps `RTC` time-service dependency explicit and aligned with the simplified Time Sync direction.
-
-## 9. Force and Mask Behavior Contract
-
-### 9.1 Scope
-
-- Force applies to input/value-source style cards (`DI`, `AI`) and controlled runtime values where explicitly allowed.
-- Mask applies to physical output drive behavior (`DO`) only.
-
-### 9.2 Priority and Precedence
-
-- For all cards, `reset` precedence rules remain unchanged (reset dominates set where applicable).
-- Force changes data source/value used by card logic.
-- Mask changes physical drive behavior only; it must not rewrite logical mission state.
-- If multiple control layers apply, precedence is:
-  1. safety/reset policy
-  2. force source/value selection (where supported)
-  3. mission/logic evaluation
-  4. mask/physical drive gating (DO only)
-
-### 9.3 Per-Card Rules
-
-- `DI` force:
-  - supported modes: `REAL`, `FORCED_HIGH`, `FORCED_LOW`.
-  - force is applied before invert/debounce/edge qualification.
-  - DI force must not corrupt edge counter integrity across transitions.
+- `DI` force modes: `REAL`, `FORCED_HIGH`, `FORCED_LOW`.
+  - Force is applied before invert/debounce/edge qualification.
 - `AI` force:
-  - supported mode: forced numeric sample (plus clear force to return to real input).
-  - forced sample goes through the same pipeline (`clamp -> map/scale -> EMA`).
-  - invalid forced values are rejected.
+  - forced sample value (and clear-force path back to real input)
+  - forced sample MUST pass normal AI pipeline (`clamp -> map/scale -> EMA`).
 - `DO` mask:
-  - supported states: `DIRECT` and `MASKED` (or equivalent config/command representation).
-  - mask suppresses physical output drive only.
-  - mission timers, counters, set/reset evaluation, and logical runtime state continue normally while masked.
-- `SIO`:
-  - no physical drive exists; mask is not applicable and must be rejected if requested.
-- `MATH` and `RTC`:
-  - output-mask semantics are not applicable.
+  - `DIRECT` or `MASKED` behavior
+  - mask suppresses physical drive only; mission/state/timers/counters continue.
+- `SIO` mask is unsupported and MUST be rejected.
+- `MATH`/`RTC` output-mask semantics are unsupported.
 
-### 9.4 Validation and Diagnostics
+Validation MUST reject unsupported force/mask operations by family.
+Diagnostics MUST expose active force/mask state.
 
-- Validation must reject unsupported force/mask commands by card family.
-- Runtime diagnostics should expose current force/mask states so operator intent is auditable.
+## 8. Variable Binding and Topology Contract
+
+- Bind source modes MUST be `CONSTANT` or `VARIABLE_REF`.
+- Allowed reference classes: `BOOL`, `NUMBER`, `TIME_WINDOW`, `STATE` (state only from `DO/SIO missionState`).
+- Validation MUST enforce type/range/unit compatibility.
+- Dependency topology MUST be acyclic.
+
+Ownership rule:
+
+- Each runtime output has a single owner card/service.
+- Validation MUST reject write-binding to another card's owned output variable (for example direct write to another card `liveValue`).
+
+## 9. Card-Specific Contract
+
+### 9.1 DI
+
+Config sub-parameters:
+
+- `channel`
+- `invert`
+- `edgeMode` (`RISING|FALLING|CHANGE`)
+- `debounceMs`
+- `set`, `reset`
+
+Runtime behavior:
+
+- sample source selection (forced/real) -> invert -> set/reset gating -> debounce -> edge qualification
+- `actualState` follows effective sampled input
+- `commandState` follows qualified logic state
+- `liveValue` increments on qualified edge under active set gate
+- `edgePulse` MUST be exactly one scan on qualified increment event
+
+### 9.2 AI
+
+Config sub-parameters:
+
+- `channel`
+- `inputRange.min/max`
+- `clampRange.min/max`
+- `outputRange.min/max`
+- `emaAlpha` (`0..100`)
+
+Runtime behavior:
+
+- `raw -> clamp -> map/scale -> EMA -> liveValue`
+- no set/reset semantics
+- invalid forced values MUST be rejected
+
+### 9.3 DO
+
+Config sub-parameters:
+
+- `channel`
+- `invert`
+- `mode` (`Normal|Immediate|Gated`)
+- `delayBeforeOnMs`
+- `activeDurationMs`
+- `repeatCount` (`0` means infinite)
+- `set`, `reset`
+
+Runtime behavior:
+
+- mission states: `IDLE|ACTIVE|FINISHED`
+- signals: `commandState`, `actualState`, physical drive state, `liveValue`, `edgePulse`
+- reset dominates set
+- retrigger while active is ignored in `Normal` and `Immediate`
+- zero-timer semantics:
+  - `delayBeforeOnMs=0` => no delay phase
+  - `activeDurationMs=0` => no auto-off (hold until reset/gated drop)
+  - both zero => immediate hold behavior
+- `liveValue` is completed-cycle counter (ceiling saturation applies)
+- `edgePulse` semantics MUST remain one-scan pulse on rising effective output edge
+
+### 9.4 SIO
+
+Config sub-parameters:
+
+- `mode` (`Normal|Immediate|Gated`)
+- `delayBeforeOnMs`
+- `activeDurationMs`
+- `repeatCount` (`0` means infinite)
+- `set`, `reset`
+
+Runtime behavior:
+
+- Same mission/timing/set-reset semantics as DO.
+- No physical GPIO drive.
+- Mask is unsupported.
+- Zero-timer semantics MUST exactly match DO behavior.
+- `liveValue` is completed-cycle counter (ceiling saturation applies).
+
+### 9.5 MATH
+
+Config sub-parameters:
+
+- `mode` (standard pipeline baseline; PID mode only when profile/contract gated)
+- `set`, `reset`
+- `fallbackValue`
+- pipeline parameters: operator, sources, clamp/scale bounds, `emaAlpha`, optional rate limit
+- PID parameters when enabled: gains, limits, source bindings
+
+Runtime behavior:
+
+- reset => fallback
+- set false => hold
+- set true => compute
+- output is `liveValue` (global numeric ceiling applies)
+- fault path MUST emit deterministic safe output (`fallbackValue`) and fault signal
+
+### 9.6 RTC
+
+Config sub-parameters:
+
+- schedule object: `minute` required; `hour/weekday/day/month/year` optional wildcard-enabled fields
+- `triggerDurationMs`
+
+Runtime behavior:
+
+- authoritative time-source scheduler
+- minute-level schedule granularity
+- outputs: `commandState`, `edgePulse`, `timeUntilNextStartSec`, `timeUntilNextEndSec`
+- no set/reset behavior
+- invalid/unsynced time MUST prevent firing
+- retrigger policy while active MUST be explicit; default is restart-window behavior
+
+## 10. Wi-Fi Connectivity Contract
+
+- Device MUST run in `WIFI_STA` mode for production runtime.
+- Two credential slots are mandatory:
+  - `backupAccessNetwork` (recovery path)
+  - `userConfiguredNetwork` (primary path)
+
+Boot connection order MUST be:
+
+1. backup network (short timeout)
+2. user network (longer timeout)
+3. offline mode with periodic non-blocking retries
+
+Offline mode MUST keep deterministic runtime fully functional.
+Wi-Fi and transport work MUST NOT interfere with Core0 deterministic timing.
+
+## 11. Observability Contract
+
+Runtime MUST expose at minimum:
+
+- per-core CPU load estimate
+- heap/SRAM headroom
+- PSRAM usage/headroom (when present)
+- per-task stack high-water marks
+- flash and LittleFS usage
+- queue depth/high-water/drop counters for cross-core and transport queues
+
+Metrics collection and publication MUST remain bounded and MUST NOT break Core0 timing guarantees.
+
+## 12. Alignment Verdict and Next Improvement Targets
+
+Current verdict: This contract is aligned with V4 goals (determinism, resilience, observability, maintainability).
+
+Improvement targets (next iteration):
+
+1. Add explicit acceptance-test IDs per major clause (traceability to AT/HIL matrix).
+2. Split transport/API and config lifecycle details into dedicated V4 contract files and cross-link them here.
+3. Add per-field min/max table appendix for all card config parameters to remove parser ambiguity.

@@ -67,10 +67,10 @@ Rules:
 
 ## 2.4 Counter Range and Overflow
 
-Integrated counters use unsigned 32-bit range (`0 ... 4,294,967,295`).
+Integrated counters in V4 are bounded by the global numeric ceiling (`0 ... 100,000,000` in centiunit convention).
 
-- At max value, next increment wraps to `0`.
-- Plan long-running deployments with wrap behavior in mind.
+- At max value, counters saturate at ceiling (no wrap in contract-facing value path).
+- Plan long-running deployments with saturation behavior in mind.
 
 ## 3. DI Card (Digital Input)
 
@@ -282,7 +282,7 @@ Condition blocks on MATH (when configured) follow the same numeric compare-sourc
 - Internal storage and runtime use integer centiunits.
 - Portal should display values as two decimal places (`centi / 100.00`).
 - Config/API payloads should carry raw integer centiunits, not float text.
-- MATH numeric fields are currently capped to `0..1,000,000` centiunits for the safety envelope (subject to V4 contract finalization).
+- Global numeric ceiling for AI/MATH/counter `liveValue` paths is `0..100,000,000` centiunits (`1,000,000.00` display max).
 
 ## 7.4 Proposed Control Behavior
 

@@ -29,6 +29,15 @@ Status: Active
 - Added explicit validation rule that `AI` and `RTC` must not carry/evaluate set/reset blocks.
 - Added explicit per-card set/reset impact matrix and missing/unsupported set/reset validation rules to remove ambiguity.
 - Added explicit force/mask behavior contract with precedence, per-card applicability, and validation/diagnostics rules.
+- Added missing numeric contract clauses in V4 core contract: fixed-point centiunit representation and non-negative value enforcement.
+- Added second-pass card contract completeness items: condition block structure/combiners, compare-source/state constraints, and card variable binding/topology ownership rules.
+- Added third-pass card semantics: safe inert set/reset default guidance, DI edgePulse one-scan rule, DO/SIO zero-timer behavior, and RTC retrigger-policy requirement.
+- Ran cross-document legacy sweep and tightened V4 contract modality (`MUST` vs ambiguous terms) for key validation/runtime clauses.
+- Added explicit runtime signal projection mapping by family (`DI/DO/SIO`, `AI`, `RTC`) to close shared-snapshot semantics gap.
+- Added global numeric ceiling policy: `0..100,000,000` centiunits (`1,000,000.00` display max) for AI/MATH/counter `liveValue` paths, including saturation-at-ceiling behavior.
+- Aligned user guide counter and numeric-limit wording with the new V4 ceiling policy.
+- Rewrote `docs/core-contract-v4.md` into a coherent single-flow V4 contract with consolidated clauses (architecture, numeric model, cards, set/reset, force/mask, topology, Wi-Fi, observability).
+- Added explicit alignment verdict and next improvement targets inside the core contract.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
 - Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 
@@ -42,3 +51,9 @@ Status: Active
 1. Define V4 module contracts (platform, storage, runtime, transport).
 2. Create initial ESP32-S3 environment in `platformio.ini`.
 3. Add baseline telemetry scaffolding (CPU/core load, SRAM/PSRAM/heap, stack high-water).
+
+## Deferred Notes (Contract Hardening Backlog)
+
+1. Add acceptance-test IDs per major core-contract clause (`AT-*` / `HIL-*`) for traceability.
+2. Split transport/API and config lifecycle into dedicated V4 contract files and cross-link from core contract.
+3. Add a single per-field min/max appendix for all card config parameters to remove parser ambiguity.
