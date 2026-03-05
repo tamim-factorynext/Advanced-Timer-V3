@@ -35,8 +35,8 @@ constexpr const char* kSplitRootDir = "/cfg";
 constexpr const char* kSplitCardsDir = "/cfg/cards";
 constexpr const char* kSplitSettingsPath = "/cfg/settings.json";
 constexpr const char* kSplitCardsIndexPath = "/cfg/cards/index.json";
-constexpr bool kLogStorageBootstrapStages = true;
-constexpr bool kLogStorageFileTrace = true;
+constexpr bool kLogStorageBootstrapStages = false;
+constexpr bool kLogStorageFileTrace = false;
 
 inline void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();

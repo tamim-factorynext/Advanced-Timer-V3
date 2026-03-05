@@ -3827,3 +3827,38 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
   - Tutorial flow strategy
   - Debug/simulation guardrails
   - Asset-size and stack rollout thresholds
+
+## 2026-03-05 (Save Path Stabilization + Log Cleanup)
+
+### Completed
+
+- Resolved intermittent portal save/validate failures for both system settings and per-card updates.
+- Introduced staged-from-active config mutation flow in transport save handlers to avoid fragile transient memory paths.
+- Added/used staging helpers in storage service:
+  - `prepareStagedFromActive()`
+  - `stageSystemConfig(...)`
+  - `commitStaged()`
+- Kept split-config persistence path (`/cfg/settings.json`, `/cfg/cards/*.json`, `/cfg/cards/index.json`) as canonical active layout.
+- Reduced expected filesystem noise during first-boot/missing-file scenarios:
+  - guarded remove/rename fallback paths
+  - added existence checks before legacy/split file open attempts
+- Performed log cleanup pass to suppress debug spam and keep runtime serial readable during normal portal operation.
+
+### Root Cause Summary
+
+- Primary blocker was backend memory/staging behavior during validate/apply, not frontend form logic.
+- `503 INSUFFICIENT_MEMORY` on settings/card operations was caused by staging buffer availability/path behavior under current save flow.
+- Reported stack-overflow resets were timing-sensitive and did not align with measured free-stack headroom; save-path hard failures were treated as separate from pure stack exhaustion.
+
+### Verification
+
+- Firmware build:
+  - Command: `C:\Users\Admin\.platformio\penv\Scripts\platformio.exe run`
+  - Result: `SUCCESS`
+  - Environment: `esp32doit-devkit-v1`
+  - RAM: `37.7%` (`123684 / 327680`)
+  - Flash: `75.2%` (`985821 / 1310720`)
+
+### Notes
+
+- A temporary "log everything" commit was created at session end for deep tracing capture and can be reverted/toggled for quieter field runs.

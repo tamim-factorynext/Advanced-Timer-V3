@@ -642,5 +642,15 @@ Use one short entry per decision with this structure:
 - Impact: Preserves rollout safety for existing clients by retaining legacy alias fields in the same payload.
 - References: `src/portal/portal_service.cpp`, `src/runtime/runtime_service.h`, `src/runtime/runtime_service.cpp`, `src/kernel/kernel_service.h`, `src/kernel/kernel_service.cpp`, `src/main.cpp`, `docs/api-contract-v3.md`.
 
+## DEC-0062: Use Staged-From-Active Config Mutation For Settings/Card Saves
+- Date: 2026-03-05
+- Status: Accepted
+- Context: Portal `PUT /api/v3/settings` and `PUT /api/v3/cards/{id}` flows intermittently failed with `503 INSUFFICIENT_MEMORY` (`staging buffer unavailable`) under realistic navigation/update load.
+- Decision: Standardize save handlers on a staged-from-active mutation flow: clone active config into staged buffer, apply scoped mutation (settings or one card), run validation, then commit staged config.
+- Impact: Removes fragile transient save behavior that previously caused memory-path failures during validate/apply.
+- Impact: Keeps update semantics consistent between system settings and per-card writes.
+- Impact: Preserves split-config persistence layout without changing API contract shape.
+- References: `src/portal/transport_runtime.cpp`, `src/storage/storage_service.h`, `src/storage/storage_service.cpp`, `docs/worklog.md`.
+
 
 

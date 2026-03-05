@@ -39,11 +39,11 @@ PortalService* gPortal = nullptr;
 v3::storage::StorageService* gStorage = nullptr;
 bool gTransportInitialized = false;
 uint32_t gLastTransportActivityMs = 0;
-constexpr bool kLogHttpVerboseReads = true;
+constexpr bool kLogHttpVerboseReads = false;
 constexpr bool kLogHttpPageNavigation = true;
-constexpr bool kLogHttpMutations = true;
-constexpr bool kLogHttpActions = true;
-constexpr bool kLogTransport404 = true;
+constexpr bool kLogHttpMutations = false;
+constexpr bool kLogHttpActions = false;
+constexpr bool kLogTransport404 = false;
 constexpr bool kLogClientConnections = true;
 
 void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
