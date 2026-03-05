@@ -46,6 +46,10 @@ Status: Active
 - Refined restore policy: LKG kept as internal robustness-only fallback; user-facing rollback to LKG is explicitly disallowed (factory/import only).
 - Added decisions `DEC-0002` (split artifacts with atomic pair activation) and `DEC-0003` (LKG internal-only + Config/Settings action placement).
 - Rewrote related persistence/restore contract sections for coherent flow and explicit portal page ownership of backup/restore vs settings actions.
+- Added dedicated `docs/frontend-contract-v4.md` by importing legacy frontend/portal contract intent and applying V4 modifications.
+- Added `DEC-0004` locking one-click config apply UX (no separate save/stage/validate/commit buttons).
+- Extended frontend contract with explicit page map, theme/token requirements, iconography semantics, and frontend stack policy (Bootstrap allowed with V4 override rules).
+- Rewrote frontend contract as near-complete import from legacy frontend markdown + HTML implementation details (page set, nav shell, theming aliases, stack adoption policy, runtime/action/error/reliability contracts) with V4 modifications applied.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
 - Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 

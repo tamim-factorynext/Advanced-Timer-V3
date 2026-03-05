@@ -23,6 +23,7 @@ Documentation creation policy on this branch:
 - `docs/decisions.md` - V4 architecture and workflow decisions (ADR-style log).
 - `docs/core-contract-v4.md` - Active V4 core runtime contract (dual-core + Wi-Fi connectivity).
 - `docs/user-guide-v4.md` - V4 user guide draft imported from V3 and aligned to V4 contracts.
+- `docs/frontend-contract-v4.md` - V4 frontend UX and transport contract (one-click apply model).
 
 ## 3. Legacy Archive Location
 

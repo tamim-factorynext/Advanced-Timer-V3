@@ -82,3 +82,24 @@ User-facing rollback to LKG can expose stale/opaque states and complicate safe U
 - Runtime/boot may auto-recover to LKG when integrity checks fail.
 - Recovery source/events must be visible in diagnostics/logs.
 - User workflows stay clear: config lifecycle in Config page, device/system actions in Settings page.
+
+## DEC-0004: One-Click Config Apply UX
+
+- Date: 2026-03-05
+- Status: Accepted
+
+### Context
+
+Separate user actions for save/stage/validate/commit increase operator friction and create avoidable UI complexity.
+
+### Decision
+
+- Frontend uses one-click `Apply` for config changes.
+- Separate user buttons for `save staged`, `validate`, and `commit` are removed from V4 UI flow.
+- Backend still executes staged -> validate -> commit internally as one transactional pipeline.
+
+### Implications
+
+- User experience is simpler and faster while preserving safety checks.
+- API must return clear per-step failure reasons when apply fails.
+- Config page remains the sole owner of config lifecycle interactions (including import/export and apply).
