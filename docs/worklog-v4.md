@@ -52,6 +52,11 @@ Status: Active
 - Rewrote frontend contract as near-complete import from legacy frontend markdown + HTML implementation details (page set, nav shell, theming aliases, stack adoption policy, runtime/action/error/reliability contracts) with V4 modifications applied.
 - Added explicit module/folder architecture contract in core contract (`kernel/platform/storage/runtime/control/transport/portal/app`) with ownership, forbidden couplings, and required interaction path.
 - Implemented V4 runtime code baseline in `src/main.cpp`: dual-core task split (Core0 kernel placeholder + Core1 service), task watchdog wiring, non-blocking Wi-Fi policy state machine, and periodic resource/performance metrics logging scaffold.
+- Refactored runtime baseline into V4 core-service architecture scaffolding:
+  - Added service contract and lifecycle manager (`core/contracts`, `core/runtime/service_manager`).
+  - Added platform modules for watchdog and boot diagnostics (`core/platform`).
+  - Added first pluggable services for Wi-Fi policy and telemetry (`core/services`).
+  - Reduced `main.cpp` to orchestration, task setup, and service wiring to keep backend transport as a future thin adapter layer.
 - Updated build/runtime baseline for ESP32-S3 N16R8 profile: 16MB partition profile + PSRAM build flags/variant in `platformio.ini`, plus boot-time PSRAM probe and mismatch warning in `src/main.cpp`.
 - Replaced fragile N8+override approach with a project-local custom board definition (`boards/esp32-s3-r8n16-v4.json`) and switched env board target to that profile for safer reproducibility.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
