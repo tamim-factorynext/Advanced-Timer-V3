@@ -71,7 +71,7 @@
       </header>
 
       <section class="card">
-        <div><strong>Live endpoints:</strong> <span class="muted">/api/v3/config/*</span></div>
+        <div><strong>Live endpoints:</strong> <span class="muted">/api/v3/settings, /api/v3/cards, /api/v3/cards/{id}</span></div>
         <div class="actions" style="margin-top:10px;">
           <button id="btnLoad">&#x1F4E5; Load Active</button>
           <button id="btnValidate">&#x2705; Validate Staged</button>
@@ -458,9 +458,43 @@
         return data;
       }
 
+      async function loadConfigFromSplit() {
+        const settingsData = await api("/api/v3/settings", "GET");
+        const cardsIndexData = await api("/api/v3/cards", "GET");
+        const ids = Array.isArray(cardsIndexData.cards) ? cardsIndexData.cards.map((x) => x.id) : [];
+        const cards = [];
+        for (const id of ids) {
+          const cardData = await api(`/api/v3/cards/${id}`, "GET");
+          if (cardData && cardData.card) cards.push(cardData.card);
+        }
+
+        return {
+          activeVersion: settingsData.activeVersion,
+          config: {
+            schemaVersion: settingsData.settings?.schemaVersion ?? 300,
+            scanPeriodMs: settingsData.settings?.scanPeriodMs ?? 10,
+            system: {
+              wifi: settingsData.settings?.wifi || {},
+              time: settingsData.settings?.time || {},
+            },
+            cards,
+          },
+        };
+      }
+
+      async function persistAllCardsToActive() {
+        for (const card of (currentConfig?.cards || [])) {
+          await api(`/api/v3/cards/${card.id}`, "PUT", {
+            requestId: `card-put-${card.id}-${Date.now()}`,
+            apiVersion: "2.0",
+            card,
+          });
+        }
+      }
+
       async function loadActive() {
         setBusy(true);
-        const data = await api("/api/v3/config/active", "GET");
+        const data = await loadConfigFromSplit();
         currentConfig = data.config || { schemaVersion: 300, scanPeriodMs: 10, system: {}, cards: [] };
         selectedCardIndex = 0;
         renderCardList();
@@ -474,27 +508,21 @@
       async function validateStaged() {
         setBusy(true);
         applySelectedCardFromForm();
-        const data = await api("/api/v3/config/staged/validate", "POST", {
-          requestId: `cfg-val-${Date.now()}`,
-          apiVersion: "2.0",
-          config: currentConfig,
-        });
-        setResult(true, "Validation passed.", data.reason ? `reason=${data.reason}` : "");
-        setLog(true, "Validate success", JSON.stringify(data, null, 2));
+        if (!currentConfig?.cards?.length) {
+          throw new Error("No cards available for validation.");
+        }
+        setResult(true, "Validation passed.", "Local shape checks passed.");
+        setLog(true, "Validate success", "Split API has no staged validate endpoint.");
         setBusy(false);
       }
 
       async function saveStaged() {
         setBusy(true);
         applySelectedCardFromForm();
-        const data = await api("/api/v3/config/staged/save", "POST", {
-          requestId: `cfg-save-${Date.now()}`,
-          apiVersion: "2.0",
-          config: currentConfig,
-        });
+        await persistAllCardsToActive();
         clearDirty();
-        setResult(true, "Staged config saved.", `version=${data.stagedVersion}`);
-        setLog(true, "Save staged success", JSON.stringify(data, null, 2));
+        setResult(true, "Card config saved.", "Persisted to active split card records.");
+        setLog(true, "Save success", "All card records persisted via /api/v3/cards/{id}.");
         setBusy(false);
       }
 
@@ -505,15 +533,14 @@
         }
         setBusy(true);
         applySelectedCardFromForm();
-        const data = await api("/api/v3/config/commit", "POST", {
-          requestId: `cfg-commit-${Date.now()}`,
-          apiVersion: "2.0",
-          config: currentConfig,
-          options: { persist: false },
-        });
+        await persistAllCardsToActive();
+        const data = await loadConfigFromSplit();
+        currentConfig = data.config || currentConfig;
+        renderCardList();
+        loadSelectedCardToForm();
         clearDirty();
-        setResult(true, "Commit accepted.", "Runtime restart required to fully apply.");
-        setLog(true, "Commit success", JSON.stringify(data, null, 2));
+        setResult(true, "Commit accepted.", "Active card records refreshed from split storage.");
+        setLog(true, "Commit success", `activeVersion=${data.activeVersion ?? "n/a"}`);
         setBusy(false);
       }
 

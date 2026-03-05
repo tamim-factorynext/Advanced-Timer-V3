@@ -680,23 +680,11 @@ bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
   outError = {ConfigErrorCode::None, 0};
   makeDefaultSystemConfig(outDecoded);
 
+  if (!decodeSystemSettingsLight(root, outDecoded, outError)) return false;
+
   JsonObjectConst systemObj = root["system"].as<JsonObjectConst>();
   if (systemObj.isNull()) systemObj = root;
-
-  if (!systemObj["schemaVersion"].is<uint32_t>() ||
-      !systemObj["scanPeriodMs"].is<uint32_t>() ||
-      !systemObj["cards"].is<JsonArrayConst>()) {
-    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
-    return false;
-  }
-
-  outDecoded.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
-  outDecoded.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
-  if (!parseWiFiConfig(systemObj, outDecoded.wifi)) {
-    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
-    return false;
-  }
-  if (!parseClockConfig(systemObj, outDecoded.time)) {
+  if (!systemObj["cards"].is<JsonArrayConst>()) {
     outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return false;
   }
@@ -712,12 +700,43 @@ bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
   uint8_t cardIndex = 0;
   for (JsonObjectConst cardObj : cards) {
     CardConfig card = {};
-    if (!parseCommonCard(cardObj, card, outError, cardIndex)) return false;
-    if (!parseFamilyParams(cardObj, card, outError, cardIndex)) return false;
+    if (!decodeCardConfigLight(cardObj, card, outError, cardIndex)) return false;
     outDecoded.cards[cardIndex] = card;
     ++cardIndex;
   }
 
+  return true;
+}
+
+bool decodeSystemSettingsLight(JsonObjectConst root, SystemConfig& inOutConfig,
+                               ConfigValidationError& outError) {
+  outError = {ConfigErrorCode::None, 0};
+  JsonObjectConst systemObj = root["system"].as<JsonObjectConst>();
+  if (systemObj.isNull()) systemObj = root;
+
+  if (!systemObj["schemaVersion"].is<uint32_t>() ||
+      !systemObj["scanPeriodMs"].is<uint32_t>()) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
+  }
+  inOutConfig.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
+  inOutConfig.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
+  if (!parseWiFiConfig(systemObj, inOutConfig.wifi)) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
+  }
+  if (!parseClockConfig(systemObj, inOutConfig.time)) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
+  }
+  return true;
+}
+
+bool decodeCardConfigLight(JsonObjectConst cardObj, CardConfig& outCard,
+                           ConfigValidationError& outError, uint8_t cardIndex) {
+  outCard = {};
+  if (!parseCommonCard(cardObj, outCard, outError, cardIndex)) return false;
+  if (!parseFamilyParams(cardObj, outCard, outError, cardIndex)) return false;
   return true;
 }
 

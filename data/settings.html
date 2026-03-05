@@ -162,8 +162,8 @@
         function loadFormFromConfig(cfg) {
           fSchema.value = cfg.schemaVersion ?? "";
           fScan.value = cfg.scanPeriodMs ?? "";
-          const wifi = cfg.system?.wifi || {};
-          const t = cfg.system?.time || {};
+          const wifi = cfg.wifi || {};
+          const t = cfg.time || {};
           const ts = t.timeSync || {};
           fTz.value = t.timezone ?? "";
           fNtp1.value = ts.primaryTimeServer ?? "";
@@ -183,23 +183,22 @@
         function applyFormToConfig(cfg) {
           cfg.schemaVersion = Number(fSchema.value || cfg.schemaVersion || 300);
           cfg.scanPeriodMs = Number(fScan.value || cfg.scanPeriodMs || 10);
-          cfg.system = cfg.system || {};
-          cfg.system.wifi = cfg.system.wifi || {};
-          cfg.system.wifi.userConfiguredNetwork = cfg.system.wifi.userConfiguredNetwork || {};
-          cfg.system.wifi.userConfiguredNetwork.ssid = fSsid.value;
-          cfg.system.wifi.userConfiguredNetwork.password = fPass.value;
-          cfg.system.wifi.userConfiguredNetwork.timeoutSec = Number(fUserTimeout.value || cfg.system.wifi.userConfiguredNetwork.timeoutSec || 180);
-          cfg.system.wifi.retryDelaySec = Number(fRetry.value || cfg.system.wifi.retryDelaySec || 30);
-          cfg.system.wifi.staOnly = fStaOnly.value === "true";
-          cfg.system.time = cfg.system.time || {};
-          cfg.system.time.timezone = fTz.value;
-          cfg.system.time.timeSync = cfg.system.time.timeSync || {};
-          cfg.system.time.timeSync.primaryTimeServer = fNtp1.value;
-          cfg.system.time.timeSync.secondaryServer = fNtp2.value;
-          cfg.system.time.timeSync.tertiaryServer = fNtp3.value;
-          cfg.system.time.timeSync.syncIntervalSec = Number(fSyncInt.value || cfg.system.time.timeSync.syncIntervalSec || 3600);
-          cfg.system.time.timeSync.startupTimeoutSec = Number(fStartupTimeout.value || cfg.system.time.timeSync.startupTimeoutSec || 15);
-          cfg.system.time.timeSync.maxTimeAgeSec = Number(fMaxAge.value || cfg.system.time.timeSync.maxTimeAgeSec || 86400);
+          cfg.wifi = cfg.wifi || {};
+          cfg.wifi.userConfiguredNetwork = cfg.wifi.userConfiguredNetwork || {};
+          cfg.wifi.userConfiguredNetwork.ssid = fSsid.value;
+          cfg.wifi.userConfiguredNetwork.password = fPass.value;
+          cfg.wifi.userConfiguredNetwork.timeoutSec = Number(fUserTimeout.value || cfg.wifi.userConfiguredNetwork.timeoutSec || 180);
+          cfg.wifi.retryDelaySec = Number(fRetry.value || cfg.wifi.retryDelaySec || 30);
+          cfg.wifi.staOnly = fStaOnly.value === "true";
+          cfg.time = cfg.time || {};
+          cfg.time.timezone = fTz.value;
+          cfg.time.timeSync = cfg.time.timeSync || {};
+          cfg.time.timeSync.primaryTimeServer = fNtp1.value;
+          cfg.time.timeSync.secondaryServer = fNtp2.value;
+          cfg.time.timeSync.tertiaryServer = fNtp3.value;
+          cfg.time.timeSync.syncIntervalSec = Number(fSyncInt.value || cfg.time.timeSync.syncIntervalSec || 3600);
+          cfg.time.timeSync.startupTimeoutSec = Number(fStartupTimeout.value || cfg.time.timeSync.startupTimeoutSec || 15);
+          cfg.time.timeSync.maxTimeAgeSec = Number(fMaxAge.value || cfg.time.timeSync.maxTimeAgeSec || 86400);
           return cfg;
         }
 
@@ -217,62 +216,61 @@
           return data;
         }
 
-        async function loadActive() {
-          setBusy(true);
-          const data = await api("/api/v3/config/active", "GET");
-          currentConfig = data.config || {};
-          loadFormFromConfig(currentConfig);
-          clearDirty();
-          setResult(true, "Loaded active settings.", `version=${data.activeVersion}`);
-          setLog(true, "Load success", "Settings form synchronized from active config.");
-          setBusy(false);
-        }
+      async function loadActive() {
+        setBusy(true);
+        const data = await api("/api/v3/settings", "GET");
+        currentConfig = data.settings || {};
+        loadFormFromConfig(currentConfig);
+        clearDirty();
+        setResult(true, "Loaded active settings.", `version=${data.activeVersion}`);
+        setLog(true, "Load success", "Settings form synchronized from split settings endpoint.");
+        setBusy(false);
+      }
 
-        async function validateStaged() {
-          setBusy(true);
-          const cfg = applyFormToConfig(currentConfig || {});
-          const data = await api("/api/v3/config/staged/validate", "POST", {
-            requestId: `set-val-${Date.now()}`,
-            apiVersion: "2.0",
-            config: cfg,
-          });
-          setResult(true, "Validation passed.", "");
-          setLog(true, "Validate success", JSON.stringify(data, null, 2));
-          setBusy(false);
-        }
+      async function validateStaged() {
+        setBusy(true);
+        const cfg = applyFormToConfig(currentConfig || {});
+        const data = await api("/api/v3/settings", "PUT", {
+          requestId: `set-val-${Date.now()}`,
+          apiVersion: "2.0",
+          settings: cfg,
+        });
+        setResult(true, "Validation passed.", "");
+        setLog(true, "Validate/Apply success", JSON.stringify(data, null, 2));
+        setBusy(false);
+      }
 
-        async function saveStaged() {
-          setBusy(true);
-          const cfg = applyFormToConfig(currentConfig || {});
-          const data = await api("/api/v3/config/staged/save", "POST", {
-            requestId: `set-save-${Date.now()}`,
-            apiVersion: "2.0",
-            config: cfg,
-          });
-          clearDirty();
-          setResult(true, "Settings staged.", `version=${data.stagedVersion}`);
-          setLog(true, "Save success", JSON.stringify(data, null, 2));
-          setBusy(false);
-        }
+      async function saveStaged() {
+        setBusy(true);
+        const cfg = applyFormToConfig(currentConfig || {});
+        const data = await api("/api/v3/settings", "PUT", {
+          requestId: `set-save-${Date.now()}`,
+          apiVersion: "2.0",
+          settings: cfg,
+        });
+        clearDirty();
+        setResult(true, "Settings saved.", `version=${data.activeVersion}`);
+        setLog(true, "Save success", JSON.stringify(data, null, 2));
+        setBusy(false);
+      }
 
         async function commit() {
           if (!confirm("Commit settings to active runtime? Device restart may be required.")) {
             setResult(false, "Commit cancelled.", "User cancelled confirmation.");
             return;
-          }
-          setBusy(true);
-          const cfg = applyFormToConfig(currentConfig || {});
-          const data = await api("/api/v3/config/commit", "POST", {
-            requestId: `set-commit-${Date.now()}`,
-            apiVersion: "2.0",
-            config: cfg,
-            options: { persist: false },
-          });
-          clearDirty();
-          setResult(true, "Commit accepted.", "Runtime restart required to fully apply.");
-          setLog(true, "Commit success", JSON.stringify(data, null, 2));
-          setBusy(false);
         }
+        setBusy(true);
+        const cfg = applyFormToConfig(currentConfig || {});
+        const data = await api("/api/v3/settings", "PUT", {
+          requestId: `set-commit-${Date.now()}`,
+          apiVersion: "2.0",
+          settings: cfg,
+        });
+        clearDirty();
+        setResult(true, "Commit accepted.", "Split settings record updated.");
+        setLog(true, "Commit success", JSON.stringify(data, null, 2));
+        setBusy(false);
+      }
 
         async function runAction(label, fn) {
           if (requestInFlight) return;

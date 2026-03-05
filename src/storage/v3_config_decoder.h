@@ -56,5 +56,27 @@ ConfigDecodeResult decodeSystemConfig(JsonObjectConst root);
  */
 bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
                              ConfigValidationError& outError);
+/**
+ * @brief Decodes settings-only payload into system-level fields.
+ * @details Parses `schemaVersion`, `scanPeriodMs`, `wifi`, and `time`; does
+ * not parse card array fields.
+ * @param root Root JSON object of settings payload.
+ * @param inOutConfig Target config mutated with decoded settings.
+ * @param outError Receives decode/shape error on failure.
+ * @return `true` when settings fields decode successfully.
+ */
+bool decodeSystemSettingsLight(JsonObjectConst root, SystemConfig& inOutConfig,
+                               ConfigValidationError& outError);
+/**
+ * @brief Decodes a single card payload object.
+ * @details Parses common card fields and family-specific params only.
+ * @param cardObj Card JSON object.
+ * @param outCard Receives decoded card.
+ * @param outError Receives decode/shape error on failure.
+ * @param cardIndex Card index context used for error reporting.
+ * @return `true` when card decode succeeds.
+ */
+bool decodeCardConfigLight(JsonObjectConst cardObj, CardConfig& outCard,
+                           ConfigValidationError& outError, uint8_t cardIndex);
 
 }  // namespace v3::storage

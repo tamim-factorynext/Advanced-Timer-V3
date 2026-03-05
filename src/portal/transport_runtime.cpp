@@ -17,6 +17,7 @@ Notes:
 #include "portal/transport_runtime.h"
 
 #include <cstring>
+#include <cstdlib>
 
 #include <LittleFS.h>
 #include <WebServer.h>
@@ -297,6 +298,143 @@ void writeSystemConfigJson(JsonObject out,
         break;
     }
   }
+}
+
+void writeSettingsJson(JsonObject out, const v3::storage::SystemConfig& cfg) {
+  out["schemaVersion"] = cfg.schemaVersion;
+  out["scanPeriodMs"] = cfg.scanPeriodMs;
+
+  JsonObject wifi = out["wifi"].to<JsonObject>();
+  JsonObject backup = wifi["backupAccessNetwork"].to<JsonObject>();
+  backup["ssid"] = cfg.wifi.backupAccessNetwork.ssid;
+  backup["password"] = cfg.wifi.backupAccessNetwork.password;
+  backup["timeoutSec"] = cfg.wifi.backupAccessNetwork.timeoutSec;
+  backup["editable"] = cfg.wifi.backupAccessNetwork.editable;
+
+  JsonObject user = wifi["userConfiguredNetwork"].to<JsonObject>();
+  user["ssid"] = cfg.wifi.userConfiguredNetwork.ssid;
+  user["password"] = cfg.wifi.userConfiguredNetwork.password;
+  user["timeoutSec"] = cfg.wifi.userConfiguredNetwork.timeoutSec;
+  user["editable"] = cfg.wifi.userConfiguredNetwork.editable;
+
+  wifi["retryDelaySec"] = cfg.wifi.retryDelaySec;
+  wifi["staOnly"] = cfg.wifi.staOnly;
+
+  JsonObject time = out["time"].to<JsonObject>();
+  time["timezone"] = cfg.time.timezone;
+  JsonObject timeSync = time["timeSync"].to<JsonObject>();
+  timeSync["enabled"] = cfg.time.timeSync.enabled;
+  timeSync["primaryTimeServer"] = cfg.time.timeSync.primaryTimeServer;
+  timeSync["secondaryServer"] = cfg.time.timeSync.secondaryServer;
+  timeSync["tertiaryServer"] = cfg.time.timeSync.tertiaryServer;
+  timeSync["syncIntervalSec"] = cfg.time.timeSync.syncIntervalSec;
+  timeSync["startupTimeoutSec"] = cfg.time.timeSync.startupTimeoutSec;
+  timeSync["maxTimeAgeSec"] = cfg.time.timeSync.maxTimeAgeSec;
+}
+
+void writeCardJson(JsonObject out, const v3::storage::CardConfig& card) {
+  out["id"] = card.id;
+  out["family"] = familyToString(card.family);
+  out["enabled"] = card.enabled;
+  JsonObject params = out["params"].to<JsonObject>();
+  switch (card.family) {
+    case v3::storage::CardFamily::DI:
+      params["channel"] = card.di.channel;
+      params["invert"] = card.di.invert;
+      params["debounceMs"] = card.di.debounceMs;
+      params["edgeMode"] = card.di.edgeMode;
+      params["setEnabled"] = card.di.setEnabled;
+      params["resetEnabled"] = card.di.resetEnabled;
+      writeConditionBlock(params["turnOnCondition"].to<JsonObject>(),
+                          card.di.turnOnCondition);
+      writeConditionBlock(params["turnOffCondition"].to<JsonObject>(),
+                          card.di.turnOffCondition);
+      break;
+    case v3::storage::CardFamily::DO:
+      params["channel"] = card.dout.channel;
+      params["invert"] = card.dout.invert;
+      params["mode"] = card.dout.mode;
+      params["delayBeforeOnMs"] = card.dout.delayBeforeOnMs;
+      params["activeDurationMs"] = card.dout.activeDurationMs;
+      params["repeatCount"] = card.dout.repeatCount;
+      writeConditionBlock(params["turnOnCondition"].to<JsonObject>(),
+                          card.dout.turnOnCondition);
+      writeConditionBlock(params["turnOffCondition"].to<JsonObject>(),
+                          card.dout.turnOffCondition);
+      break;
+    case v3::storage::CardFamily::AI:
+      params["channel"] = card.ai.channel;
+      params["inputMin"] = card.ai.inputMin;
+      params["inputMax"] = card.ai.inputMax;
+      params["outputMin"] = card.ai.outputMin;
+      params["outputMax"] = card.ai.outputMax;
+      params["smoothingFactorPct"] = card.ai.smoothingFactorPct;
+      break;
+    case v3::storage::CardFamily::SIO:
+      params["invert"] = card.sio.invert;
+      params["mode"] = card.sio.mode;
+      params["delayBeforeOnMs"] = card.sio.delayBeforeOnMs;
+      params["activeDurationMs"] = card.sio.activeDurationMs;
+      params["repeatCount"] = card.sio.repeatCount;
+      writeConditionBlock(params["turnOnCondition"].to<JsonObject>(),
+                          card.sio.turnOnCondition);
+      writeConditionBlock(params["turnOffCondition"].to<JsonObject>(),
+                          card.sio.turnOffCondition);
+      break;
+    case v3::storage::CardFamily::MATH:
+      params["operation"] = card.math.operation;
+      params["inputA"] = card.math.inputA;
+      params["inputB"] = card.math.inputB;
+      params["inputMin"] = card.math.inputMin;
+      params["inputMax"] = card.math.inputMax;
+      params["outputMin"] = card.math.outputMin;
+      params["outputMax"] = card.math.outputMax;
+      params["smoothingFactorPct"] = card.math.smoothingFactorPct;
+      params["fallbackValue"] = card.math.fallbackValue;
+      writeConditionBlock(params["turnOnCondition"].to<JsonObject>(),
+                          card.math.turnOnCondition);
+      writeConditionBlock(params["turnOffCondition"].to<JsonObject>(),
+                          card.math.turnOffCondition);
+      break;
+    case v3::storage::CardFamily::RTC:
+      params["hasYear"] = card.rtc.hasYear;
+      params["year"] = card.rtc.year;
+      params["hasMonth"] = card.rtc.hasMonth;
+      params["month"] = card.rtc.month;
+      params["hasDay"] = card.rtc.hasDay;
+      params["day"] = card.rtc.day;
+      params["hasWeekday"] = card.rtc.hasWeekday;
+      params["weekday"] = card.rtc.weekday;
+      params["hasHour"] = card.rtc.hasHour;
+      params["hour"] = card.rtc.hour;
+      params["minute"] = card.rtc.minute;
+      params["triggerDurationMs"] = card.rtc.triggerDurationMs;
+      break;
+    default:
+      break;
+  }
+}
+
+int8_t findCardIndexById(const v3::storage::SystemConfig& cfg, uint8_t cardId) {
+  for (uint8_t i = 0; i < cfg.cardCount; ++i) {
+    if (cfg.cards[i].id == cardId) return static_cast<int8_t>(i);
+  }
+  return -1;
+}
+
+bool parseCardIdFromCardsUri(const String& uri, uint8_t& outCardId) {
+  const String prefix = "/api/v3/cards/";
+  if (!uri.startsWith(prefix)) return false;
+  const String suffix = uri.substring(prefix.length());
+  if (suffix.length() == 0) return false;
+  for (size_t i = 0; i < suffix.length(); ++i) {
+    const char c = suffix.charAt(i);
+    if (c < '0' || c > '9') return false;
+  }
+  const unsigned long value = strtoul(suffix.c_str(), nullptr, 10);
+  if (value > 255UL) return false;
+  outCardId = static_cast<uint8_t>(value);
+  return true;
 }
 
 bool extractConfigObject(JsonDocument& requestDoc, JsonObjectConst& outConfigObj,
@@ -626,6 +764,210 @@ void handleHttpConfigRestorePost() {
   gHttpServer.send(200, "application/json", body);
 }
 
+void handleHttpSettingsGet() {
+  markTransportActivity();
+  if (gStorage == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    return;
+  }
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["tsMs"] = millis();
+  doc["activeVersion"] = gStorage->activeRevision();
+  JsonObject settings = doc["settings"].to<JsonObject>();
+  writeSettingsJson(settings, gStorage->activeSystemConfig());
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
+void handleHttpSettingsPut() {
+  markTransportActivity();
+  if (gStorage == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    return;
+  }
+  const String payload = gHttpServer.arg("plain");
+  JsonDocument requestDoc;
+  const DeserializationError jsonErr = deserializeJson(requestDoc, payload);
+  if (jsonErr) {
+    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload");
+    return;
+  }
+
+  JsonObjectConst root = requestDoc.as<JsonObjectConst>();
+  JsonObjectConst settingsObj = root["settings"].as<JsonObjectConst>();
+  if (settingsObj.isNull()) settingsObj = root;
+  String requestId = root["requestId"].is<const char*>()
+                         ? String(root["requestId"].as<const char*>())
+                         : String();
+
+  v3::storage::SystemConfig candidate = gStorage->activeSystemConfig();
+  v3::storage::ConfigValidationError decodeError = {
+      v3::storage::ConfigErrorCode::None, 0};
+  if (!v3::storage::decodeSystemSettingsLight(settingsObj, candidate,
+                                              decodeError)) {
+    sendConfigError(422, "VALIDATION_FAILED", requestId,
+                    v3::storage::configErrorCodeToString(decodeError.code));
+    return;
+  }
+  v3::storage::ConfigValidationError validationError = {
+      v3::storage::ConfigErrorCode::None, 0};
+  if (!v3::storage::validateSystemConfigLight(candidate, validationError)) {
+    sendConfigError(422, "VALIDATION_FAILED", requestId,
+                    v3::storage::configErrorCodeToString(validationError.code));
+    return;
+  }
+
+  v3::storage::ValidatedConfig staged = {};
+  staged.system = candidate;
+  gStorage->stageConfig(staged);
+  if (!gStorage->commitStaged()) {
+    sendConfigError(409, "COMMIT_FAILED", requestId, "settings commit failed");
+    return;
+  }
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["requestId"] = requestId;
+  doc["tsMs"] = millis();
+  doc["activeVersion"] = gStorage->activeRevision();
+  doc["requiresRestart"] = true;
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
+void handleHttpCardsIndexGet() {
+  markTransportActivity();
+  if (gStorage == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    return;
+  }
+  const v3::storage::SystemConfig& cfg = gStorage->activeSystemConfig();
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["tsMs"] = millis();
+  doc["activeVersion"] = gStorage->activeRevision();
+  JsonArray cards = doc["cards"].to<JsonArray>();
+  for (uint8_t i = 0; i < cfg.cardCount; ++i) {
+    JsonObject item = cards.add<JsonObject>();
+    item["id"] = cfg.cards[i].id;
+    item["family"] = familyToString(cfg.cards[i].family);
+    item["enabled"] = cfg.cards[i].enabled;
+  }
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
+void handleHttpCardGetById(uint8_t cardId) {
+  markTransportActivity();
+  if (gStorage == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    return;
+  }
+  const v3::storage::SystemConfig& cfg = gStorage->activeSystemConfig();
+  const int8_t index = findCardIndexById(cfg, cardId);
+  if (index < 0) {
+    gHttpServer.send(404, "application/json",
+                     "{\"ok\":false,\"reason\":\"card_not_found\"}");
+    return;
+  }
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["tsMs"] = millis();
+  doc["activeVersion"] = gStorage->activeRevision();
+  JsonObject card = doc["card"].to<JsonObject>();
+  writeCardJson(card, cfg.cards[static_cast<uint8_t>(index)]);
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
+void handleHttpCardPutById(uint8_t cardId) {
+  markTransportActivity();
+  if (gStorage == nullptr) {
+    gHttpServer.send(500, "application/json",
+                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    return;
+  }
+  const String payload = gHttpServer.arg("plain");
+  JsonDocument requestDoc;
+  const DeserializationError jsonErr = deserializeJson(requestDoc, payload);
+  if (jsonErr) {
+    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload");
+    return;
+  }
+
+  JsonObjectConst root = requestDoc.as<JsonObjectConst>();
+  JsonObjectConst cardObj = root["card"].as<JsonObjectConst>();
+  if (cardObj.isNull()) cardObj = root;
+  String requestId = root["requestId"].is<const char*>()
+                         ? String(root["requestId"].as<const char*>())
+                         : String();
+
+  v3::storage::CardConfig decodedCard = {};
+  v3::storage::ConfigValidationError decodeError = {
+      v3::storage::ConfigErrorCode::None, 0};
+  if (!v3::storage::decodeCardConfigLight(cardObj, decodedCard, decodeError, 0)) {
+    sendConfigError(422, "VALIDATION_FAILED", requestId,
+                    v3::storage::configErrorCodeToString(decodeError.code));
+    return;
+  }
+  if (decodedCard.id != cardId) {
+    sendConfigError(422, "VALIDATION_FAILED", requestId, "card id mismatch");
+    return;
+  }
+
+  v3::storage::SystemConfig candidate = gStorage->activeSystemConfig();
+  const int8_t index = findCardIndexById(candidate, cardId);
+  if (index < 0) {
+    sendConfigError(404, "CARD_NOT_FOUND", requestId, "card not found");
+    return;
+  }
+  candidate.cards[static_cast<uint8_t>(index)] = decodedCard;
+
+  v3::storage::ConfigValidationError validationError = {
+      v3::storage::ConfigErrorCode::None, 0};
+  if (!v3::storage::validateSystemConfigLight(candidate, validationError)) {
+    sendConfigError(422, "VALIDATION_FAILED", requestId,
+                    v3::storage::configErrorCodeToString(validationError.code));
+    return;
+  }
+
+  v3::storage::ValidatedConfig staged = {};
+  staged.system = candidate;
+  gStorage->stageConfig(staged);
+  if (!gStorage->commitStaged()) {
+    sendConfigError(409, "COMMIT_FAILED", requestId, "card commit failed");
+    return;
+  }
+
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["requestId"] = requestId;
+  doc["tsMs"] = millis();
+  doc["activeVersion"] = gStorage->activeRevision();
+  doc["requiresRestart"] = true;
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+}
+
 /**
  * @brief Handles root landing endpoint.
  * @details Returns a tiny discovery payload with primary API routes so raw-IP
@@ -647,6 +989,7 @@ void handleHttpRootGet() {
       200, "application/json",
       "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
       "snapshot\",\"/api/v3/diagnostics\",\"/api/v3/command\","
+      "\"/api/v3/settings\",\"/api/v3/cards\",\"/api/v3/cards/{id}\","
       "\"/api/v3/config/active\",\"/api/v3/config/staged/save\","
       "\"/api/v3/config/staged/validate\",\"/api/v3/config/commit\","
       "\"/api/v3/config/restore\"]}");
@@ -826,15 +1169,53 @@ void initTransportRuntime(PortalService& portal,
                  handleHttpConfigRestorePost);
   gHttpServer.on("/api/v3/config/restore/", HTTP_POST,
                  handleHttpConfigRestorePost);
+
+  gHttpServer.on("/api/v3/settings", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/settings/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/settings", HTTP_GET, handleHttpSettingsGet);
+  gHttpServer.on("/api/v3/settings/", HTTP_GET, handleHttpSettingsGet);
+  gHttpServer.on("/api/v3/settings", HTTP_PUT, handleHttpSettingsPut);
+  gHttpServer.on("/api/v3/settings/", HTTP_PUT, handleHttpSettingsPut);
+
+  gHttpServer.on("/api/v3/cards", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/cards/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/cards", HTTP_GET, handleHttpCardsIndexGet);
+  gHttpServer.on("/api/v3/cards/", HTTP_GET, handleHttpCardsIndexGet);
+
   gHttpServer.onNotFound([]() {
     markTransportActivity();
     const HTTPMethod method = gHttpServer.method();
+    const String uri = gHttpServer.uri();
+    if (uri.startsWith("/api/v3/cards/")) {
+      uint8_t cardId = 0;
+      if (!parseCardIdFromCardsUri(uri, cardId)) {
+        gHttpServer.send(400, "application/json",
+                         "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
+        return;
+      }
+      if (method == HTTP_OPTIONS) {
+        handleHttpCorsOptions();
+        return;
+      }
+      if (method == HTTP_GET) {
+        handleHttpCardGetById(cardId);
+        return;
+      }
+      if (method == HTTP_PUT) {
+        handleHttpCardPutById(cardId);
+        return;
+      }
+      gHttpServer.send(405, "application/json",
+                       "{\"ok\":false,\"reason\":\"method_not_allowed\"}");
+      return;
+    }
+
     Serial.printf("[transport] 404 method=%s path=%s\n", methodToString(method),
-                  gHttpServer.uri().c_str());
+                  uri.c_str());
     Serial.flush();
 
     String body = "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"";
-    body += gHttpServer.uri();
+    body += uri;
     body += "\",\"method\":\"";
     body += methodToString(method);
     body += "\"}";
