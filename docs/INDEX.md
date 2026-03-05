@@ -20,6 +20,8 @@ Documentation creation policy on this branch:
 
 - `docs/esp32-s3-psram-migration-guide.md` - Active V4 rebuild and migration source of truth.
 - `docs/worklog-v4.md` - Active V4 implementation worklog.
+- `docs/decisions.md` - V4 architecture and workflow decisions (ADR-style log).
+- `docs/core-contract-v4.md` - Active V4 core runtime contract (dual-core + Wi-Fi connectivity).
 
 ## 3. Legacy Archive Location
 

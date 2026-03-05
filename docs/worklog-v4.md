@@ -21,6 +21,8 @@ Status: Active
   - `legacy/requirements-legacy-v3-contract.md`
   - `legacy/GEMINI.md`
 - Updated active docs index to reflect V4-first + legacy archive layout.
+- Added V4 core contract doc (`docs/core-contract-v4.md`) by importing/adapting V3 dual-core and Wi-Fi contracts.
+- Added explicit V4 alignment check for dual-core determinism, connectivity resilience, and telemetry-first requirements.
 
 ## Verification
 
