@@ -23,6 +23,14 @@ Status: Active
 - Updated active docs index to reflect V4-first + legacy archive layout.
 - Added V4 core contract doc (`docs/core-contract-v4.md`) by importing/adapting V3 dual-core and Wi-Fi contracts.
 - Added explicit V4 alignment check for dual-core determinism, connectivity resilience, and telemetry-first requirements.
+- Expanded `docs/core-contract-v4.md` with card-family contract sections imported from V3 and adapted for V4.
+- Added shared card model, set/reset semantics, and per-family baseline requirements for `DI`, `AI`, `DO`, `SIO`, `MATH`, and `RTC`.
+- Added explicit card sub-parameter details, units/value conventions, and runtime behavior clauses in `docs/core-contract-v4.md`.
+- Added explicit validation rule that `AI` and `RTC` must not carry/evaluate set/reset blocks.
+- Added explicit per-card set/reset impact matrix and missing/unsupported set/reset validation rules to remove ambiguity.
+- Added explicit force/mask behavior contract with precedence, per-card applicability, and validation/diagnostics rules.
+- Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
+- Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 
 ## Verification
 
