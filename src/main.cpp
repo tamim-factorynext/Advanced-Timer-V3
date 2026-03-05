@@ -27,14 +27,14 @@ constexpr size_t kPsramProbeBytes = 1 * 1024 * 1024;
 // Wi-Fi policy baseline (backup first, then user, then offline retry).
 constexpr const char *kBackupSsid = "factorynext";
 constexpr const char *kBackupPass = "12345678";
-constexpr uint32_t kBackupTimeoutMs = 3000;
+constexpr uint32_t kBackupTimeoutMs = 8000;
 
 constexpr const char *kUserSsid = "FactoryNext";
 constexpr const char *kUserPass = "FactoryNext20$22#";
-constexpr uint32_t kUserTimeoutMs = 15000;
+constexpr uint32_t kUserTimeoutMs = 12000;
 
-constexpr uint32_t kOfflineRetryDelayMs = 10000;
-constexpr uint32_t kWifiRadioCooldownMs = 200;
+constexpr uint32_t kOfflineRetryDelayMs = 60000;
+constexpr uint32_t kWifiRadioCooldownMs = 3000;
 
 TaskHandle_t gCore0TaskHandle = nullptr;
 TaskHandle_t gCore1TaskHandle = nullptr;
@@ -159,7 +159,6 @@ void logMetricsSnapshot() {
       gCore0TaskHandle ? uxTaskGetStackHighWaterMark(gCore0TaskHandle) : 0;
   const UBaseType_t core1StackWords =
       gCore1TaskHandle ? uxTaskGetStackHighWaterMark(gCore1TaskHandle) : 0;
-
   Serial.printf(
       "[METRICS] C0(avg/max/ovr): %lu/%lu/%lu us load=%.1f%% | "
       "C1(avg/max/ovr): %lu/%lu/%lu us load=%.1f%%\n",
@@ -211,7 +210,8 @@ void runPsramBootProbe() {
 
 void startWifiAttempt(const char *ssid, const char *pass) {
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);
+  // Keep RF power draw lower while trying to connect on marginal hardware.
+  WiFi.setSleep(true);
   WiFi.begin(ssid, pass);
   gWifiStateStartedMs = millis();
   Serial.printf("[WIFI] Attempting connect: %s\n", ssid);
@@ -344,6 +344,9 @@ void setup() {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_OFF);
+  Serial.printf("[WIFI] Cool mode: radio cooldown=%lu ms, retry backoff=%lu ms\n",
+                static_cast<unsigned long>(kWifiRadioCooldownMs),
+                static_cast<unsigned long>(kOfflineRetryDelayMs));
 
   initTaskWatchdog();
 
