@@ -6,7 +6,7 @@ This branch is the clean-slate V4 implementation track focused on ESP32-S3.
 
 ## Project Identity
 
-Advanced Timer V4 is a deterministic, configurable industrial control firmware in the timer-relay product class, implemented on ESP32-S3.
+Advanced Timer V4 is a deterministic, configurable industrial control firmware in the timer-relay product class, implemented on ESP32-S3 (N16R8 target profile).
 
 It is intentionally positioned between:
 

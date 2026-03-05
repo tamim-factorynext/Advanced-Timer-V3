@@ -50,6 +50,10 @@ Status: Active
 - Added `DEC-0004` locking one-click config apply UX (no separate save/stage/validate/commit buttons).
 - Extended frontend contract with explicit page map, theme/token requirements, iconography semantics, and frontend stack policy (Bootstrap allowed with V4 override rules).
 - Rewrote frontend contract as near-complete import from legacy frontend markdown + HTML implementation details (page set, nav shell, theming aliases, stack adoption policy, runtime/action/error/reliability contracts) with V4 modifications applied.
+- Added explicit module/folder architecture contract in core contract (`kernel/platform/storage/runtime/control/transport/portal/app`) with ownership, forbidden couplings, and required interaction path.
+- Implemented V4 runtime code baseline in `src/main.cpp`: dual-core task split (Core0 kernel placeholder + Core1 service), task watchdog wiring, non-blocking Wi-Fi policy state machine, and periodic resource/performance metrics logging scaffold.
+- Updated build/runtime baseline for ESP32-S3 N16R8 profile: 16MB partition profile + PSRAM build flags/variant in `platformio.ini`, plus boot-time PSRAM probe and mismatch warning in `src/main.cpp`.
+- Replaced fragile N8+override approach with a project-local custom board definition (`boards/esp32-s3-r8n16-v4.json`) and switched env board target to that profile for safer reproducibility.
 - Imported legacy user guide into active V4 docs as `docs/user-guide-v4.md` with targeted alignment edits.
 - Updated Wi-Fi user-guide behavior to match V4 core contract (backup-first, user fallback, offline mode, background retry).
 

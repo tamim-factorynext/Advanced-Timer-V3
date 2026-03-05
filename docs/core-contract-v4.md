@@ -47,6 +47,38 @@ Any option that fails 1-3 MUST be rejected.
 - Core0 MUST avoid unbounded waits and blocking cross-core locks.
 - Core1 is allowed variable-latency work but MUST use bounded timeout/backoff behavior.
 
+### 3.3 Module and Folder Architecture Contract
+
+V4 implementation MUST keep explicit module boundaries. Recommended source layout:
+
+- `src/kernel/`: deterministic card evaluation, scan execution, runtime state transitions
+- `src/platform/`: hardware adapters, pin/backends, time/watchdog primitives
+- `src/storage/`: config persistence, decode/validate, transaction and recovery lifecycle
+- `src/runtime/`: snapshot projection, metrics aggregation, diagnostic views
+- `src/control/`: command validation, command DTOs, queue submission policies
+- `src/transport/` (or `src/portal/transport/`): HTTP/WebSocket ingress/egress adapters
+- `src/portal/` (optional split): UI payload shaping and portal-facing orchestration
+- `src/app/` (or composition root): boot wiring, task startup, dependency assembly
+
+Boundary ownership rules:
+
+- `kernel` MUST NOT directly depend on transport/network/filesystem modules.
+- `transport` MUST NOT mutate kernel state directly; it must route through `control` queue boundaries.
+- `storage` MUST own config lifecycle and activation contracts; no side-channel commit shortcuts.
+- `runtime` MUST project read models only; it is not a mutation owner.
+- `platform` adapters MUST hide backend-specific details from `kernel` card logic.
+
+Forbidden couplings:
+
+- `kernel -> transport`
+- `kernel -> storage` direct commit mutation paths
+- `transport -> kernel` direct state writes
+- `portal/frontend glue -> kernel` direct state writes
+
+Required interaction pattern:
+
+- ingress (`transport`) -> validation (`control`/`storage`) -> queued intents -> deterministic apply (`kernel`) -> snapshot projection (`runtime`) -> egress (`transport`)
+
 ## 4. Numeric and Unit Contract
 
 ### 4.1 Fixed-Point Representation
