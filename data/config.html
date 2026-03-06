@@ -29,7 +29,7 @@
       .grid-4 { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(140px, 1fr)); }
       .field { display: grid; gap: 4px; }
       .field.is-disabled { opacity: 0.55; }
-      .field.field-full { grid-column: 1 / -1; }
+      .field.field-spacer { visibility: hidden; }
       .field label { font-size: 12px; color: var(--muted-strong); }
       .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
       .hint { font-size: 11px; color: var(--muted); }
@@ -71,6 +71,9 @@
           padding: 6px;
         }
         .hint {
+          display: none;
+        }
+        .field.field-spacer {
           display: none;
         }
       }
@@ -354,7 +357,7 @@
           { key: "mode", label: "Mode", type: "enum", options: { 5: "DO Normal", 6: "DO Immediate", 7: "DO Gated" } },
           { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "activeDurationMs", label: "ON Duration", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
-          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
+          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "0 = Infinite" }
         ];
         if (family === "AI") return [
           { key: "channel", label: "ADC Channel", type: "number", unit: "pin" },
@@ -369,7 +372,7 @@
           { key: "mode", label: "Mode", type: "enum", options: { 5: "SIO Normal", 6: "SIO Immediate", 7: "SIO Gated" } },
           { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "activeDurationMs", label: "ON Duration", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
-          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
+          { key: "repeatCount", label: "Repeat Count", type: "number", unit: "0 = Infinite" }
         ];
         if (family === "MATH") return [
           { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
@@ -514,9 +517,12 @@
         };
       }
 
-      function conditionField(id, label, controlHtml, hintText = "", extraClass = "") {
-        const cls = extraClass ? `field ${extraClass}` : "field";
-        return `<div class="${cls}"><label for="${id}">${label}</label>${controlHtml}<div class="hint">${hintText}</div></div>`;
+      function conditionField(id, label, controlHtml, hintText = "") {
+        return `<div class="field"><label for="${id}">${label}</label>${controlHtml}<div class="hint">${hintText}</div></div>`;
+      }
+
+      function conditionSpacer() {
+        return `<div class="field field-spacer" aria-hidden="true"></div>`;
       }
 
       function cardSelectOptions(selectedId, fallbackCardId) {
@@ -656,7 +662,10 @@
           conditionField(`${prefix}_a_operator`, "Primary Operator", `<select id="${prefix}_a_operator"></select>`),
           conditionField(`${prefix}_a_thr_source`, "Threshold Source", `<select id="${prefix}_a_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_a_thr`, "Primary Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`, "", "field-full"),
+          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
+          conditionSpacer(),
+          conditionSpacer(),
+          conditionSpacer(),
           conditionField(`${prefix}_b_source`, "Secondary Source Card", `<select id="${prefix}_b_source">${sourceBOptions}</select>`),
           conditionField(`${prefix}_b_operator`, "Secondary Operator", `<select id="${prefix}_b_operator"></select>`),
           conditionField(`${prefix}_b_thr_source`, "Threshold Source", `<select id="${prefix}_b_thr_source"><option value="CONST">Use constant value</option></select>`),
