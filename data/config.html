@@ -341,8 +341,6 @@
           { key: "invert", label: "Invert", type: "bool" },
           { key: "debounceMs", label: "Debounce", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "edgeMode", label: "Edge Mode", type: "enum", options: { 0: "DI Rising Edge", 1: "DI Falling Edge", 2: "DI Any Change" } },
-          { key: "setEnabled", label: "Set Enabled", type: "bool" },
-          { key: "resetEnabled", label: "Reset Enabled", type: "bool" }
         ];
         if (family === "DO") return [
           { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },

@@ -687,7 +687,7 @@ Deferred items remain out of current execution scope until core functional parit
 - Summary: move DI from scaffold-only modules to active scan execution path with config-backed defaults.
 - Implemented outputs:
   - storage DI config extension:
-    - `channel`, `edgeMode`, `setEnabled`, `resetEnabled`
+    - `channel`, `edgeMode`
     - decoder defaults for omitted fields
     - DI mode validation
     - files:
@@ -731,7 +731,7 @@ Deferred items remain out of current execution scope until core functional parit
     - file: `src/storage/v3_config_contract.h`
   - decoder support + backward-compatible defaults:
     - parses `params.set` / `params.reset` blocks when provided
-    - falls back to derived defaults from legacy `setEnabled`/`resetEnabled` fields
+    - falls back to derived inert defaults when explicit blocks are absent
     - file: `src/storage/v3_config_decoder.cpp`
   - validator rules:
     - validates condition block IDs/operators/combiners for DI

@@ -465,7 +465,7 @@ Use one short entry per decision with this structure:
 - Date: 2026-03-02
 - Status: Accepted
 - Context: DI runtime rules were aligned, but active kernel scan loop had no card execution path and current config model needed practical defaults for incomplete DI payload fields.
-- Decision: Extend storage DI params with `channel`, `edgeMode`, `setEnabled`, `resetEnabled` and apply decoder defaults (`channel=cardId`, `edgeMode=RISING`, `setEnabled=true`, `resetEnabled=false`), then wire DI runtime execution into `KernelService` with a kernel-local force hook (`setDiForce`) ready for future portal/API binding.
+- Decision: Extend storage DI params with `channel` and `edgeMode`, apply decoder defaults (`channel=cardId`, `edgeMode=RISING`), then wire DI runtime execution into `KernelService` with a kernel-local force hook (`setDiForce`) ready for future portal/API binding.
 - Impact: Activates first real card-family runtime execution in production scan loop without waiting for full portal force command implementation.
 - Impact: Makes new-device/factory-default behavior deterministic when DI fields are omitted.
 - Impact: Keeps DI force policy aligned with contract intent (force value path before invert) while transport wiring is staged separately.
@@ -503,7 +503,7 @@ Use one short entry per decision with this structure:
 ## DEC-0048: DI Set/Reset Gating Uses Condition Blocks Over Runtime Signal Tree
 - Date: 2026-03-02
 - Status: Accepted
-- Context: Initial DI integration used temporary `setEnabled/resetEnabled` booleans, which was insufficient for cross-card logic intent and global variable-tree semantics.
+- Context: Initial DI integration used temporary boolean gates, which was insufficient for cross-card logic intent and global variable-tree semantics.
 - Decision: Evaluate DI `set` and `reset` each scan using condition blocks (`clauseA/clauseB/combiner`) against runtime signal tree values (`commandState`, `actualState`, `edgePulse`, `liveValue`, mission state), with backward-compatible defaults derived from legacy boolean fields when explicit blocks are not present.
 - Impact: Aligns DI gating with contract-style cross-card condition semantics.
 - Impact: Preserves compatibility for existing simplified payloads while enabling richer condition logic.

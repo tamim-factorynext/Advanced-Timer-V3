@@ -49,8 +49,6 @@ void initDiCard(CardConfig& card, uint8_t id, uint8_t channel) {
   card.di.invert = false;
   card.di.debounceMs = 50;
   card.di.edgeMode = 0;  // 0=RISING
-  card.di.setEnabled = false;
-  card.di.resetEnabled = false;
   card.di.turnOnCondition = makeInertConditionBlock(id);
   card.di.turnOffCondition = makeInertConditionBlock(id);
 }

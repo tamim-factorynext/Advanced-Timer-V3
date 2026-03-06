@@ -182,8 +182,6 @@ void writeCardJson(JsonObject out, const CardConfig& card) {
       params["invert"] = card.di.invert;
       params["debounceMs"] = card.di.debounceMs;
       params["edgeMode"] = card.di.edgeMode;
-      params["setEnabled"] = card.di.setEnabled;
-      params["resetEnabled"] = card.di.resetEnabled;
       writeConditionBlock(params["turnOnCondition"].to<JsonObject>(),
                           card.di.turnOnCondition);
       writeConditionBlock(params["turnOffCondition"].to<JsonObject>(),

@@ -26,13 +26,10 @@ namespace {
  * @brief Initializes a condition block to safe disabled defaults.
  * @param block Destination condition block.
  * @param selfCardId Card id used as default clause source.
- * @param enabled Reserved compatibility flag; currently unused.
  * @par Used By
  * parseFamilyParams().
  */
-void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfCardId,
-                               bool enabled) {
-  (void)enabled;
+void initDefaultConditionBlock(v3::storage::ConditionBlock& block, uint8_t selfCardId) {
   block.combiner = v3::storage::ConditionCombiner::None;
   block.clauseA.sourceCardId = selfCardId;
   block.clauseA.op = v3::storage::ConditionOperator::AlwaysFalse;
@@ -460,12 +457,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.di.invert = params["invert"].as<bool>();
       outCard.di.debounceMs = params["debounceMs"].as<uint32_t>();
       outCard.di.edgeMode = params["edgeMode"] | 0U;  // 0:RISING,1:FALLING,2:CHANGE
-      outCard.di.setEnabled = params["setEnabled"] | false;
-      outCard.di.resetEnabled = params["resetEnabled"] | false;
-      initDefaultConditionBlock(outCard.di.turnOnCondition, outCard.id,
-                                outCard.di.setEnabled);
-      initDefaultConditionBlock(outCard.di.turnOffCondition, outCard.id,
-                                outCard.di.resetEnabled);
+      initDefaultConditionBlock(outCard.di.turnOnCondition, outCard.id);
+      initDefaultConditionBlock(outCard.di.turnOffCondition, outCard.id);
       JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
       JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
       if (!setObj.isNull() &&
@@ -499,8 +492,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.dout.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
       outCard.dout.activeDurationMs = params["activeDurationMs"] | 0U;
       outCard.dout.repeatCount = params["repeatCount"] | 1U;
-      initDefaultConditionBlock(outCard.dout.turnOnCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.dout.turnOffCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.dout.turnOnCondition, outCard.id);
+      initDefaultConditionBlock(outCard.dout.turnOffCondition, outCard.id);
       {
         JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
         JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
@@ -552,8 +545,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.sio.delayBeforeOnMs = params["delayBeforeOnMs"] | 0U;
       outCard.sio.activeDurationMs = params["activeDurationMs"] | 0U;
       outCard.sio.repeatCount = params["repeatCount"] | 1U;
-      initDefaultConditionBlock(outCard.sio.turnOnCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.sio.turnOffCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.sio.turnOnCondition, outCard.id);
+      initDefaultConditionBlock(outCard.sio.turnOffCondition, outCard.id);
       {
         JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
         JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();
@@ -595,8 +588,8 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       outCard.math.outputMax = params["outputMax"] | 10000U;
       outCard.math.smoothingFactorPct = params["smoothingFactorPct"] | 100U;
       outCard.math.fallbackValue = params["fallbackValue"] | 0U;
-      initDefaultConditionBlock(outCard.math.turnOnCondition, outCard.id, false);
-      initDefaultConditionBlock(outCard.math.turnOffCondition, outCard.id, false);
+      initDefaultConditionBlock(outCard.math.turnOnCondition, outCard.id);
+      initDefaultConditionBlock(outCard.math.turnOffCondition, outCard.id);
       {
         JsonObjectConst setObj = params["turnOnCondition"].as<JsonObjectConst>();
         JsonObjectConst resetObj = params["turnOffCondition"].as<JsonObjectConst>();

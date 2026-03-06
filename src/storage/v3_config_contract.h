@@ -119,8 +119,6 @@ struct DiParams {
   bool invert;
   uint32_t debounceMs;
   uint8_t edgeMode;
-  bool setEnabled;
-  bool resetEnabled;
   ConditionBlock turnOnCondition;
   ConditionBlock turnOffCondition;
 };

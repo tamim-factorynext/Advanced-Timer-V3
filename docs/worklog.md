@@ -3206,12 +3206,10 @@ Integrated DI runtime execution into active `KernelService` scan loop and extend
 ### Completed
 
 - Storage DI config extension:
-  - added `channel`, `edgeMode`, `setEnabled`, `resetEnabled` in DI params.
+  - added `channel` and `edgeMode` in DI params.
   - decoder defaults for DI when fields are missing:
     - `channel = card.id`
     - `edgeMode = RISING`
-    - `setEnabled = true`
-    - `resetEnabled = false`
   - validator now rejects invalid DI edge mode values.
   - files:
     - `src/storage/v3_config_contract.h`
@@ -3326,7 +3324,7 @@ Replaced DI temporary boolean gate usage with condition-block evaluation against
 
 - Added decoder parsing for DI `set`/`reset` blocks:
   - supports explicit block parsing from payload.
-  - retains backward compatibility by deriving defaults from existing `setEnabled/resetEnabled`.
+  - retains backward compatibility by deriving inert defaults when explicit blocks are absent.
   - file:
     - `src/storage/v3_config_decoder.cpp`
 
@@ -3387,7 +3385,6 @@ Updated DI decoder defaults so new-device/factory-reset style payloads start wit
   - `clauseB.sourceCardId = self`
   - `clauseB.operator = ALWAYS_FALSE`
   - `combiner = NONE`
-- DI legacy `setEnabled` default changed to `false` for safer inert baseline.
 - File:
   - `src/storage/v3_config_decoder.cpp`
 
