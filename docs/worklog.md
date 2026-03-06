@@ -3887,3 +3887,39 @@ Completed the documentation saga stop-point with focused symbol-level Doxygen co
 ### Notes
 
 - A temporary "log everything" commit was created at session end for deep tracing capture and can be reverted/toggled for quieter field runs.
+
+## 2026-03-07 (Config UX Tightening + MATH Input Source Upgrade)
+
+### Completed
+
+- Config Studio layout/UX refinements:
+  - tightened mobile spacing for card parameter and condition sections.
+  - kept secondary clauses visible; now auto-disabled + grayed when combiner is `Primary only`.
+  - adjusted desktop condition layout to explicit 3-row structure:
+    1) primary fields
+    2) combiner row
+    3) secondary fields
+  - aligned combiner row behavior to user-requested visual structure.
+
+- DI contract cleanup:
+  - removed unused `setEnabled` / `resetEnabled` from active model and UI.
+  - removed from storage contract, defaults, decoder, API serialization, runtime transport payloads, and config frontend.
+  - cleaned matching references in docs (`decisions`, `milestones`, `worklog`) so active docs match current runtime behavior.
+
+- MATH card capability upgrade (clean schema upgrade):
+  - added per-input source selection for both operands:
+    - `inputAUseCard`, `inputACardId`, `inputA`
+    - `inputBUseCard`, `inputBCardId`, `inputB`
+  - schema version bumped from `300` to `301`.
+  - decoder/validator/storage/transport/runtime/frontend updated end-to-end for new shape.
+  - MATH runtime now resolves `Input A/B` each scan from either constant values or selected card `liveValue`.
+  - self-reference for MATH inputs explicitly allowed (for increment/decrement feedback patterns).
+
+### Observed
+
+- Live page showed unsynced time (`01 Jan 1970`), indicating NTP/RTC sync is currently not valid at runtime and needs targeted follow-up.
+
+### Verification Notes
+
+- Source-level reference checks were run for removed/added fields.
+- Local firmware build was not executed in this shell because `platformio/pio` is unavailable in terminal PATH in this environment.
