@@ -345,16 +345,11 @@
           { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit" }
         ];
         if (family === "RTC") return [
-          { key: "hasYear", label: "Has Year", type: "bool" },
-          { key: "year", label: "Year", type: "number", unit: "year" },
-          { key: "hasMonth", label: "Has Month", type: "bool" },
-          { key: "month", label: "Month", type: "number", unit: "1..12" },
-          { key: "hasDay", label: "Has Day", type: "bool" },
-          { key: "day", label: "Day", type: "number", unit: "1..31" },
-          { key: "hasWeekday", label: "Has Weekday", type: "bool" },
-          { key: "weekday", label: "Weekday", type: "number", unit: "0..6" },
-          { key: "hasHour", label: "Has Hour", type: "bool" },
-          { key: "hour", label: "Hour", type: "number", unit: "0..23" },
+          { key: "year", label: "Year", type: "rtc_year" },
+          { key: "month", label: "Month", type: "rtc_month" },
+          { key: "day", label: "Day", type: "rtc_day" },
+          { key: "weekday", label: "Weekday", type: "rtc_weekday" },
+          { key: "hour", label: "Hour", type: "rtc_hour" },
           { key: "minute", label: "Minute", type: "number", unit: "0..59" },
           { key: "triggerDurationMs", label: "Trigger Duration", type: "number", unit: "ms", hint: "centi-ms" }
         ];
@@ -364,6 +359,46 @@
       function renderFamilyFields(card) {
         const params = card.params || {};
         activeFieldDefs = fieldDefsForFamily(card.family);
+        const rtcYearOptions = [
+          { value: "any", label: "Any year" },
+          ...Array.from({ length: 13 }, (_, i) => {
+            const year = 2026 + i;
+            return { value: String(year), label: String(year) };
+          })
+        ];
+        const rtcMonthOptions = [
+          { value: "any", label: "Any month" },
+          { value: "1", label: "January" },
+          { value: "2", label: "February" },
+          { value: "3", label: "March" },
+          { value: "4", label: "April" },
+          { value: "5", label: "May" },
+          { value: "6", label: "June" },
+          { value: "7", label: "July" },
+          { value: "8", label: "August" },
+          { value: "9", label: "September" },
+          { value: "10", label: "October" },
+          { value: "11", label: "November" },
+          { value: "12", label: "December" },
+        ];
+        const rtcWeekdayOptions = [
+          { value: "any", label: "Any day" },
+          { value: "0", label: "Sunday" },
+          { value: "1", label: "Monday" },
+          { value: "2", label: "Tuesday" },
+          { value: "3", label: "Wednesday" },
+          { value: "4", label: "Thursday" },
+          { value: "5", label: "Friday" },
+          { value: "6", label: "Saturday" },
+        ];
+        const rtcDayOptions = [
+          { value: "any", label: "Any day of month" },
+          ...Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
+        ];
+        const rtcHourOptions = [
+          { value: "any", label: "Any hour" },
+          ...Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: `${String(i).padStart(2, "0")}:00` }))
+        ];
         familyFieldsEl.innerHTML = activeFieldDefs.map((def) => {
           const id = `f_${def.key}`;
           const hintId = `h_${def.key}`;
@@ -373,6 +408,36 @@
             control = `<select id="${id}">${boolOptions()}</select>`;
           } else if (def.type === "enum") {
             control = `<select id="${id}">${selectOptions(def.options, params[def.key])}</select>`;
+          } else if (def.type === "rtc_year") {
+            const current = params.hasYear ? String(params.year ?? 2026) : "any";
+            const opts = rtcYearOptions.map((opt) =>
+              `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            control = `<select id="${id}">${opts}</select>`;
+          } else if (def.type === "rtc_month") {
+            const current = params.hasMonth ? String(params.month ?? 1) : "any";
+            const opts = rtcMonthOptions.map((opt) =>
+              `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            control = `<select id="${id}">${opts}</select>`;
+          } else if (def.type === "rtc_day") {
+            const current = params.hasDay ? String(params.day ?? 1) : "any";
+            const opts = rtcDayOptions.map((opt) =>
+              `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            control = `<select id="${id}">${opts}</select>`;
+          } else if (def.type === "rtc_weekday") {
+            const current = params.hasWeekday ? String(params.weekday ?? 0) : "any";
+            const opts = rtcWeekdayOptions.map((opt) =>
+              `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            control = `<select id="${id}">${opts}</select>`;
+          } else if (def.type === "rtc_hour") {
+            const current = params.hasHour ? String(params.hour ?? 0) : "any";
+            const opts = rtcHourOptions.map((opt) =>
+              `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            control = `<select id="${id}">${opts}</select>`;
           } else {
             const step = def.step != null ? `step="${def.step}"` : "";
             const min = def.min != null ? `min="${def.min}"` : "";
@@ -467,48 +532,55 @@
         opEl.value = options.selected;
       }
 
-      function refreshThresholdSelect(prefix, clauseKey, selectedThresholdCardId = null) {
+      function refreshThresholdSelect(prefix, clauseKey, selectedThresholdCardId = null, useThresholdCardFromState = null) {
         const sourceEl = document.getElementById(`${prefix}_${clauseKey}_source`);
         const opEl = document.getElementById(`${prefix}_${clauseKey}_operator`);
-        const useCardEl = document.getElementById(`${prefix}_${clauseKey}_use_card`);
-        const thresholdEl = document.getElementById(`${prefix}_${clauseKey}_thr_card`);
-        if (!sourceEl || !opEl || !useCardEl || !thresholdEl) return;
+        const thresholdSourceEl = document.getElementById(`${prefix}_${clauseKey}_thr_source`);
+        const thresholdValueEl = document.getElementById(`${prefix}_${clauseKey}_thr`);
+        if (!sourceEl || !opEl || !thresholdSourceEl || !thresholdValueEl) return;
 
         const sourceCardId = Number(sourceEl.value || 0);
         const op = opEl.value;
-        const useThresholdCard = (useCardEl.value === "true");
-        const requireNumericCard = useThresholdCard && isNumericOperator(op);
+        const numericOperator = isNumericOperator(op);
         const cards = Array.isArray(currentConfig?.cards) ? currentConfig.cards : [];
-        const sourceCard = cards.find((card) => Number(card?.id ?? -1) === sourceCardId) || null;
-        const numericCards = cards.filter((card) => familyHasNumericLiveValue(card?.family));
-        const allowed = [
-          ...(sourceCard ? [sourceCard] : []),
-          ...numericCards.filter((card) => Number(card?.id ?? -1) !== sourceCardId)
-        ];
+        const allowed = cards.filter((card) =>
+          Number(card?.id ?? -1) !== sourceCardId && familyHasNumericLiveValue(card?.family)
+        );
 
-        if (!allowed.length) {
-          thresholdEl.innerHTML = `<option value="${sourceCardId}">No numeric card available</option>`;
-          thresholdEl.value = String(sourceCardId);
-          thresholdEl.disabled = true;
+        const currentSourceValue = String(thresholdSourceEl.value || "CONST");
+        const currentIsCard = currentSourceValue.startsWith("CARD:");
+        const explicitUseCard = (useThresholdCardFromState === null) ? null : !!useThresholdCardFromState;
+        const useCard = (explicitUseCard !== null) ? explicitUseCard : currentIsCard;
+        const parsedCardId = currentIsCard ? Number(currentSourceValue.slice(5)) : NaN;
+        const preferredCardId = Number.isFinite(parsedCardId) ? parsedCardId : Number(selectedThresholdCardId ?? -1);
+        const hasPreferredCard = allowed.some((card) => Number(card?.id ?? -1) === preferredCardId);
+
+        if (!numericOperator || !allowed.length) {
+          thresholdSourceEl.innerHTML = `<option value="CONST" selected>Use constant value</option>`;
+          thresholdSourceEl.value = "CONST";
+          thresholdSourceEl.disabled = true;
+          thresholdValueEl.disabled = false;
           return;
         }
 
-        const selectedId = Number(selectedThresholdCardId ?? thresholdEl.value ?? sourceCardId);
+        const selectedId = hasPreferredCard ? preferredCardId : Number(allowed[0]?.id ?? -1);
         const familyCounters = {};
-        const optionsHtml = allowed.map((card) => {
+        const cardOptionsHtml = allowed.map((card) => {
           const familyKey = String(card?.family || "UNKNOWN");
           const familyIndex = familyCounters[familyKey] || 0;
           familyCounters[familyKey] = familyIndex + 1;
           const cardId = Number(card?.id ?? 0);
-          const selected = (cardId === selectedId) ? "selected" : "";
-          const selfSuffix = (cardId === sourceCardId) ? " (self)" : "";
-          return `<option value="${cardId}" ${selected}>${cardLabel(card, familyIndex)}${selfSuffix}</option>`;
+          const selected = (useCard && cardId === selectedId) ? "selected" : "";
+          return `<option value="CARD:${cardId}" ${selected}>${cardLabel(card, familyIndex)}</option>`;
         }).join("");
-        thresholdEl.innerHTML = optionsHtml;
-        if (!allowed.some((card) => Number(card?.id ?? -1) === Number(thresholdEl.value))) {
-          thresholdEl.value = String(sourceCardId || allowed[0].id);
+        thresholdSourceEl.innerHTML = `<option value="CONST" ${useCard ? "" : "selected"}>Use constant value</option>${cardOptionsHtml}`;
+        thresholdSourceEl.disabled = false;
+        if (useCard) {
+          thresholdSourceEl.value = `CARD:${selectedId}`;
+        } else {
+          thresholdSourceEl.value = "CONST";
         }
-        thresholdEl.disabled = !requireNumericCard;
+        thresholdValueEl.disabled = thresholdSourceEl.value.startsWith("CARD:");
       }
 
       function renderConditionGroup(rootEl, prefix, block, fallbackCardId) {
@@ -517,30 +589,24 @@
         const c = b.clauseB || emptyConditionBlock(fallbackCardId).clauseB;
         const combOptions = COMBINERS.map((x) => `<option value="${x}" ${x === b.combiner ? "selected" : ""}>${COMBINER_LABELS[x] || x}</option>`).join("");
         const sourceAOptions = cardSelectOptions(a.sourceCardId, fallbackCardId);
-        const thresholdAOptions = cardSelectOptions(a.thresholdCardId, fallbackCardId);
         const sourceBOptions = cardSelectOptions(c.sourceCardId, fallbackCardId);
-        const thresholdBOptions = cardSelectOptions(c.thresholdCardId, fallbackCardId);
 
         rootEl.innerHTML = [
           conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
           conditionField(`${prefix}_a_source`, "Primary Source Card", `<select id="${prefix}_a_source">${sourceAOptions}</select>`),
           conditionField(`${prefix}_a_operator`, "Primary Operator", `<select id="${prefix}_a_operator"></select>`),
+          conditionField(`${prefix}_a_thr_source`, "Primary Threshold Source", `<select id="${prefix}_a_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_a_thr`, "Primary Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_a_thr_card`, "Primary Threshold Card", `<select id="${prefix}_a_thr_card">${thresholdAOptions}</select>`, "Compare against this card when enabled below."),
-          conditionField(`${prefix}_a_use_card`, "Primary Uses Threshold Card", `<select id="${prefix}_a_use_card">${boolOptions()}</select>`, "false: use threshold number, true: use threshold card."),
           conditionField(`${prefix}_b_source`, "Secondary Source Card", `<select id="${prefix}_b_source">${sourceBOptions}</select>`),
           conditionField(`${prefix}_b_operator`, "Secondary Operator", `<select id="${prefix}_b_operator"></select>`),
+          conditionField(`${prefix}_b_thr_source`, "Secondary Threshold Source", `<select id="${prefix}_b_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_b_thr`, "Secondary Threshold", `<input id="${prefix}_b_thr" type="number" value="${c.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_b_thr_card`, "Secondary Threshold Card", `<select id="${prefix}_b_thr_card">${thresholdBOptions}</select>`, "Compare against this card when enabled below."),
-          conditionField(`${prefix}_b_use_card`, "Secondary Uses Threshold Card", `<select id="${prefix}_b_use_card">${boolOptions()}</select>`, "false: use threshold number, true: use threshold card.") 
         ].join("");
 
-        document.getElementById(`${prefix}_a_use_card`).value = String(!!a.useThresholdCard);
-        document.getElementById(`${prefix}_b_use_card`).value = String(!!c.useThresholdCard);
         refreshOperatorSelect(prefix, "a", a.operator);
         refreshOperatorSelect(prefix, "b", c.operator);
-        refreshThresholdSelect(prefix, "a", a.thresholdCardId);
-        refreshThresholdSelect(prefix, "b", c.thresholdCardId);
+        refreshThresholdSelect(prefix, "a", a.thresholdCardId, !!a.useThresholdCard);
+        refreshThresholdSelect(prefix, "b", c.thresholdCardId, !!c.useThresholdCard);
 
         rootEl.querySelectorAll("input,select").forEach((el) => {
           el.addEventListener("change", () => markDirty());
@@ -564,12 +630,12 @@
         }
         const opAEl = document.getElementById(`${prefix}_a_operator`);
         const opBEl = document.getElementById(`${prefix}_b_operator`);
-        const useAEl = document.getElementById(`${prefix}_a_use_card`);
-        const useBEl = document.getElementById(`${prefix}_b_use_card`);
+        const srcAThrEl = document.getElementById(`${prefix}_a_thr_source`);
+        const srcBThrEl = document.getElementById(`${prefix}_b_thr_source`);
         if (opAEl) opAEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
         if (opBEl) opBEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
-        if (useAEl) useAEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
-        if (useBEl) useBEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
+        if (srcAThrEl) srcAThrEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
+        if (srcBThrEl) srcBThrEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
       }
 
       function loadSelectedCardToForm() {
@@ -595,21 +661,27 @@
       }
 
       function readConditionGroup(prefix, fallbackCardId) {
+        const aThresholdSource = String(document.getElementById(`${prefix}_a_thr_source`).value || "CONST");
+        const bThresholdSource = String(document.getElementById(`${prefix}_b_thr_source`).value || "CONST");
+        const aUseThresholdCard = aThresholdSource.startsWith("CARD:");
+        const bUseThresholdCard = bThresholdSource.startsWith("CARD:");
+        const aThresholdCardId = aUseThresholdCard ? Number(aThresholdSource.slice(5)) : fallbackCardId;
+        const bThresholdCardId = bUseThresholdCard ? Number(bThresholdSource.slice(5)) : fallbackCardId;
         return {
           combiner: document.getElementById(`${prefix}_combiner`).value,
           clauseA: {
             sourceCardId: readNum(`${prefix}_a_source`, fallbackCardId),
             operator: document.getElementById(`${prefix}_a_operator`).value,
             thresholdValue: readNum(`${prefix}_a_thr`, 0),
-            thresholdCardId: readNum(`${prefix}_a_thr_card`, fallbackCardId),
-            useThresholdCard: readBool(`${prefix}_a_use_card`)
+            thresholdCardId: Number.isNaN(aThresholdCardId) ? fallbackCardId : aThresholdCardId,
+            useThresholdCard: aUseThresholdCard
           },
           clauseB: {
             sourceCardId: readNum(`${prefix}_b_source`, fallbackCardId),
             operator: document.getElementById(`${prefix}_b_operator`).value,
             thresholdValue: readNum(`${prefix}_b_thr`, 0),
-            thresholdCardId: readNum(`${prefix}_b_thr_card`, fallbackCardId),
-            useThresholdCard: readBool(`${prefix}_b_use_card`)
+            thresholdCardId: Number.isNaN(bThresholdCardId) ? fallbackCardId : bThresholdCardId,
+            useThresholdCard: bUseThresholdCard
           }
         };
       }
@@ -627,6 +699,41 @@
             params[def.key] = el.value === "true";
           } else if (def.type === "enum") {
             params[def.key] = Number(el.value);
+          } else if (def.type === "rtc_year") {
+            if (el.value === "any") {
+              params.hasYear = false;
+            } else {
+              params.hasYear = true;
+              params.year = readNum(`f_${def.key}`, params.year ?? 2026);
+            }
+          } else if (def.type === "rtc_month") {
+            if (el.value === "any") {
+              params.hasMonth = false;
+            } else {
+              params.hasMonth = true;
+              params.month = readNum(`f_${def.key}`, params.month ?? 1);
+            }
+          } else if (def.type === "rtc_day") {
+            if (el.value === "any") {
+              params.hasDay = false;
+            } else {
+              params.hasDay = true;
+              params.day = readNum(`f_${def.key}`, params.day ?? 1);
+            }
+          } else if (def.type === "rtc_weekday") {
+            if (el.value === "any") {
+              params.hasWeekday = false;
+            } else {
+              params.hasWeekday = true;
+              params.weekday = readNum(`f_${def.key}`, params.weekday ?? 0);
+            }
+          } else if (def.type === "rtc_hour") {
+            if (el.value === "any") {
+              params.hasHour = false;
+            } else {
+              params.hasHour = true;
+              params.hour = readNum(`f_${def.key}`, params.hour ?? 0);
+            }
           } else {
             params[def.key] = readNum(`f_${def.key}`, params[def.key] ?? 0);
           }
