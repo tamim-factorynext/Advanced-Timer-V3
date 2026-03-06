@@ -16,6 +16,7 @@ Notes:
 */
 #include "portal/transport_runtime.h"
 
+#include <Arduino.h>
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
@@ -24,6 +25,7 @@ Notes:
 #include <LittleFS.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
+#include <esp_system.h>
 #include <uri/UriBraces.h>
 
 #include "kernel/enum_codec.h"
@@ -773,6 +775,22 @@ void handleHttpSettingsPut() {
   gHttpServer.send(200, "application/json", body);
 }
 
+void handleHttpSystemRebootPost() {
+  markTransportActivity();
+  logHttpAccess("api.system.reboot.post");
+  JsonDocument doc;
+  doc["ok"] = true;
+  doc["apiVersion"] = "2.0";
+  doc["status"] = "SUCCESS";
+  doc["tsMs"] = millis();
+  doc["message"] = "rebooting";
+  String body;
+  serializeJson(doc, body);
+  gHttpServer.send(200, "application/json", body);
+  delay(200);
+  esp_restart();
+}
+
 void handleHttpCardsIndexGet() {
   markTransportActivity();
   logHttpAccess("api.cards.index.get");
@@ -1154,6 +1172,11 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/api/v3/settings/", HTTP_GET, handleHttpSettingsGet);
   gHttpServer.on("/api/v3/settings", HTTP_PUT, handleHttpSettingsPut);
   gHttpServer.on("/api/v3/settings/", HTTP_PUT, handleHttpSettingsPut);
+
+  gHttpServer.on("/api/v3/system/reboot", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/system/reboot/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/system/reboot", HTTP_POST, handleHttpSystemRebootPost);
+  gHttpServer.on("/api/v3/system/reboot/", HTTP_POST, handleHttpSystemRebootPost);
 
   gHttpServer.on("/api/v3/cards", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/cards/", HTTP_OPTIONS, handleHttpCorsOptions);

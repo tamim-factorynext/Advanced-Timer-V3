@@ -19,11 +19,15 @@
       .nav a { color: var(--muted-strong); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
       .nav a.active { color: var(--text); background: var(--surface); }
       .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; box-shadow: var(--shadow); }
-      .grid { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(180px, 1fr)); }
-      .field { display: grid; gap: 4px; }
-      .field label { font-size: 12px; color: var(--muted-strong); }
+      .form-list { margin-top: 10px; display: grid; gap: 8px; }
+      .field { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; }
+      .field label { font-size: 13px; color: var(--muted-strong); }
       .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
+      .range-wrap { display: flex; align-items: center; gap: 8px; }
+      .range-wrap input[type="range"] { flex: 1; padding: 0; accent-color: var(--accent-2); }
+      .range-value { min-width: 56px; text-align: right; color: var(--muted-strong); font-size: 12px; }
       .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .action-note { margin-top: 8px; font-size: 12px; color: var(--muted-strong); }
       button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 8px 11px; cursor: pointer; }
       button:hover { background: var(--surface-hover); }
       button:disabled { opacity: 0.65; cursor: wait; }
@@ -36,7 +40,19 @@
       .muted { color: var(--muted-strong); }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--muted-strong); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
-      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+      @media (max-width: 900px) {
+        .field { grid-template-columns: 120px 1fr; gap: 8px; }
+        .field label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      }
+      @media (max-width: 700px) {
+        .app { padding: 10px 10px calc(14px + env(safe-area-inset-bottom)); }
+        .top { align-items: flex-start; }
+        .nav { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+        .nav a, .theme { flex: 0 0 auto; padding: 7px 9px; font-size: 13px; }
+      }
+      @media (max-width: 900px) and (orientation: landscape) {
+        .field { grid-template-columns: 135px 1fr; gap: 8px; }
+      }
     </style>
   </head>
   <body data-theme="dark">
@@ -60,27 +76,26 @@
 
       <section class="card">
         <div><strong>System Settings</strong> <span class="muted">(WiFi, time, scan)</span></div>
-        <div class="grid" style="margin-top:10px;">
-          <div class="field"><label>Schema Version</label><input id="fSchema" type="number" /></div>
-          <div class="field"><label>Scan Period (ms)</label><input id="fScan" type="number" /></div>
-          <div class="field"><label>Timezone</label><input id="fTz" type="text" /></div>
-          <div class="field"><label>Primary NTP Server</label><input id="fNtp1" type="text" /></div>
-          <div class="field"><label>Sync Interval (sec)</label><input id="fSyncInt" type="number" /></div>
-          <div class="field"><label>Startup Timeout (sec)</label><input id="fStartupTimeout" type="number" /></div>
-          <div class="field"><label>Max Time Age (sec)</label><input id="fMaxAge" type="number" /></div>
+        <div class="form-list">
           <div class="field"><label>User WiFi SSID</label><input id="fSsid" type="text" /></div>
           <div class="field"><label>User WiFi Password</label><input id="fPass" type="text" /></div>
-          <div class="field"><label>User Timeout (sec)</label><input id="fUserTimeout" type="number" /></div>
-          <div class="field"><label>Retry Delay (sec)</label><input id="fRetry" type="number" /></div>
-          <div class="field"><label>STA Only</label><select id="fStaOnly"><option value="true">true</option><option value="false">false</option></select></div>
+          <div class="field"><label>Timezone</label><input id="fTz" type="text" /></div>
+          <div class="field"><label>Primary NTP Server</label><input id="fNtp1" type="text" /></div>
+          <div class="field">
+            <label>Scan Period</label>
+            <div class="range-wrap">
+              <input id="fScanSec" type="range" min="0.01" max="1" step="0.01" />
+              <span id="fScanSecValue" class="range-value">0.01 s</span>
+            </div>
+          </div>
         </div>
 
         <div class="actions">
-          <button id="btnLoad">&#x1F4E5; Load Active</button>
-          <button id="btnValidate">&#x2705; Validate + Apply</button>
-          <button id="btnSave">&#x1F4BE; Save Active</button>
-          <button id="btnCommit">&#x1F680; Apply Again</button>
+          <button id="btnReload">&#x1F504; Reload Active</button>
+          <button id="btnApply">&#x1F4BE; Save + Apply</button>
+          <button id="btnReboot">&#x21BB; Reboot</button>
         </div>
+        <div class="action-note">Save + Apply validates and commits immediately.</div>
 
         <div id="result" class="result"><strong>Status:</strong> Idle.</div>
         <div id="log" class="log">Ready.</div>
@@ -95,23 +110,17 @@
         const themeSelect = document.getElementById("themeSelect");
         const resultEl = document.getElementById("result");
         const logEl = document.getElementById("log");
-        const actionIds = ["btnLoad", "btnValidate", "btnSave", "btnCommit"];
+          const actionIds = ["btnReload", "btnApply", "btnReboot"];
         let requestInFlight = false;
         let currentConfig = null;
         let dirty = false;
 
-        const fSchema = document.getElementById("fSchema");
-        const fScan = document.getElementById("fScan");
+        const fScanSec = document.getElementById("fScanSec");
+        const fScanSecValue = document.getElementById("fScanSecValue");
         const fTz = document.getElementById("fTz");
         const fNtp1 = document.getElementById("fNtp1");
-        const fSyncInt = document.getElementById("fSyncInt");
-        const fStartupTimeout = document.getElementById("fStartupTimeout");
-        const fMaxAge = document.getElementById("fMaxAge");
         const fSsid = document.getElementById("fSsid");
         const fPass = document.getElementById("fPass");
-        const fUserTimeout = document.getElementById("fUserTimeout");
-        const fRetry = document.getElementById("fRetry");
-        const fStaOnly = document.getElementById("fStaOnly");
 
         function normalizeTheme(theme) {
           if (theme === "colorful-a") return "neon-orchid";
@@ -155,42 +164,40 @@
           document.title = "AT-V3 Portal | Settings";
         }
 
+        function syncScanPeriodLabel() {
+          const seconds = Number(fScanSec.value || 0.01);
+          fScanSecValue.textContent = `${seconds.toFixed(2)} s`;
+        }
+
         function loadFormFromConfig(cfg) {
-          fSchema.value = cfg.schemaVersion ?? "";
-          fScan.value = cfg.scanPeriodMs ?? "";
+          const scanMs = Number(cfg.scanPeriodMs || 10);
+          const clampedMs = Math.min(1000, Math.max(10, scanMs));
+          fScanSec.value = (clampedMs / 1000).toFixed(2);
+          syncScanPeriodLabel();
           const wifi = cfg.wifi || {};
           const t = cfg.time || {};
           const ts = t.timeSync || {};
           fTz.value = t.timezone ?? "";
           fNtp1.value = ts.primaryTimeServer ?? "";
-          fSyncInt.value = ts.syncIntervalSec ?? "";
-          fStartupTimeout.value = ts.startupTimeoutSec ?? "";
-          fMaxAge.value = ts.maxTimeAgeSec ?? "";
           const user = wifi.userConfiguredNetwork || {};
           fSsid.value = user.ssid ?? "";
           fPass.value = user.password ?? "";
-          fUserTimeout.value = user.timeoutSec ?? "";
-          fRetry.value = wifi.retryDelaySec ?? "";
-          fStaOnly.value = String(!!wifi.staOnly);
         }
 
         function applyFormToConfig(cfg) {
-          cfg.schemaVersion = Number(fSchema.value || cfg.schemaVersion || 300);
-          cfg.scanPeriodMs = Number(fScan.value || cfg.scanPeriodMs || 10);
+          cfg.schemaVersion = Number(cfg.schemaVersion || 300);
+          const scanSec = Number(fScanSec.value || 0.01);
+          const scanMs = Math.round(scanSec * 1000);
+          cfg.scanPeriodMs = Math.min(1000, Math.max(10, scanMs));
           cfg.wifi = cfg.wifi || {};
           cfg.wifi.userConfiguredNetwork = cfg.wifi.userConfiguredNetwork || {};
           cfg.wifi.userConfiguredNetwork.ssid = fSsid.value;
           cfg.wifi.userConfiguredNetwork.password = fPass.value;
-          cfg.wifi.userConfiguredNetwork.timeoutSec = Number(fUserTimeout.value || cfg.wifi.userConfiguredNetwork.timeoutSec || 180);
-          cfg.wifi.retryDelaySec = Number(fRetry.value || cfg.wifi.retryDelaySec || 30);
-          cfg.wifi.staOnly = fStaOnly.value === "true";
+          cfg.wifi.staOnly = true;
           cfg.time = cfg.time || {};
           cfg.time.timezone = fTz.value;
           cfg.time.timeSync = cfg.time.timeSync || {};
           cfg.time.timeSync.primaryTimeServer = fNtp1.value;
-          cfg.time.timeSync.syncIntervalSec = Number(fSyncInt.value || cfg.time.timeSync.syncIntervalSec || 3600);
-          cfg.time.timeSync.startupTimeoutSec = Number(fStartupTimeout.value || cfg.time.timeSync.startupTimeoutSec || 15);
-          cfg.time.timeSync.maxTimeAgeSec = Number(fMaxAge.value || cfg.time.timeSync.maxTimeAgeSec || 86400);
           return cfg;
         }
 
@@ -219,48 +226,34 @@
         setBusy(false);
       }
 
-      async function validateStaged() {
+        async function saveAndApply() {
         setBusy(true);
         const cfg = applyFormToConfig(currentConfig || {});
         const data = await api("/api/v3/settings", "PUT", {
-          requestId: `set-val-${Date.now()}`,
+          requestId: `settings-apply-${Date.now()}`,
           apiVersion: "2.0",
           settings: cfg,
         });
-        setResult(true, "Validation passed.", "");
-        setLog(true, "Validate/Apply success", JSON.stringify(data, null, 2));
-        setBusy(false);
-      }
-
-      async function saveStaged() {
-        setBusy(true);
-        const cfg = applyFormToConfig(currentConfig || {});
-        const data = await api("/api/v3/settings", "PUT", {
-          requestId: `set-save-${Date.now()}`,
-          apiVersion: "2.0",
-          settings: cfg,
-        });
+        currentConfig = cfg;
         clearDirty();
-        setResult(true, "Settings saved.", `version=${data.activeVersion}`);
-        setLog(true, "Save success", JSON.stringify(data, null, 2));
+        const restartHint = data.requiresRestart ? " restart required" : "";
+        setResult(true, "Settings applied.", `version=${data.activeVersion}${restartHint}`);
+        setLog(true, "Apply success", JSON.stringify(data, null, 2));
         setBusy(false);
       }
 
-        async function commit() {
-          if (!confirm("Commit settings to active runtime? Device restart may be required.")) {
-            setResult(false, "Commit cancelled.", "User cancelled confirmation.");
+        async function rebootDevice() {
+          if (!confirm("Reboot device now? Portal will disconnect briefly.")) {
+            setResult(false, "Reboot cancelled.", "User cancelled confirmation.");
             return;
         }
         setBusy(true);
-        const cfg = applyFormToConfig(currentConfig || {});
-        const data = await api("/api/v3/settings", "PUT", {
-          requestId: `set-commit-${Date.now()}`,
+        const data = await api("/api/v3/system/reboot", "POST", {
+          requestId: `reboot-${Date.now()}`,
           apiVersion: "2.0",
-          settings: cfg,
         });
-        clearDirty();
-        setResult(true, "Commit accepted.", "Split settings record updated.");
-        setLog(true, "Commit success", JSON.stringify(data, null, 2));
+        setResult(true, "Reboot requested.", "Device is restarting.");
+        setLog(true, "Reboot requested", JSON.stringify(data, null, 2));
         setBusy(false);
       }
 
@@ -273,13 +266,21 @@
           }
         }
 
-        document.getElementById("btnLoad").addEventListener("click", () => runAction("Load", loadActive));
-        document.getElementById("btnValidate").addEventListener("click", () => runAction("Validate", validateStaged));
-        document.getElementById("btnSave").addEventListener("click", () => runAction("Save", saveStaged));
-        document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
+          document.getElementById("btnReload").addEventListener("click", () => {
+            if (dirty && !confirm("Discard unsaved form changes and reload active settings?")) {
+              return;
+            }
+            runAction("Reload", loadActive);
+          });
+          document.getElementById("btnApply").addEventListener("click", () => runAction("Apply", saveAndApply));
+          document.getElementById("btnReboot").addEventListener("click", () => runAction("Reboot", rebootDevice));
 
-        [fSchema, fScan, fTz, fNtp1, fSyncInt, fStartupTimeout, fMaxAge, fSsid, fPass, fUserTimeout, fRetry, fStaOnly].forEach((el) => {
+        [fTz, fNtp1, fSsid, fPass].forEach((el) => {
           el.addEventListener("change", () => markDirty());
+        });
+        fScanSec.addEventListener("input", () => {
+          syncScanPeriodLabel();
+          markDirty();
         });
 
         window.addEventListener("beforeunload", (ev) => {

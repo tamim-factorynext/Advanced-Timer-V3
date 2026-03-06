@@ -4,6 +4,34 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-06
+
+### Settings UX Simplification + WiFi Workflow Backlog Note
+
+### Completed
+
+- Simplified settings actions to reduce ambiguity:
+  - kept explicit actions: `Reload Active`, `Save + Apply`, `Reboot Device`.
+- Added explicit reboot transport action:
+  - `POST /api/v3/system/reboot` in portal transport runtime.
+- Reduced operator-facing settings complexity:
+  - removed editable `schemaVersion` and `staOnly` from settings UI.
+  - removed secondary/tertiary NTP server fields end-to-end (contract, decoder, validator, settings serialization, UI).
+  - hid advanced timing fields from settings UI (`user timeout`, `retry delay`, `sync interval`, `startup timeout`, `max time age`) while preserving existing active values in payload round-trip.
+- Improved settings form responsiveness:
+  - single-line label/value form behavior tuned for mobile portrait and landscape breakpoints.
+- Updated live runtime page clock display:
+  - firmware-authored clock payload exposed in runtime metrics API.
+  - frontend live page now shows clock/date panel using firmware time.
+
+### TODO (Planned Next)
+
+- Add scan-based WiFi connection workflow in Settings:
+  - network scan list + signal/security metadata.
+  - temporary connect before save.
+  - explicit save-selected-network action.
+  - manual fallback for hidden SSID entry.
+
 ## 2026-03-04
 
 ### Snapshot Payload Baseline (ESP32 DOIT, 12 cards)
