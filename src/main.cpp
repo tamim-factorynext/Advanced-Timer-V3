@@ -513,7 +513,7 @@ void core1ServiceTask(void*) {
 
 void setup() {
   Serial.begin(115200);
-  delay(5000);  // Keep startup capture window without starving loop-task WDT.
+  delay(500);  // Keep startup capture window without starving loop-task WDT.
   if (kLogBootSummary) {
     Serial.println("Advanced Timer V3 Core bootstrap");
     Serial.printf("[boot] reset reason=%d\n",

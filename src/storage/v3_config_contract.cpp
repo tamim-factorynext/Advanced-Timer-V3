@@ -144,7 +144,7 @@ void makeDefaultSystemConfig(SystemConfig& cfg) {
           sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
   strncpy(cfg.wifi.backupAccessNetwork.password, "12345678",
           sizeof(cfg.wifi.backupAccessNetwork.password) - 1);
-  cfg.wifi.backupAccessNetwork.timeoutSec = 2;
+  cfg.wifi.backupAccessNetwork.timeoutSec = 10;
   cfg.wifi.backupAccessNetwork.editable = false;
 
   strncpy(cfg.wifi.userConfiguredNetwork.ssid, "FactoryNext",

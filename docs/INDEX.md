@@ -29,6 +29,7 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/esp32-s3-psram-migration-guide.md` - Planned migration path for future ESP32-S3 + PSRAM memory architecture.
 - `docs/naming-glossary-v3.md` - Canonical user-facing naming vocabulary and staged key-migration plan.
 - `docs/doxygen-comment-style.md` - Standard Doxygen comment templates and rollout guidance for symbol-level documentation.
+- `docs/portal-execution-board-v3.md` - Focused short-horizon portal delivery board (next slices, done criteria, and WIP limits).
 
 ## 2.1 Market/Strategy Research
 

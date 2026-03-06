@@ -18,6 +18,7 @@ Notes:
 
 #include <WiFi.h>
 #include <cstdio>
+#include <cstring>
 #include <time.h>
 
 namespace v3::platform {
@@ -26,6 +27,17 @@ namespace {
 
 void formatIp(const IPAddress& ip, char out[16]) {
   std::snprintf(out, 16, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+}
+
+const char* resolvePosixTimezone(const char* configuredTz) {
+  // configTzTime expects POSIX TZ strings; map known IANA labels used in config.
+  if (configuredTz == nullptr || configuredTz[0] == '\0') {
+    return "UTC0";
+  }
+  if (std::strcmp(configuredTz, "Asia/Dhaka") == 0) {
+    return "BDT-6";
+  }
+  return configuredTz;
 }
 
 }  // namespace
@@ -113,7 +125,8 @@ void WiFiRuntime::startBackupAccessNetworkAttempt(uint32_t nowMs) {
 
 void WiFiRuntime::configureTimeSync() {
   if (!clockConfig_.timeSync.enabled) return;
-  configTzTime(clockConfig_.timezone, clockConfig_.timeSync.primaryTimeServer,
+  configTzTime(resolvePosixTimezone(clockConfig_.timezone),
+               clockConfig_.timeSync.primaryTimeServer,
                clockConfig_.timeSync.secondaryServer,
                clockConfig_.timeSync.tertiaryServer);
   timeSyncConfigured_ = true;

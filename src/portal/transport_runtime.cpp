@@ -18,6 +18,8 @@ Notes:
 
 #include <cstring>
 #include <cstdlib>
+#include <cstdio>
+#include <time.h>
 
 #include <LittleFS.h>
 #include <WebServer.h>
@@ -335,6 +337,57 @@ void writeRuntimeCardJson(JsonObject item, const RuntimeSnapshotCard& card) {
   item["turnOffConditionMet"] = card.turnOffConditionMet;
 }
 
+void writeRuntimeClockJson(JsonObject out) {
+  const time_t epochNow = time(nullptr);
+  struct tm localTime = {};
+  if (epochNow <= 0 || localtime_r(&epochNow, &localTime) == nullptr) {
+    out["valid"] = false;
+    out["epochSec"] = 0;
+    return;
+  }
+
+  static const char* kWeekdayShort[7] = {"Sun", "Mon", "Tue", "Wed",
+                                         "Thu", "Fri", "Sat"};
+  static const char* kMonthShort[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+  const int year = localTime.tm_year + 1900;
+  const int month = localTime.tm_mon + 1;
+  const int day = localTime.tm_mday;
+  const int weekday = localTime.tm_wday;
+  const int hour24 = localTime.tm_hour;
+  const int minute = localTime.tm_min;
+  const int second = localTime.tm_sec;
+  const bool isPm = (hour24 >= 12);
+  int hour12 = hour24 % 12;
+  if (hour12 == 0) hour12 = 12;
+
+  char formatted24[16] = {};
+  char formatted12[20] = {};
+  std::snprintf(formatted24, sizeof(formatted24), "%02d:%02d:%02d", hour24,
+                minute, second);
+  std::snprintf(formatted12, sizeof(formatted12), "%02d:%02d:%02d %s", hour12,
+                minute, second, isPm ? "PM" : "AM");
+
+  out["valid"] = true;
+  out["epochSec"] = static_cast<uint32_t>(epochNow);
+  out["year"] = year;
+  out["month"] = month;
+  out["monthName"] =
+      (month >= 1 && month <= 12) ? kMonthShort[month - 1] : "?";
+  out["day"] = day;
+  out["weekday"] = weekday;
+  out["weekdayName"] =
+      (weekday >= 0 && weekday <= 6) ? kWeekdayShort[weekday] : "?";
+  out["hour24"] = hour24;
+  out["hour12"] = hour12;
+  out["minute"] = minute;
+  out["second"] = second;
+  out["amPm"] = isPm ? "PM" : "AM";
+  out["formatted24"] = formatted24;
+  out["formatted12"] = formatted12;
+}
+
 int8_t findCardIndexById(const v3::storage::SystemConfig& cfg, uint8_t cardId) {
   for (uint8_t i = 0; i < cfg.cardCount; ++i) {
     if (cfg.cards[i].id == cardId) return static_cast<int8_t>(i);
@@ -420,6 +473,8 @@ void handleHttpRuntimeMetricsGet() {
   runtime["engineMode"] = toString(snapshot.mode);
   runtime["scanPeriodMs"] = snapshot.scanPeriodMs;
   runtime["cardCount"] = snapshot.enabledCardCount;
+  JsonObject clock = runtime["clock"].to<JsonObject>();
+  writeRuntimeClockJson(clock);
   JsonObject metrics = runtime["metrics"].to<JsonObject>();
   metrics["scanLastUs"] = snapshot.scanLastUs;
   metrics["scanMaxUs"] = snapshot.scanMaxUs;
