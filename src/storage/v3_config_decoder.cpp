@@ -349,13 +349,7 @@ bool parseClockConfig(JsonObjectConst systemObj, ClockConfig& outClock) {
   }
 
   if (!parseOptionalStringField(ntpObj, "primaryTimeServer", outClock.timeSync.primaryTimeServer,
-                                sizeof(outClock.timeSync.primaryTimeServer)) ||
-      !parseOptionalStringField(ntpObj, "secondaryServer",
-                                outClock.timeSync.secondaryServer,
-                                sizeof(outClock.timeSync.secondaryServer)) ||
-      !parseOptionalStringField(ntpObj, "tertiaryServer",
-                                outClock.timeSync.tertiaryServer,
-                                sizeof(outClock.timeSync.tertiaryServer))) {
+                                sizeof(outClock.timeSync.primaryTimeServer))) {
     return false;
   }
 

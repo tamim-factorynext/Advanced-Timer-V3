@@ -161,10 +161,6 @@ void makeDefaultSystemConfig(SystemConfig& cfg) {
   cfg.time.timeSync.enabled = true;
   strncpy(cfg.time.timeSync.primaryTimeServer, "pool.ntp.org",
           sizeof(cfg.time.timeSync.primaryTimeServer) - 1);
-  strncpy(cfg.time.timeSync.secondaryServer, "time.google.com",
-          sizeof(cfg.time.timeSync.secondaryServer) - 1);
-  strncpy(cfg.time.timeSync.tertiaryServer, "time.cloudflare.com",
-          sizeof(cfg.time.timeSync.tertiaryServer) - 1);
   cfg.time.timeSync.syncIntervalSec = 3600;
   cfg.time.timeSync.startupTimeoutSec = 15;
   cfg.time.timeSync.maxTimeAgeSec = 86400;

@@ -114,8 +114,6 @@ bool validateSystemConfigLight(const SystemConfig& candidate,
 
   if (!isNonEmpty(candidate.time.timezone) ||
       !isNonEmpty(candidate.time.timeSync.primaryTimeServer) ||
-      !isNonEmpty(candidate.time.timeSync.secondaryServer) ||
-      !isNonEmpty(candidate.time.timeSync.tertiaryServer) ||
       candidate.time.timeSync.syncIntervalSec == 0 ||
       candidate.time.timeSync.startupTimeoutSec == 0 ||
       candidate.time.timeSync.maxTimeAgeSec == 0) {

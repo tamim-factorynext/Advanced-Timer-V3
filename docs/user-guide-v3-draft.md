@@ -415,7 +415,7 @@ Planned settings model:
 
 - `timezone` (for local schedule interpretation)
 - `timeSync.enabled`
-- `timeSync.primaryTimeServer`, `timeSync.secondaryServer`, `timeSync.tertiaryServer`
+- `timeSync.primaryTimeServer`
 - `timeSync.syncIntervalSec`
 - `timeSync.startupTimeoutSec`
 - `timeSync.maxTimeAgeSec`

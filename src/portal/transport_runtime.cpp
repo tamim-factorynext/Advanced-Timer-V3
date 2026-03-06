@@ -214,8 +214,6 @@ void writeSettingsJson(JsonObject out, const v3::storage::SystemConfig& cfg) {
   JsonObject timeSync = time["timeSync"].to<JsonObject>();
   timeSync["enabled"] = cfg.time.timeSync.enabled;
   timeSync["primaryTimeServer"] = cfg.time.timeSync.primaryTimeServer;
-  timeSync["secondaryServer"] = cfg.time.timeSync.secondaryServer;
-  timeSync["tertiaryServer"] = cfg.time.timeSync.tertiaryServer;
   timeSync["syncIntervalSec"] = cfg.time.timeSync.syncIntervalSec;
   timeSync["startupTimeoutSec"] = cfg.time.timeSync.startupTimeoutSec;
   timeSync["maxTimeAgeSec"] = cfg.time.timeSync.maxTimeAgeSec;

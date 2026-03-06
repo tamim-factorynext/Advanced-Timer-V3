@@ -65,8 +65,6 @@
           <div class="field"><label>Scan Period (ms)</label><input id="fScan" type="number" /></div>
           <div class="field"><label>Timezone</label><input id="fTz" type="text" /></div>
           <div class="field"><label>Primary NTP Server</label><input id="fNtp1" type="text" /></div>
-          <div class="field"><label>Secondary NTP Server</label><input id="fNtp2" type="text" /></div>
-          <div class="field"><label>Tertiary NTP Server</label><input id="fNtp3" type="text" /></div>
           <div class="field"><label>Sync Interval (sec)</label><input id="fSyncInt" type="number" /></div>
           <div class="field"><label>Startup Timeout (sec)</label><input id="fStartupTimeout" type="number" /></div>
           <div class="field"><label>Max Time Age (sec)</label><input id="fMaxAge" type="number" /></div>
@@ -106,8 +104,6 @@
         const fScan = document.getElementById("fScan");
         const fTz = document.getElementById("fTz");
         const fNtp1 = document.getElementById("fNtp1");
-        const fNtp2 = document.getElementById("fNtp2");
-        const fNtp3 = document.getElementById("fNtp3");
         const fSyncInt = document.getElementById("fSyncInt");
         const fStartupTimeout = document.getElementById("fStartupTimeout");
         const fMaxAge = document.getElementById("fMaxAge");
@@ -167,8 +163,6 @@
           const ts = t.timeSync || {};
           fTz.value = t.timezone ?? "";
           fNtp1.value = ts.primaryTimeServer ?? "";
-          fNtp2.value = ts.secondaryServer ?? "";
-          fNtp3.value = ts.tertiaryServer ?? "";
           fSyncInt.value = ts.syncIntervalSec ?? "";
           fStartupTimeout.value = ts.startupTimeoutSec ?? "";
           fMaxAge.value = ts.maxTimeAgeSec ?? "";
@@ -194,8 +188,6 @@
           cfg.time.timezone = fTz.value;
           cfg.time.timeSync = cfg.time.timeSync || {};
           cfg.time.timeSync.primaryTimeServer = fNtp1.value;
-          cfg.time.timeSync.secondaryServer = fNtp2.value;
-          cfg.time.timeSync.tertiaryServer = fNtp3.value;
           cfg.time.timeSync.syncIntervalSec = Number(fSyncInt.value || cfg.time.timeSync.syncIntervalSec || 3600);
           cfg.time.timeSync.startupTimeoutSec = Number(fStartupTimeout.value || cfg.time.timeSync.startupTimeoutSec || 15);
           cfg.time.timeSync.maxTimeAgeSec = Number(fMaxAge.value || cfg.time.timeSync.maxTimeAgeSec || 86400);
@@ -286,7 +278,7 @@
         document.getElementById("btnSave").addEventListener("click", () => runAction("Save", saveStaged));
         document.getElementById("btnCommit").addEventListener("click", () => runAction("Commit", commit));
 
-        [fSchema, fScan, fTz, fNtp1, fNtp2, fNtp3, fSyncInt, fStartupTimeout, fMaxAge, fSsid, fPass, fUserTimeout, fRetry, fStaOnly].forEach((el) => {
+        [fSchema, fScan, fTz, fNtp1, fSyncInt, fStartupTimeout, fMaxAge, fSsid, fPass, fUserTimeout, fRetry, fStaOnly].forEach((el) => {
           el.addEventListener("change", () => markDirty());
         });
 

@@ -126,9 +126,7 @@ void WiFiRuntime::startBackupAccessNetworkAttempt(uint32_t nowMs) {
 void WiFiRuntime::configureTimeSync() {
   if (!clockConfig_.timeSync.enabled) return;
   configTzTime(resolvePosixTimezone(clockConfig_.timezone),
-               clockConfig_.timeSync.primaryTimeServer,
-               clockConfig_.timeSync.secondaryServer,
-               clockConfig_.timeSync.tertiaryServer);
+               clockConfig_.timeSync.primaryTimeServer);
   timeSyncConfigured_ = true;
 }
 

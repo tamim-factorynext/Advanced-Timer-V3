@@ -193,8 +193,6 @@ struct RtcParams {
 struct NtpConfig {
   bool enabled;
   char primaryTimeServer[kMaxNtpServerLen + 1];
-  char secondaryServer[kMaxNtpServerLen + 1];
-  char tertiaryServer[kMaxNtpServerLen + 1];
   uint32_t syncIntervalSec;
   uint32_t startupTimeoutSec;
   uint32_t maxTimeAgeSec;

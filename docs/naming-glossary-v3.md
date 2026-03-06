@@ -83,8 +83,6 @@ Preferred user-facing concept label:
 | `ntp` | `timeSync` | Replace protocol acronym in UI/API contract. |
 | `enabled` | `enabled` | Keep unchanged. |
 | `primaryTimeServer` | `primaryTimeServer` | Explicit purpose. |
-| `secondaryServer` | `-` | Hide from standard UX; keep only for advanced/internal compatibility. |
-| `tertiaryServer` | `-` | Hide from standard UX; keep only for advanced/internal compatibility. |
 | `syncIntervalSec` | `syncEverySec` | Reads as schedule. |
 | `startupTimeoutSec` | `startupWaitSec` | Simpler wording. |
 | `maxStaleSec` | `maxTimeAgeSec` | User can infer stale-time policy. |
