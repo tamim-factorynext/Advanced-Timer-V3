@@ -28,9 +28,12 @@
       .grid { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(160px, 1fr)); }
       .grid-4 { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(140px, 1fr)); }
       .field { display: grid; gap: 4px; }
+      .field.is-disabled { opacity: 0.55; }
+      .field.field-full { grid-column: 1 / -1; }
       .field label { font-size: 12px; color: var(--muted-strong); }
       .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
-      .hint { font-size: 11px; color: var(--muted); min-height: 14px; }
+      .hint { font-size: 11px; color: var(--muted); }
+      .hint:empty { display: none; }
       .eval-block { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--surface-log); }
       button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 8px 11px; cursor: pointer; }
       button:hover { background: var(--surface-hover); }
@@ -47,12 +50,15 @@
       @media (max-width: 900px) {
         .layout { grid-template-columns: 1fr; }
         .card-list { max-height: 220px; }
-        .grid, .grid-4 { grid-template-columns: 1fr; }
+        .grid, .grid-4 {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
         .field {
           grid-template-columns: minmax(112px, 40%) 1fr;
           column-gap: 6px;
           align-items: center;
-          gap: 2px;
+          gap: 0;
         }
         .field label {
           margin: 0;
@@ -65,7 +71,7 @@
           padding: 6px;
         }
         .hint {
-          grid-column: 1 / -1;
+          display: none;
         }
       }
     </style>
@@ -508,8 +514,9 @@
         };
       }
 
-      function conditionField(id, label, controlHtml, hintText = "") {
-        return `<div class="field"><label for="${id}">${label}</label>${controlHtml}<div class="hint">${hintText}</div></div>`;
+      function conditionField(id, label, controlHtml, hintText = "", extraClass = "") {
+        const cls = extraClass ? `field ${extraClass}` : "field";
+        return `<div class="${cls}"><label for="${id}">${label}</label>${controlHtml}<div class="hint">${hintText}</div></div>`;
       }
 
       function cardSelectOptions(selectedId, fallbackCardId) {
@@ -612,6 +619,30 @@
         thresholdValueEl.disabled = thresholdSourceEl.value.startsWith("CARD:");
       }
 
+      function refreshSecondaryAvailability(prefix) {
+        const combinerEl = document.getElementById(`${prefix}_combiner`);
+        const secondaryIds = [
+          `${prefix}_b_source`,
+          `${prefix}_b_operator`,
+          `${prefix}_b_thr_source`,
+          `${prefix}_b_thr`,
+        ];
+        if (!combinerEl) return;
+        const secondaryEnabled = combinerEl.value !== "NONE";
+
+        secondaryIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.disabled = !secondaryEnabled;
+          const field = el.closest(".field");
+          if (field) field.classList.toggle("is-disabled", !secondaryEnabled);
+        });
+
+        if (secondaryEnabled) {
+          refreshThresholdSelect(prefix, "b");
+        }
+      }
+
       function renderConditionGroup(rootEl, prefix, block, fallbackCardId) {
         const b = block || emptyConditionBlock(fallbackCardId);
         const a = b.clauseA || emptyConditionBlock(fallbackCardId).clauseA;
@@ -625,7 +656,7 @@
           conditionField(`${prefix}_a_operator`, "Primary Operator", `<select id="${prefix}_a_operator"></select>`),
           conditionField(`${prefix}_a_thr_source`, "Threshold Source", `<select id="${prefix}_a_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_a_thr`, "Primary Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
+          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`, "", "field-full"),
           conditionField(`${prefix}_b_source`, "Secondary Source Card", `<select id="${prefix}_b_source">${sourceBOptions}</select>`),
           conditionField(`${prefix}_b_operator`, "Secondary Operator", `<select id="${prefix}_b_operator"></select>`),
           conditionField(`${prefix}_b_thr_source`, "Threshold Source", `<select id="${prefix}_b_thr_source"><option value="CONST">Use constant value</option></select>`),
@@ -636,6 +667,7 @@
         refreshOperatorSelect(prefix, "b", c.operator);
         refreshThresholdSelect(prefix, "a", a.thresholdCardId, !!a.useThresholdCard);
         refreshThresholdSelect(prefix, "b", c.thresholdCardId, !!c.useThresholdCard);
+        refreshSecondaryAvailability(prefix);
 
         rootEl.querySelectorAll("input,select").forEach((el) => {
           el.addEventListener("change", () => markDirty());
@@ -661,10 +693,17 @@
         const opBEl = document.getElementById(`${prefix}_b_operator`);
         const srcAThrEl = document.getElementById(`${prefix}_a_thr_source`);
         const srcBThrEl = document.getElementById(`${prefix}_b_thr_source`);
+        const combinerEl = document.getElementById(`${prefix}_combiner`);
         if (opAEl) opAEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
         if (opBEl) opBEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
         if (srcAThrEl) srcAThrEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
         if (srcBThrEl) srcBThrEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
+        if (combinerEl) {
+          combinerEl.addEventListener("change", () => {
+            refreshSecondaryAvailability(prefix);
+            markDirty();
+          });
+        }
       }
 
       function loadSelectedCardToForm() {
