@@ -220,14 +220,24 @@
           el.cards.innerHTML = '<div class="node"><div class="meta">No card rows in runtime cache.</div></div>';
           return;
         }
+        const runtimeTypeLabelMap = {
+          DigitalInput: "Digital Input",
+          DigitalOutput: "Digital Output",
+          AnalogInput: "Analog Input",
+          SoftIO: "Soft IO",
+          Math: "Math",
+          RTC: "RTC",
+        };
         el.cards.innerHTML = cards.map((c) => {
           const truth = c.actualState ? "ON" : "OFF";
           const truthClass = c.actualState ? "ok" : "warn";
+          const typeLabel = runtimeTypeLabelMap[c.type] || c.type || "Card";
+          const familyIndex = Number(c.index || 0);
           return `
             <article class="node">
-              <h4><span>${c.type} #${c.id}</span><span class="${truthClass}">${truth}</span></h4>
+              <h4><span>${typeLabel} ${familyIndex}</span><span class="${truthClass}">${truth}</span></h4>
               <div class="meta">
-                <div>idx=${c.index} | mode=${c.mode}</div>
+                <div>id=${c.id} | mode=${c.mode}</div>
                 <div>state=${c.state} | value=${c.liveValue}</div>
                 <div>cmd=${c.commandState} act=${c.actualState} edge=${c.edgePulse}</div>
               </div>

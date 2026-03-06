@@ -317,4 +317,12 @@ These questions are intentionally unresolved and should be reviewed in the marat
 - What exact per-phase asset-size budget should be enforced to protect LittleFS headroom for current ESP32 target?
 - At what threshold should `Chart.js` be rejected or deferred in favor of simpler visuals?
 
+2. Card editing UX model (Live vs Config split):
+- Should we adopt a dual-mode approach:
+- `Config Studio` remains full expert editor for direct parameter edits.
+- `Live Runtime` adds guided `Card Wizard` flow for safer operational changes.
+- If dual-mode is adopted, what exact edit boundaries are allowed on Live page before forcing handoff to Config Studio?
+- What diff/confirmation model is mandatory to prevent confusion when edits can originate from both pages?
+- What synchronization signals must always be visible (`activeVersion`, last change source, last change timestamp) after any commit?
+
 Decisions already accepted above were removed from this backlog to keep Section 12 strictly unresolved.

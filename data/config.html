@@ -147,6 +147,70 @@
         "TRIGGERED", "TRIGGER_CLEARED", "GT", "LT", "EQ", "NEQ", "GTE", "LTE", "RUNNING", "FINISHED", "STOPPED"
       ];
       const COMBINERS = ["NONE", "AND", "OR"];
+      const OPERATOR_LABELS = {
+        ALWAYS_TRUE: "Always True",
+        ALWAYS_FALSE: "Always False",
+        LOGICAL_TRUE: "Logical True",
+        LOGICAL_FALSE: "Logical False",
+        PHYSICAL_ON: "Physical ON",
+        PHYSICAL_OFF: "Physical OFF",
+        TRIGGERED: "Triggered",
+        TRIGGER_CLEARED: "Trigger Cleared",
+        GT: "Greater Than (>)",
+        LT: "Less Than (<)",
+        EQ: "Equal (=)",
+        NEQ: "Not Equal (!=)",
+        GTE: "Greater or Equal (>=)",
+        LTE: "Less or Equal (<=)",
+        RUNNING: "Running",
+        FINISHED: "Finished",
+        STOPPED: "Stopped",
+      };
+      const COMBINER_LABELS = {
+        NONE: "Primary only",
+        AND: "Require both",
+        OR: "Allow either",
+      };
+
+      function isNumericOperator(op) {
+        return ["GT", "GTE", "LT", "LTE", "EQ", "NEQ"].includes(op);
+      }
+
+      function isStateOperator(op) {
+        return ["LOGICAL_TRUE", "LOGICAL_FALSE", "PHYSICAL_ON", "PHYSICAL_OFF"].includes(op);
+      }
+
+      function isTriggerOperator(op) {
+        return ["TRIGGERED", "TRIGGER_CLEARED"].includes(op);
+      }
+
+      function isProcessOperator(op) {
+        return ["RUNNING", "FINISHED", "STOPPED"].includes(op);
+      }
+
+      function isAlwaysOperator(op) {
+        return ["ALWAYS_TRUE", "ALWAYS_FALSE"].includes(op);
+      }
+
+      function isOperatorAllowedForFamily(sourceFamily, op) {
+        if (isAlwaysOperator(op)) return true;
+        if (sourceFamily === "AI") {
+          return isNumericOperator(op);
+        }
+        if (sourceFamily === "MATH") {
+          return isNumericOperator(op) || isTriggerOperator(op);
+        }
+        if (sourceFamily === "DI") {
+          return isStateOperator(op) || isTriggerOperator(op) || isNumericOperator(op);
+        }
+        if (sourceFamily === "RTC") {
+          return isStateOperator(op) || isTriggerOperator(op);
+        }
+        if (sourceFamily === "DO" || sourceFamily === "SIO") {
+          return isStateOperator(op) || isTriggerOperator(op) || isNumericOperator(op) || isProcessOperator(op);
+        }
+        return false;
+      }
 
       function normalizeTheme(theme) {
         if (theme === "colorful-a") return "neon-orchid";
@@ -192,10 +256,18 @@
         document.title = `AT-V3 Portal | Config Studio`;
       }
 
-      function cardLabel(card) {
-        const idx = card?.params?.channel;
-        if (typeof idx === "number") return `#${card.id} ${card.family} (ch ${idx})`;
-        return `#${card.id} ${card.family}`;
+      function cardLabel(card, familyIndex) {
+        const familyLabelMap = {
+          DI: "Digital Input",
+          DO: "Digital Output",
+          AI: "Analog Input",
+          SIO: "Soft IO",
+          MATH: "Math",
+          RTC: "RTC",
+        };
+        const familyLabel = familyLabelMap[card?.family] || String(card?.family || "Card");
+        const indexLabel = (typeof familyIndex === "number") ? familyIndex : "?";
+        return `${familyLabel} ${indexLabel}`;
       }
 
       function renderCardList() {
@@ -204,9 +276,13 @@
           cardListEl.innerHTML = `<div class="muted">No cards</div>`;
           return;
         }
+        const familyCounters = {};
         cardListEl.innerHTML = cards.map((c, i) => {
           const active = i === selectedCardIndex ? "active" : "";
-          return `<button class="card-btn ${active}" data-card-index="${i}">${cardLabel(c)} ${c.enabled ? "(on)" : "(off)"}</button>`;
+          const familyKey = String(c?.family || "UNKNOWN");
+          const familyIndex = familyCounters[familyKey] || 0;
+          familyCounters[familyKey] = familyIndex + 1;
+          return `<button class="card-btn ${active}" data-card-index="${i}">${cardLabel(c, familyIndex)}</button>`;
         }).join("");
         cardListEl.querySelectorAll("button[data-card-index]").forEach((b) => {
           b.addEventListener("click", () => {
@@ -230,14 +306,14 @@
           { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
           { key: "invert", label: "Invert", type: "bool" },
           { key: "debounceMs", label: "Debounce", type: "number", unit: "ms", step: 10, hint: "centi-ms" },
-          { key: "edgeMode", label: "Edge Mode", type: "enum", options: { 0: "Rising", 1: "Falling", 2: "Change" } },
+          { key: "edgeMode", label: "Edge Mode", type: "enum", options: { 0: "DI Rising Edge", 1: "DI Falling Edge", 2: "DI Any Change" } },
           { key: "setEnabled", label: "Set Enabled", type: "bool" },
           { key: "resetEnabled", label: "Reset Enabled", type: "bool" }
         ];
         if (family === "DO") return [
           { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
           { key: "invert", label: "Invert", type: "bool" },
-          { key: "mode", label: "Mode", type: "enum", options: { 5: "Normal", 6: "Immediate", 7: "Gated" } },
+          { key: "mode", label: "Mode", type: "enum", options: { 5: "DO Normal", 6: "DO Immediate", 7: "DO Gated" } },
           { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
           { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
           { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
@@ -252,13 +328,13 @@
         ];
         if (family === "SIO") return [
           { key: "invert", label: "Invert", type: "bool" },
-          { key: "mode", label: "Mode", type: "enum", options: { 5: "Normal", 6: "Immediate", 7: "Gated" } },
+          { key: "mode", label: "Mode", type: "enum", options: { 5: "SIO Normal", 6: "SIO Immediate", 7: "SIO Gated" } },
           { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
           { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
           { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
         ];
         if (family === "MATH") return [
-          { key: "operation", label: "Operation", type: "enum", options: { 0: "ADD", 1: "SUB_SAT", 2: "MUL", 3: "DIV_SAFE" } },
+          { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
           { key: "inputA", label: "Input A", type: "number", unit: "unit" },
           { key: "inputB", label: "Input B", type: "number", unit: "unit" },
           { key: "inputMin", label: "Input Min", type: "number", unit: "unit" },
@@ -338,39 +414,162 @@
         };
       }
 
-      function conditionField(id, label, controlHtml) {
-        return `<div class="field"><label for="${id}">${label}</label>${controlHtml}</div>`;
+      function conditionField(id, label, controlHtml, hintText = "") {
+        return `<div class="field"><label for="${id}">${label}</label>${controlHtml}<div class="hint">${hintText}</div></div>`;
+      }
+
+      function cardSelectOptions(selectedId, fallbackCardId) {
+        const cards = Array.isArray(currentConfig?.cards) ? currentConfig.cards : [];
+        if (!cards.length) {
+          const fallback = Number.isFinite(Number(fallbackCardId)) ? Number(fallbackCardId) : 0;
+          return `<option value="${fallback}" selected>Card ${fallback}</option>`;
+        }
+        const familyCounters = {};
+        return cards.map((card) => {
+          const familyKey = String(card?.family || "UNKNOWN");
+          const familyIndex = familyCounters[familyKey] || 0;
+          familyCounters[familyKey] = familyIndex + 1;
+          const cardId = Number(card?.id ?? 0);
+          const selected = (Number(selectedId) === cardId) ? "selected" : "";
+          return `<option value="${cardId}" ${selected}>${cardLabel(card, familyIndex)}</option>`;
+        }).join("");
+      }
+
+      function cardFamilyById(cardId) {
+        const cards = Array.isArray(currentConfig?.cards) ? currentConfig.cards : [];
+        const target = cards.find((card) => Number(card?.id ?? -1) === Number(cardId));
+        return target?.family || null;
+      }
+
+      function familyHasNumericLiveValue(family) {
+        return family != null && family !== "RTC";
+      }
+
+      function operatorOptionsForSource(sourceCardId, selectedOp) {
+        const sourceFamily = cardFamilyById(sourceCardId);
+        const allowed = CONDITION_OPERATORS.filter((op) => isOperatorAllowedForFamily(sourceFamily, op));
+        const finalAllowed = allowed.length ? allowed : ["ALWAYS_FALSE"];
+        const finalSelected = finalAllowed.includes(selectedOp) ? selectedOp : finalAllowed[0];
+        const html = finalAllowed.map((op) =>
+          `<option value="${op}" ${op === finalSelected ? "selected" : ""}>${OPERATOR_LABELS[op] || op}</option>`
+        ).join("");
+        return { html, selected: finalSelected };
+      }
+
+      function refreshOperatorSelect(prefix, clauseKey, selectedOpFromState = null) {
+        const sourceEl = document.getElementById(`${prefix}_${clauseKey}_source`);
+        const opEl = document.getElementById(`${prefix}_${clauseKey}_operator`);
+        if (!sourceEl || !opEl) return;
+        const sourceCardId = Number(sourceEl.value || 0);
+        const selectedOp = selectedOpFromState || opEl.value;
+        const options = operatorOptionsForSource(sourceCardId, selectedOp);
+        opEl.innerHTML = options.html;
+        opEl.value = options.selected;
+      }
+
+      function refreshThresholdSelect(prefix, clauseKey, selectedThresholdCardId = null) {
+        const sourceEl = document.getElementById(`${prefix}_${clauseKey}_source`);
+        const opEl = document.getElementById(`${prefix}_${clauseKey}_operator`);
+        const useCardEl = document.getElementById(`${prefix}_${clauseKey}_use_card`);
+        const thresholdEl = document.getElementById(`${prefix}_${clauseKey}_thr_card`);
+        if (!sourceEl || !opEl || !useCardEl || !thresholdEl) return;
+
+        const sourceCardId = Number(sourceEl.value || 0);
+        const op = opEl.value;
+        const useThresholdCard = (useCardEl.value === "true");
+        const requireNumericCard = useThresholdCard && isNumericOperator(op);
+        const cards = Array.isArray(currentConfig?.cards) ? currentConfig.cards : [];
+        const sourceCard = cards.find((card) => Number(card?.id ?? -1) === sourceCardId) || null;
+        const numericCards = cards.filter((card) => familyHasNumericLiveValue(card?.family));
+        const allowed = [
+          ...(sourceCard ? [sourceCard] : []),
+          ...numericCards.filter((card) => Number(card?.id ?? -1) !== sourceCardId)
+        ];
+
+        if (!allowed.length) {
+          thresholdEl.innerHTML = `<option value="${sourceCardId}">No numeric card available</option>`;
+          thresholdEl.value = String(sourceCardId);
+          thresholdEl.disabled = true;
+          return;
+        }
+
+        const selectedId = Number(selectedThresholdCardId ?? thresholdEl.value ?? sourceCardId);
+        const familyCounters = {};
+        const optionsHtml = allowed.map((card) => {
+          const familyKey = String(card?.family || "UNKNOWN");
+          const familyIndex = familyCounters[familyKey] || 0;
+          familyCounters[familyKey] = familyIndex + 1;
+          const cardId = Number(card?.id ?? 0);
+          const selected = (cardId === selectedId) ? "selected" : "";
+          const selfSuffix = (cardId === sourceCardId) ? " (self)" : "";
+          return `<option value="${cardId}" ${selected}>${cardLabel(card, familyIndex)}${selfSuffix}</option>`;
+        }).join("");
+        thresholdEl.innerHTML = optionsHtml;
+        if (!allowed.some((card) => Number(card?.id ?? -1) === Number(thresholdEl.value))) {
+          thresholdEl.value = String(sourceCardId || allowed[0].id);
+        }
+        thresholdEl.disabled = !requireNumericCard;
       }
 
       function renderConditionGroup(rootEl, prefix, block, fallbackCardId) {
         const b = block || emptyConditionBlock(fallbackCardId);
         const a = b.clauseA || emptyConditionBlock(fallbackCardId).clauseA;
         const c = b.clauseB || emptyConditionBlock(fallbackCardId).clauseB;
-        const opOptions = CONDITION_OPERATORS.map((o) => `<option value="${o}" ${o === a.operator ? "selected" : ""}>${o}</option>`).join("");
-        const opOptionsB = CONDITION_OPERATORS.map((o) => `<option value="${o}" ${o === c.operator ? "selected" : ""}>${o}</option>`).join("");
-        const combOptions = COMBINERS.map((x) => `<option value="${x}" ${x === b.combiner ? "selected" : ""}>${x}</option>`).join("");
+        const combOptions = COMBINERS.map((x) => `<option value="${x}" ${x === b.combiner ? "selected" : ""}>${COMBINER_LABELS[x] || x}</option>`).join("");
+        const sourceAOptions = cardSelectOptions(a.sourceCardId, fallbackCardId);
+        const thresholdAOptions = cardSelectOptions(a.thresholdCardId, fallbackCardId);
+        const sourceBOptions = cardSelectOptions(c.sourceCardId, fallbackCardId);
+        const thresholdBOptions = cardSelectOptions(c.thresholdCardId, fallbackCardId);
 
         rootEl.innerHTML = [
           conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
-          conditionField(`${prefix}_a_source`, "ClauseA Source Card", `<input id="${prefix}_a_source" type="number" value="${a.sourceCardId ?? fallbackCardId}" />`),
-          conditionField(`${prefix}_a_operator`, "ClauseA Operator", `<select id="${prefix}_a_operator">${opOptions}</select>`),
-          conditionField(`${prefix}_a_thr`, "ClauseA Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_a_thr_card`, "ClauseA Threshold Card", `<input id="${prefix}_a_thr_card" type="number" value="${a.thresholdCardId ?? fallbackCardId}" />`),
-          conditionField(`${prefix}_a_use_card`, "ClauseA Use Threshold Card", `<select id="${prefix}_a_use_card">${boolOptions()}</select>`),
-          conditionField(`${prefix}_b_source`, "ClauseB Source Card", `<input id="${prefix}_b_source" type="number" value="${c.sourceCardId ?? fallbackCardId}" />`),
-          conditionField(`${prefix}_b_operator`, "ClauseB Operator", `<select id="${prefix}_b_operator">${opOptionsB}</select>`),
-          conditionField(`${prefix}_b_thr`, "ClauseB Threshold", `<input id="${prefix}_b_thr" type="number" value="${c.thresholdValue ?? 0}" />`),
-          conditionField(`${prefix}_b_thr_card`, "ClauseB Threshold Card", `<input id="${prefix}_b_thr_card" type="number" value="${c.thresholdCardId ?? fallbackCardId}" />`),
-          conditionField(`${prefix}_b_use_card`, "ClauseB Use Threshold Card", `<select id="${prefix}_b_use_card">${boolOptions()}</select>`) 
+          conditionField(`${prefix}_a_source`, "Primary Source Card", `<select id="${prefix}_a_source">${sourceAOptions}</select>`),
+          conditionField(`${prefix}_a_operator`, "Primary Operator", `<select id="${prefix}_a_operator"></select>`),
+          conditionField(`${prefix}_a_thr`, "Primary Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
+          conditionField(`${prefix}_a_thr_card`, "Primary Threshold Card", `<select id="${prefix}_a_thr_card">${thresholdAOptions}</select>`, "Compare against this card when enabled below."),
+          conditionField(`${prefix}_a_use_card`, "Primary Uses Threshold Card", `<select id="${prefix}_a_use_card">${boolOptions()}</select>`, "false: use threshold number, true: use threshold card."),
+          conditionField(`${prefix}_b_source`, "Secondary Source Card", `<select id="${prefix}_b_source">${sourceBOptions}</select>`),
+          conditionField(`${prefix}_b_operator`, "Secondary Operator", `<select id="${prefix}_b_operator"></select>`),
+          conditionField(`${prefix}_b_thr`, "Secondary Threshold", `<input id="${prefix}_b_thr" type="number" value="${c.thresholdValue ?? 0}" />`),
+          conditionField(`${prefix}_b_thr_card`, "Secondary Threshold Card", `<select id="${prefix}_b_thr_card">${thresholdBOptions}</select>`, "Compare against this card when enabled below."),
+          conditionField(`${prefix}_b_use_card`, "Secondary Uses Threshold Card", `<select id="${prefix}_b_use_card">${boolOptions()}</select>`, "false: use threshold number, true: use threshold card.") 
         ].join("");
 
         document.getElementById(`${prefix}_a_use_card`).value = String(!!a.useThresholdCard);
         document.getElementById(`${prefix}_b_use_card`).value = String(!!c.useThresholdCard);
+        refreshOperatorSelect(prefix, "a", a.operator);
+        refreshOperatorSelect(prefix, "b", c.operator);
+        refreshThresholdSelect(prefix, "a", a.thresholdCardId);
+        refreshThresholdSelect(prefix, "b", c.thresholdCardId);
 
         rootEl.querySelectorAll("input,select").forEach((el) => {
           el.addEventListener("change", () => markDirty());
           el.addEventListener("input", () => markDirty());
         });
+        const sourceAEl = document.getElementById(`${prefix}_a_source`);
+        const sourceBEl = document.getElementById(`${prefix}_b_source`);
+        if (sourceAEl) {
+          sourceAEl.addEventListener("change", () => {
+            refreshOperatorSelect(prefix, "a");
+            refreshThresholdSelect(prefix, "a");
+            markDirty();
+          });
+        }
+        if (sourceBEl) {
+          sourceBEl.addEventListener("change", () => {
+            refreshOperatorSelect(prefix, "b");
+            refreshThresholdSelect(prefix, "b");
+            markDirty();
+          });
+        }
+        const opAEl = document.getElementById(`${prefix}_a_operator`);
+        const opBEl = document.getElementById(`${prefix}_b_operator`);
+        const useAEl = document.getElementById(`${prefix}_a_use_card`);
+        const useBEl = document.getElementById(`${prefix}_b_use_card`);
+        if (opAEl) opAEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
+        if (opBEl) opBEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
+        if (useAEl) useAEl.addEventListener("change", () => refreshThresholdSelect(prefix, "a"));
+        if (useBEl) useBEl.addEventListener("change", () => refreshThresholdSelect(prefix, "b"));
       }
 
       function loadSelectedCardToForm() {
