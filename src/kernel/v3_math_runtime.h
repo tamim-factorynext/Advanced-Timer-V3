@@ -49,6 +49,8 @@ struct V3MathRuntimeState {
 struct V3MathStepInput {
   bool turnOnCondition;
   bool turnOffCondition;
+  uint32_t inputA;
+  uint32_t inputB;
 };
 
 /** @brief MATH step output bundle including condition outcomes and reset override. */

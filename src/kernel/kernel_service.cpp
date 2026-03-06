@@ -553,6 +553,10 @@ void KernelService::bindMathSlotsFromConfig() {
     slot.cardId = card.id;
     slot.turnOnCondition = card.math.turnOnCondition;
     slot.turnOffCondition = card.math.turnOffCondition;
+    slot.inputAUseCard = card.math.inputAUseCard;
+    slot.inputACardId = card.math.inputACardId;
+    slot.inputBUseCard = card.math.inputBUseCard;
+    slot.inputBCardId = card.math.inputBCardId;
 
     slot.cfg.operation = card.math.operation;
     slot.cfg.inputA = card.math.inputA;
@@ -834,6 +838,12 @@ void KernelService::runMathScan() {
     in.turnOffCondition =
         evalConditionBlock(slot.turnOffCondition, signalScratch_,
                            v3::storage::kMaxCards);
+    in.inputA = (slot.inputAUseCard && slot.inputACardId < v3::storage::kMaxCards)
+                    ? signalScratch_[slot.inputACardId].liveValue
+                    : slot.cfg.inputA;
+    in.inputB = (slot.inputBUseCard && slot.inputBCardId < v3::storage::kMaxCards)
+                    ? signalScratch_[slot.inputBCardId].liveValue
+                    : slot.cfg.inputB;
 
     V3MathStepOutput out = {};
     runV3MathStep(slot.cfg, slot.state, in, out);

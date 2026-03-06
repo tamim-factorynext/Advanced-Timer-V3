@@ -376,7 +376,9 @@
         ];
         if (family === "MATH") return [
           { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
+          { key: "inputASource", label: "Input A Source", type: "math_input_source", useKey: "inputAUseCard", cardKey: "inputACardId" },
           { key: "inputA", label: "Input A", type: "number", unit: "unit" },
+          { key: "inputBSource", label: "Input B Source", type: "math_input_source", useKey: "inputBUseCard", cardKey: "inputBCardId" },
           { key: "inputB", label: "Input B", type: "number", unit: "unit" },
           { key: "inputMin", label: "Input Min", type: "number", unit: "unit" },
           { key: "inputMax", label: "Input Max", type: "number", unit: "unit" },
@@ -440,6 +442,8 @@
           { value: "any", label: "Any hour" },
           ...Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: `${String(i).padStart(2, "0")}:00` }))
         ];
+        const numericCards = (Array.isArray(currentConfig?.cards) ? currentConfig.cards : [])
+          .filter((c) => familyHasNumericLiveValue(c?.family));
         familyFieldsEl.innerHTML = activeFieldDefs.map((def) => {
           const id = `f_${def.key}`;
           const hintId = `h_${def.key}`;
@@ -479,6 +483,20 @@
               `<option value="${opt.value}" ${opt.value === current ? "selected" : ""}>${opt.label}</option>`
             ).join("");
             control = `<select id="${id}">${opts}</select>`;
+          } else if (def.type === "math_input_source") {
+            const useCard = !!params[def.useKey];
+            const selectedCardId = Number(params[def.cardKey] ?? card.id);
+            const familyCounters = {};
+            const cardOptions = numericCards.map((c) => {
+              const familyKey = String(c?.family || "UNKNOWN");
+              const familyIndex = familyCounters[familyKey] || 0;
+              familyCounters[familyKey] = familyIndex + 1;
+              const cardId = Number(c?.id ?? 0);
+              const selected = useCard && selectedCardId === cardId ? "selected" : "";
+              return `<option value="CARD:${cardId}" ${selected}>${cardLabel(c, familyIndex)}</option>`;
+            }).join("");
+            const constantSelected = useCard ? "" : "selected";
+            control = `<select id="${id}"><option value="CONST" ${constantSelected}>Use constant value</option>${cardOptions}</select>`;
           } else {
             const step = def.step != null ? `step="${def.step}"` : "";
             const min = def.min != null ? `min="${def.min}"` : "";
@@ -492,6 +510,15 @@
           return `<div class="field"><label for="${id}">${label}</label>${control}<div id="${hintId}" class="hint"></div></div>`;
         }).join("");
 
+        const updateMathInputEditability = () => {
+          const srcA = document.getElementById("f_inputASource");
+          const srcB = document.getElementById("f_inputBSource");
+          const aInput = document.getElementById("f_inputA");
+          const bInput = document.getElementById("f_inputB");
+          if (srcA && aInput) aInput.disabled = String(srcA.value || "").startsWith("CARD:");
+          if (srcB && bInput) bInput.disabled = String(srcB.value || "").startsWith("CARD:");
+        };
+
         activeFieldDefs.forEach((def) => {
           const el = document.getElementById(`f_${def.key}`);
           if (!el) return;
@@ -504,9 +531,10 @@
             hintEl.textContent = "";
           };
           updateHint();
-          el.addEventListener("input", () => { updateHint(); markDirty(); });
-          el.addEventListener("change", () => { updateHint(); markDirty(); });
+          el.addEventListener("input", () => { updateHint(); updateMathInputEditability(); markDirty(); });
+          el.addEventListener("change", () => { updateHint(); updateMathInputEditability(); markDirty(); });
         });
+        updateMathInputEditability();
       }
 
       function emptyConditionBlock(cardId) {
@@ -811,6 +839,16 @@
               params.hasHour = true;
               params.hour = readNum(`f_${def.key}`, params.hour ?? 0);
             }
+          } else if (def.type === "math_input_source") {
+            const sourceToken = String(el.value || "CONST");
+            if (sourceToken.startsWith("CARD:")) {
+              const cardId = Number(sourceToken.slice(5));
+              params[def.useKey] = true;
+              params[def.cardKey] = Number.isNaN(cardId) ? card.id : cardId;
+            } else {
+              params[def.useKey] = false;
+              params[def.cardKey] = card.id;
+            }
           } else if (isTimeSecondsField(def)) {
             const currentMs = Number(params[def.key] ?? 0);
             params[def.key] = uiSecondsToStorageMs(document.getElementById(`f_${def.key}`).value, currentMs);
@@ -854,7 +892,7 @@
         return {
           activeVersion: settingsData.activeVersion,
           config: {
-            schemaVersion: settingsData.settings?.schemaVersion ?? 300,
+            schemaVersion: settingsData.settings?.schemaVersion ?? 301,
             scanPeriodMs: settingsData.settings?.scanPeriodMs ?? 10,
             system: {
               wifi: settingsData.settings?.wifi || {},
@@ -876,7 +914,7 @@
       async function loadActive() {
         setBusy(true);
         const data = await loadConfigFromSplit();
-        currentConfig = data.config || { schemaVersion: 300, scanPeriodMs: 10, system: {}, cards: [] };
+        currentConfig = data.config || { schemaVersion: 301, scanPeriodMs: 10, system: {}, cards: [] };
         selectedCardIndex = 0;
         renderCardList();
         loadSelectedCardToForm();

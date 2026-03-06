@@ -23,7 +23,7 @@ Notes:
 
 namespace v3::storage {
 
-constexpr uint32_t kConfigSchemaVersion = 300;
+constexpr uint32_t kConfigSchemaVersion = 301;
 constexpr uint32_t kMinScanIntervalMs = 10;
 constexpr uint32_t kMaxScanIntervalMs = 1000;
 constexpr uint32_t kMathValueMin = 0;
@@ -159,7 +159,11 @@ struct SioParams {
 /** @brief MATH-specific operation, scaling, and condition parameters. */
 struct MathParams {
   uint8_t operation;
+  bool inputAUseCard;
+  uint8_t inputACardId;
   uint32_t inputA;
+  bool inputBUseCard;
+  uint8_t inputBCardId;
   uint32_t inputB;
   uint32_t inputMin;
   uint32_t inputMax;

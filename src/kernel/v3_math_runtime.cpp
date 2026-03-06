@@ -47,17 +47,18 @@ uint32_t saturatingMul(uint32_t a, uint32_t b) {
 }
 
 /** @brief Computes operation raw result with saturating arithmetic where needed. */
-uint32_t computeRawValue(const V3MathRuntimeConfig& cfg) {
+uint32_t computeRawValue(const V3MathRuntimeConfig& cfg, uint32_t inputA,
+                         uint32_t inputB) {
   switch (cfg.operation) {
     case kMathOpAdd:
-      return saturatingAdd(cfg.inputA, cfg.inputB);
+      return saturatingAdd(inputA, inputB);
     case kMathOpSubSat:
-      return (cfg.inputA >= cfg.inputB) ? (cfg.inputA - cfg.inputB) : 0U;
+      return (inputA >= inputB) ? (inputA - inputB) : 0U;
     case kMathOpMul:
-      return saturatingMul(cfg.inputA, cfg.inputB);
+      return saturatingMul(inputA, inputB);
     case kMathOpDivSafe:
-      if (cfg.inputB == 0U) return cfg.fallbackValue;
-      return cfg.inputA / cfg.inputB;
+      if (inputB == 0U) return cfg.fallbackValue;
+      return inputA / inputB;
     default:
       return cfg.fallbackValue;
   }
@@ -113,7 +114,7 @@ void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
   if (in.turnOffCondition) {
     nextValue = cfg.fallbackValue;
   } else if (in.turnOnCondition) {
-    const uint32_t raw = computeRawValue(cfg);
+    const uint32_t raw = computeRawValue(cfg, in.inputA, in.inputB);
     const uint32_t clampedInput = clampToRange(raw, cfg.inputMin, cfg.inputMax);
     const uint32_t scaled =
         mapRange(clampedInput, cfg.inputMin, cfg.inputMax, cfg.outputMin,

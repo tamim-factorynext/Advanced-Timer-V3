@@ -205,6 +205,22 @@ bool validateSystemConfigLight(const SystemConfig& candidate,
       outError.cardIndex = i;
       return false;
     }
+    if (card.family == CardFamily::MATH && card.math.inputAUseCard) {
+      if (card.math.inputACardId >= candidate.cardCount ||
+          !familyHasNumericLiveValue(candidate.cards[card.math.inputACardId].family)) {
+        outError.code = ConfigErrorCode::InvalidMathClamp;
+        outError.cardIndex = i;
+        return false;
+      }
+    }
+    if (card.family == CardFamily::MATH && card.math.inputBUseCard) {
+      if (card.math.inputBCardId >= candidate.cardCount ||
+          !familyHasNumericLiveValue(candidate.cards[card.math.inputBCardId].family)) {
+        outError.code = ConfigErrorCode::InvalidMathClamp;
+        outError.cardIndex = i;
+        return false;
+      }
+    }
 
     if (card.family == CardFamily::RTC &&
         card.rtc.hasMonth && (card.rtc.month < 1 || card.rtc.month > 12)) {

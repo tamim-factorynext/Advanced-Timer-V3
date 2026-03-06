@@ -101,7 +101,11 @@ void initMathCard(CardConfig& card, uint8_t id) {
   card.family = CardFamily::MATH;
   card.enabled = true;
   card.math.operation = 0;  // ADD
+  card.math.inputAUseCard = false;
+  card.math.inputACardId = id;
   card.math.inputA = 0;
+  card.math.inputBUseCard = false;
+  card.math.inputBCardId = id;
   card.math.inputB = 0;
   card.math.inputMin = 0;
   card.math.inputMax = 100;

@@ -204,6 +204,10 @@ class KernelService {
     uint8_t cardId;
     v3::storage::ConditionBlock turnOnCondition;
     v3::storage::ConditionBlock turnOffCondition;
+    bool inputAUseCard;
+    uint8_t inputACardId;
+    bool inputBUseCard;
+    uint8_t inputBCardId;
     V3MathRuntimeConfig cfg;
     V3MathRuntimeState state;
     bool lastSetResult;

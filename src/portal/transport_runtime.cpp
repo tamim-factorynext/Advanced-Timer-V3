@@ -270,7 +270,11 @@ void writeCardJson(JsonObject out, const v3::storage::CardConfig& card) {
       break;
     case v3::storage::CardFamily::MATH:
       params["operation"] = card.math.operation;
+      params["inputAUseCard"] = card.math.inputAUseCard;
+      params["inputACardId"] = card.math.inputACardId;
       params["inputA"] = card.math.inputA;
+      params["inputBUseCard"] = card.math.inputBUseCard;
+      params["inputBCardId"] = card.math.inputBCardId;
       params["inputB"] = card.math.inputB;
       params["inputMin"] = card.math.inputMin;
       params["inputMax"] = card.math.inputMax;

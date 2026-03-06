@@ -564,8 +564,12 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
       return true;
     case CardFamily::MATH:
       if ((!params["operation"].isNull() && !params["operation"].is<uint8_t>()) ||
-          (!params["inputA"].isNull() && !params["inputA"].is<uint32_t>()) ||
-          (!params["inputB"].isNull() && !params["inputB"].is<uint32_t>()) ||
+          !params["inputAUseCard"].is<bool>() ||
+          !params["inputACardId"].is<uint8_t>() ||
+          !params["inputA"].is<uint32_t>() ||
+          !params["inputBUseCard"].is<bool>() ||
+          !params["inputBCardId"].is<uint8_t>() ||
+          !params["inputB"].is<uint32_t>() ||
           (!params["inputMin"].isNull() && !params["inputMin"].is<uint32_t>()) ||
           (!params["inputMax"].isNull() && !params["inputMax"].is<uint32_t>()) ||
           (!params["outputMin"].isNull() &&
@@ -580,8 +584,12 @@ bool parseFamilyParams(JsonObjectConst cardObj, CardConfig& outCard,
         return false;
       }
       outCard.math.operation = params["operation"] | 0U;
-      outCard.math.inputA = params["inputA"] | 0U;
-      outCard.math.inputB = params["inputB"] | 0U;
+      outCard.math.inputAUseCard = params["inputAUseCard"].as<bool>();
+      outCard.math.inputACardId = params["inputACardId"].as<uint8_t>();
+      outCard.math.inputA = params["inputA"].as<uint32_t>();
+      outCard.math.inputBUseCard = params["inputBUseCard"].as<bool>();
+      outCard.math.inputBCardId = params["inputBCardId"].as<uint8_t>();
+      outCard.math.inputB = params["inputB"].as<uint32_t>();
       outCard.math.inputMin = params["inputMin"] | 0U;
       outCard.math.inputMax = params["inputMax"] | 10000U;
       outCard.math.outputMin = params["outputMin"] | 0U;

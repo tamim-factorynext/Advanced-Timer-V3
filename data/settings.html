@@ -185,7 +185,7 @@
         }
 
         function applyFormToConfig(cfg) {
-          cfg.schemaVersion = Number(cfg.schemaVersion || 300);
+          cfg.schemaVersion = Number(cfg.schemaVersion || 301);
           const scanSec = Number(fScanSec.value || 0.01);
           const scanMs = Math.round(scanSec * 1000);
           cfg.scanPeriodMs = Math.min(1000, Math.max(10, scanMs));
