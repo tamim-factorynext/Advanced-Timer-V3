@@ -48,6 +48,25 @@
         .layout { grid-template-columns: 1fr; }
         .card-list { max-height: 220px; }
         .grid, .grid-4 { grid-template-columns: 1fr; }
+        .field {
+          grid-template-columns: minmax(112px, 40%) 1fr;
+          column-gap: 6px;
+          align-items: center;
+          gap: 2px;
+        }
+        .field label {
+          margin: 0;
+          line-height: 1.2;
+          font-size: 11.5px;
+        }
+        .field input,
+        .field select {
+          width: 100%;
+          padding: 6px;
+        }
+        .hint {
+          grid-column: 1 / -1;
+        }
       }
     </style>
   </head>
@@ -147,6 +166,11 @@
         "TRIGGERED", "TRIGGER_CLEARED", "GT", "LT", "EQ", "NEQ", "GTE", "LTE", "RUNNING", "FINISHED", "STOPPED"
       ];
       const COMBINERS = ["NONE", "AND", "OR"];
+      const COMBINER_LABELS = {
+        NONE: "Primary only",
+        AND: "Require both",
+        OR: "Allow either",
+      };
       const OPERATOR_LABELS = {
         ALWAYS_TRUE: "Always True",
         ALWAYS_FALSE: "Always False",
@@ -166,12 +190,6 @@
         FINISHED: "Finished",
         STOPPED: "Stopped",
       };
-      const COMBINER_LABELS = {
-        NONE: "Primary only",
-        AND: "Require both",
-        OR: "Allow either",
-      };
-
       function isNumericOperator(op) {
         return ["GT", "GTE", "LT", "LTE", "EQ", "NEQ"].includes(op);
       }
@@ -301,11 +319,27 @@
         return Object.entries(map).map(([v, t]) => `<option value="${v}" ${String(v) === String(current) ? "selected" : ""}>${t}</option>`).join("");
       }
 
+      function isTimeSecondsField(def) {
+        return def && def.storageUnit === "ms";
+      }
+
+      function storageMsToUiSeconds(msValue) {
+        const n = Number(msValue ?? 0);
+        if (Number.isNaN(n)) return "0.00";
+        return (n / 1000).toFixed(2);
+      }
+
+      function uiSecondsToStorageMs(secValue, fallbackMs = 0) {
+        const n = Number(secValue);
+        if (Number.isNaN(n)) return fallbackMs;
+        return Math.round(Math.max(0, n) * 1000);
+      }
+
       function fieldDefsForFamily(family) {
         if (family === "DI") return [
           { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
           { key: "invert", label: "Invert", type: "bool" },
-          { key: "debounceMs", label: "Debounce", type: "number", unit: "ms", step: 10, hint: "centi-ms" },
+          { key: "debounceMs", label: "Debounce", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "edgeMode", label: "Edge Mode", type: "enum", options: { 0: "DI Rising Edge", 1: "DI Falling Edge", 2: "DI Any Change" } },
           { key: "setEnabled", label: "Set Enabled", type: "bool" },
           { key: "resetEnabled", label: "Reset Enabled", type: "bool" }
@@ -314,8 +348,8 @@
           { key: "channel", label: "GPIO Channel", type: "number", unit: "pin" },
           { key: "invert", label: "Invert", type: "bool" },
           { key: "mode", label: "Mode", type: "enum", options: { 5: "DO Normal", 6: "DO Immediate", 7: "DO Gated" } },
-          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
-          { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
+          { key: "activeDurationMs", label: "ON Duration", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
         ];
         if (family === "AI") return [
@@ -329,8 +363,8 @@
         if (family === "SIO") return [
           { key: "invert", label: "Invert", type: "bool" },
           { key: "mode", label: "Mode", type: "enum", options: { 5: "SIO Normal", 6: "SIO Immediate", 7: "SIO Gated" } },
-          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "ms", hint: "centi-ms" },
-          { key: "activeDurationMs", label: "Active Duration", type: "number", unit: "ms", hint: "centi-ms" },
+          { key: "delayBeforeOnMs", label: "Delay Before ON", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
+          { key: "activeDurationMs", label: "ON Duration", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" },
           { key: "repeatCount", label: "Repeat Count", type: "number", unit: "count" }
         ];
         if (family === "MATH") return [
@@ -351,7 +385,7 @@
           { key: "weekday", label: "Weekday", type: "rtc_weekday" },
           { key: "hour", label: "Hour", type: "rtc_hour" },
           { key: "minute", label: "Minute", type: "number", unit: "0..59" },
-          { key: "triggerDurationMs", label: "Trigger Duration", type: "number", unit: "ms", hint: "centi-ms" }
+          { key: "triggerDurationMs", label: "Trigger Duration", type: "number", unit: "s", step: 0.01, min: 0, storageUnit: "ms" }
         ];
         return [];
       }
@@ -442,7 +476,11 @@
             const step = def.step != null ? `step="${def.step}"` : "";
             const min = def.min != null ? `min="${def.min}"` : "";
             const max = def.max != null ? `max="${def.max}"` : "";
-            control = `<input id="${id}" type="number" ${step} ${min} ${max} value="${params[def.key] ?? ""}" />`;
+            const rawValue = params[def.key];
+            const displayValue = isTimeSecondsField(def)
+              ? storageMsToUiSeconds(rawValue ?? 0)
+              : (rawValue ?? "");
+            control = `<input id="${id}" type="number" ${step} ${min} ${max} value="${displayValue}" />`;
           }
           return `<div class="field"><label for="${id}">${label}</label>${control}<div id="${hintId}" class="hint"></div></div>`;
         }).join("");
@@ -456,14 +494,7 @@
           const updateHint = () => {
             const hintEl = document.getElementById(`h_${def.key}`);
             if (!hintEl) return;
-            if (def.hint === "centi-ms") {
-              const ms = Number(el.value || 0);
-              if (!Number.isNaN(ms)) {
-                hintEl.textContent = `${(ms / 1000).toFixed(2)} s (${Math.round(ms / 10)} centiseconds)`;
-              }
-            } else {
-              hintEl.textContent = "";
-            }
+            hintEl.textContent = "";
           };
           updateHint();
           el.addEventListener("input", () => { updateHint(); markDirty(); });
@@ -592,14 +623,14 @@
         const sourceBOptions = cardSelectOptions(c.sourceCardId, fallbackCardId);
 
         rootEl.innerHTML = [
-          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
           conditionField(`${prefix}_a_source`, "Primary Source Card", `<select id="${prefix}_a_source">${sourceAOptions}</select>`),
           conditionField(`${prefix}_a_operator`, "Primary Operator", `<select id="${prefix}_a_operator"></select>`),
-          conditionField(`${prefix}_a_thr_source`, "Primary Threshold Source", `<select id="${prefix}_a_thr_source"><option value="CONST">Use constant value</option></select>`),
+          conditionField(`${prefix}_a_thr_source`, "Threshold Source", `<select id="${prefix}_a_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_a_thr`, "Primary Threshold", `<input id="${prefix}_a_thr" type="number" value="${a.thresholdValue ?? 0}" />`),
+          conditionField(`${prefix}_combiner`, "Combiner", `<select id="${prefix}_combiner">${combOptions}</select>`),
           conditionField(`${prefix}_b_source`, "Secondary Source Card", `<select id="${prefix}_b_source">${sourceBOptions}</select>`),
           conditionField(`${prefix}_b_operator`, "Secondary Operator", `<select id="${prefix}_b_operator"></select>`),
-          conditionField(`${prefix}_b_thr_source`, "Secondary Threshold Source", `<select id="${prefix}_b_thr_source"><option value="CONST">Use constant value</option></select>`),
+          conditionField(`${prefix}_b_thr_source`, "Threshold Source", `<select id="${prefix}_b_thr_source"><option value="CONST">Use constant value</option></select>`),
           conditionField(`${prefix}_b_thr`, "Secondary Threshold", `<input id="${prefix}_b_thr" type="number" value="${c.thresholdValue ?? 0}" />`),
         ].join("");
 
@@ -668,7 +699,7 @@
         const aThresholdCardId = aUseThresholdCard ? Number(aThresholdSource.slice(5)) : fallbackCardId;
         const bThresholdCardId = bUseThresholdCard ? Number(bThresholdSource.slice(5)) : fallbackCardId;
         return {
-          combiner: document.getElementById(`${prefix}_combiner`).value,
+          combiner: document.getElementById(`${prefix}_combiner`)?.value || "NONE",
           clauseA: {
             sourceCardId: readNum(`${prefix}_a_source`, fallbackCardId),
             operator: document.getElementById(`${prefix}_a_operator`).value,
@@ -734,6 +765,9 @@
               params.hasHour = true;
               params.hour = readNum(`f_${def.key}`, params.hour ?? 0);
             }
+          } else if (isTimeSecondsField(def)) {
+            const currentMs = Number(params[def.key] ?? 0);
+            params[def.key] = uiSecondsToStorageMs(document.getElementById(`f_${def.key}`).value, currentMs);
           } else {
             params[def.key] = readNum(`f_${def.key}`, params[def.key] ?? 0);
           }
