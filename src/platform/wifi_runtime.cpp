@@ -93,7 +93,8 @@ void WiFiRuntime::tick(uint32_t nowMs) {
                       static_cast<unsigned long>(epochNow),
                       localTime.tm_year + 1900, status_.staIp);
         Serial.flush();
-        lastTimeValid_ = timeValid;
+      }
+      lastTimeValid_ = timeValid;
     }
     return;
   }
@@ -208,4 +209,3 @@ void WiFiRuntime::refreshStaIp() {
 }
 
 }  // namespace v3::platform
-
