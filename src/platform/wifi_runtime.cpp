@@ -25,19 +25,13 @@ namespace v3::platform {
 
 namespace {
 
+constexpr bool kLogTimeSync = true;
+constexpr uint32_t kTimeSyncStatusLogIntervalMs = 10000;
+constexpr int kMinimumSyncedYear = 2024;
+constexpr const char* kUtcTimezone = "UTC0";
+
 void formatIp(const IPAddress& ip, char out[16]) {
   std::snprintf(out, 16, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
-}
-
-const char* resolvePosixTimezone(const char* configuredTz) {
-  // configTzTime expects POSIX TZ strings; map known IANA labels used in config.
-  if (configuredTz == nullptr || configuredTz[0] == '\0') {
-    return "UTC0";
-  }
-  if (std::strcmp(configuredTz, "Asia/Dhaka") == 0) {
-    return "BDT-6";
-  }
-  return configuredTz;
 }
 
 }  // namespace
@@ -51,7 +45,9 @@ void WiFiRuntime::begin(const v3::storage::WiFiConfig& config,
   status_.phase = WiFiConnectPhase::None;
   status_.online = false;
   timeSyncConfigured_ = false;
+  lastTimeValid_ = false;
   lastTimeSyncMs_ = 0;
+  lastTimeSyncLogMs_ = 0;
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true, true);
   startBackupAccessNetworkAttempt(0);
@@ -76,6 +72,31 @@ void WiFiRuntime::tick(uint32_t nowMs) {
         configureTimeSync();
         lastTimeSyncMs_ = nowMs;
       }
+
+      const time_t epochNow = time(nullptr);
+      struct tm localTime = {};
+      const bool timeValid =
+          (epochNow > 0) && (localtime_r(&epochNow, &localTime) != nullptr) &&
+          ((localTime.tm_year + 1900) >= kMinimumSyncedYear);
+      if (timeValid && !lastTimeValid_ && kLogTimeSync) {
+        Serial.printf("[time-sync] valid epoch=%lu year=%d ip=%s\n",
+                      static_cast<unsigned long>(epochNow),
+                      localTime.tm_year + 1900, status_.staIp);
+        Serial.flush();
+      } else if (!timeValid && kLogTimeSync &&
+                 (becameConnected ||
+                  (nowMs - lastTimeSyncLogMs_) >= kTimeSyncStatusLogIntervalMs)) {
+        Serial.printf(
+            "[time-sync] waiting valid=0 configured=%u server=%s tz=%s ip=%s epoch=%ld year=%d\n",
+            timeSyncConfigured_ ? 1U : 0U, clockConfig_.timeSync.primaryTimeServer,
+            clockConfig_.timezone, status_.staIp, static_cast<long>(epochNow),
+            (localtime_r(&epochNow, &localTime) != nullptr)
+                ? (localTime.tm_year + 1900)
+                : 0);
+        Serial.flush();
+        lastTimeSyncLogMs_ = nowMs;
+      }
+      lastTimeValid_ = timeValid;
     }
     return;
   }
@@ -125,9 +146,19 @@ void WiFiRuntime::startBackupAccessNetworkAttempt(uint32_t nowMs) {
 
 void WiFiRuntime::configureTimeSync() {
   if (!clockConfig_.timeSync.enabled) return;
-  configTzTime(resolvePosixTimezone(clockConfig_.timezone),
-               clockConfig_.timeSync.primaryTimeServer);
+  const time_t epochBefore = time(nullptr);
+  if (kLogTimeSync) {
+    Serial.printf(
+        "[time-sync] configure server=%s tz=%s configuredTz=%s syncIntervalSec=%lu epochBefore=%ld\n",
+        clockConfig_.timeSync.primaryTimeServer, kUtcTimezone,
+        clockConfig_.timezone,
+        static_cast<unsigned long>(clockConfig_.timeSync.syncIntervalSec),
+        static_cast<long>(epochBefore));
+    Serial.flush();
+  }
+  configTzTime(kUtcTimezone, clockConfig_.timeSync.primaryTimeServer);
   timeSyncConfigured_ = true;
+  lastTimeSyncLogMs_ = 0;
 }
 
 void WiFiRuntime::startUserConfiguredNetworkAttempt(uint32_t nowMs) {

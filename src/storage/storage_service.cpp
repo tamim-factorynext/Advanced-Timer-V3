@@ -37,6 +37,7 @@ constexpr const char* kSplitSettingsPath = "/cfg/settings.json";
 constexpr const char* kSplitCardsIndexPath = "/cfg/cards/index.json";
 constexpr bool kLogStorageBootstrapStages = false;
 constexpr bool kLogStorageFileTrace = false;
+constexpr bool kLogStorageWrites = true;
 
 inline void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -266,32 +267,64 @@ bool writeJsonAtomic(const char* path, JsonDocument& doc) {
   snprintf(tmpPath, sizeof(tmpPath), "%s.tmp", path);
 
   File file = LittleFS.open(tmpPath, "w");
-  if (!file) return false;
+  if (!file) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] open failed path=%s tmp=%s\n", path, tmpPath);
+      Serial.flush();
+    }
+    return false;
+  }
   const size_t written = serializeJson(doc, file);
   file.flush();
   file.close();
   if (written == 0) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] serialize failed path=%s tmp=%s\n", path, tmpPath);
+      Serial.flush();
+    }
     LittleFS.remove(tmpPath);
     return false;
   }
   if (LittleFS.rename(tmpPath, path)) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] commit ok path=%s bytes=%lu\n", path,
+                    static_cast<unsigned long>(written));
+      Serial.flush();
+    }
     return true;
   }
   if (LittleFS.exists(path)) {
     LittleFS.remove(path);
   }
   if (!LittleFS.rename(tmpPath, path)) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] rename failed path=%s tmp=%s\n", path, tmpPath);
+      Serial.flush();
+    }
     LittleFS.remove(tmpPath);
     return false;
+  }
+  if (kLogStorageWrites) {
+    Serial.printf("[storage:write] replace ok path=%s bytes=%lu\n", path,
+                  static_cast<unsigned long>(written));
+    Serial.flush();
   }
   return true;
 }
 
 bool ensureSplitDirs() {
   if (!LittleFS.mkdir(kSplitRootDir) && !LittleFS.exists(kSplitRootDir)) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] mkdir failed path=%s\n", kSplitRootDir);
+      Serial.flush();
+    }
     return false;
   }
   if (!LittleFS.mkdir(kSplitCardsDir) && !LittleFS.exists(kSplitCardsDir)) {
+    if (kLogStorageWrites) {
+      Serial.printf("[storage:write] mkdir failed path=%s\n", kSplitCardsDir);
+      Serial.flush();
+    }
     return false;
   }
   return true;
@@ -301,13 +334,26 @@ bool persistSplitConfig(const SystemConfig& cfg) {
   if (!ensureStorageFsMounted()) return false;
   if (!ensureSplitDirs()) return false;
 
+  if (kLogStorageWrites) {
+    Serial.printf("[storage:write] persist split start cards=%u\n",
+                  static_cast<unsigned>(cfg.cardCount));
+    Serial.flush();
+  }
+
   for (uint8_t i = 0; i < cfg.cardCount; ++i) {
     JsonDocument cardDoc;
     JsonObject cardRoot = cardDoc.to<JsonObject>();
     writeCardJson(cardRoot, cfg.cards[i]);
     char cardPath[64] = {};
     buildCardPath(cfg.cards[i].id, cardPath, sizeof(cardPath));
-    if (!writeJsonAtomic(cardPath, cardDoc)) return false;
+    if (!writeJsonAtomic(cardPath, cardDoc)) {
+      if (kLogStorageWrites) {
+        Serial.printf("[storage:write] card persist failed id=%u path=%s\n",
+                      static_cast<unsigned>(cfg.cards[i].id), cardPath);
+        Serial.flush();
+      }
+      return false;
+    }
   }
 
   JsonDocument settingsDoc;
@@ -330,6 +376,10 @@ bool persistSplitConfig(const SystemConfig& cfg) {
 
   if (LittleFS.exists(kLegacyActiveConfigPath)) {
     LittleFS.remove(kLegacyActiveConfigPath);
+  }
+  if (kLogStorageWrites) {
+    Serial.println("[storage:write] persist split done");
+    Serial.flush();
   }
   return true;
 }

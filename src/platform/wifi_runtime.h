@@ -65,7 +65,9 @@ class WiFiRuntime {
   v3::storage::ClockConfig clockConfig_ = {};
   WiFiStatus status_ = {};
   bool timeSyncConfigured_ = false;
+  bool lastTimeValid_ = false;
   uint32_t lastTimeSyncMs_ = 0;
+  uint32_t lastTimeSyncLogMs_ = 0;
 };
 
 }  // namespace v3::platform

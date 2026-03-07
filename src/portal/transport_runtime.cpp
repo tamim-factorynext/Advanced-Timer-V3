@@ -26,6 +26,7 @@ Notes:
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 #include <esp_system.h>
+#include <esp_task_wdt.h>
 #include <uri/UriBraces.h>
 
 #include "kernel/enum_codec.h"
@@ -49,9 +50,22 @@ constexpr bool kLogHttpMutations = false;
 constexpr bool kLogHttpActions = false;
 constexpr bool kLogTransport404 = false;
 constexpr bool kLogClientConnections = true;
+constexpr bool kLogSettingsCommit = true;
+constexpr bool kLogTransportTiming = true;
+constexpr uint32_t kSlowTransportLogMs = 100;
 
 void sendNoContent() { gHttpServer.send(204, "text/plain", ""); }
 void markTransportActivity() { gLastTransportActivityMs = millis(); }
+void feedTaskWatchdog() { (void)esp_task_wdt_reset(); }
+
+void logTransportTiming(const char* tag, uint32_t elapsedMs) {
+  if (!kLogTransportTiming) return;
+  if (elapsedMs < kSlowTransportLogMs) return;
+  Serial.printf("[transport:slow] %s elapsed=%lums heap=%lu\n", tag,
+                static_cast<unsigned long>(elapsedMs),
+                static_cast<unsigned long>(ESP.getFreeHeap()));
+  Serial.flush();
+}
 
 const char* contentTypeForPath(const String& path) {
   if (path.endsWith(".html")) return "text/html";
@@ -65,11 +79,27 @@ const char* contentTypeForPath(const String& path) {
 }
 
 bool sendLittleFsFile(const char* path) {
+  const uint32_t startedMs = millis();
+  feedTaskWatchdog();
   if (!LittleFS.exists(path)) return false;
   File file = LittleFS.open(path, "r");
   if (!file) return false;
+  if (kLogTransportTiming) {
+    Serial.printf("[transport:file] start path=%s size=%lu heap=%lu\n", path,
+                  static_cast<unsigned long>(file.size()),
+                  static_cast<unsigned long>(ESP.getFreeHeap()));
+    Serial.flush();
+  }
   gHttpServer.streamFile(file, contentTypeForPath(String(path)));
+  feedTaskWatchdog();
   file.close();
+  const uint32_t elapsedMs = millis() - startedMs;
+  if (kLogTransportTiming) {
+    Serial.printf("[transport:file] done path=%s elapsed=%lums heap=%lu\n", path,
+                  static_cast<unsigned long>(elapsedMs),
+                  static_cast<unsigned long>(ESP.getFreeHeap()));
+    Serial.flush();
+  }
   return true;
 }
 
@@ -688,6 +718,12 @@ void handleHttpConfigRestorePost() {
 void handleHttpSettingsGet() {
   markTransportActivity();
   logHttpAccess("api.settings.get");
+  const uint32_t startedMs = millis();
+  if (kLogTransportTiming) {
+    Serial.printf("[settings.get] start heap=%lu\n",
+                  static_cast<unsigned long>(ESP.getFreeHeap()));
+    Serial.flush();
+  }
   if (gStorage == nullptr) {
     gHttpServer.send(500, "application/json",
                      "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
@@ -704,6 +740,15 @@ void handleHttpSettingsGet() {
   String body;
   serializeJson(doc, body);
   gHttpServer.send(200, "application/json", body);
+  feedTaskWatchdog();
+  const uint32_t elapsedMs = millis() - startedMs;
+  if (kLogTransportTiming) {
+    Serial.printf("[settings.get] done elapsed=%lums bytes=%u heap=%lu\n",
+                  static_cast<unsigned long>(elapsedMs),
+                  static_cast<unsigned>(body.length()),
+                  static_cast<unsigned long>(ESP.getFreeHeap()));
+    Serial.flush();
+  }
 }
 
 void handleHttpSettingsPut() {
@@ -728,13 +773,19 @@ void handleHttpSettingsPut() {
   String requestId = root["requestId"].is<const char*>()
                          ? String(root["requestId"].as<const char*>())
                          : String();
-  if (kLogHttpActions) {
-    Serial.printf("[http-action] settings.put requestId=%s\n", requestId.c_str());
+  if (kLogHttpActions || kLogSettingsCommit) {
+    Serial.printf("[settings.put] requestId=%s payloadBytes=%u\n", requestId.c_str(),
+                  static_cast<unsigned>(payload.length()));
     Serial.flush();
   }
 
   v3::storage::SystemConfig* candidate = gStorage->prepareStagedFromActive();
   if (candidate == nullptr) {
+    if (kLogSettingsCommit) {
+      Serial.printf("[settings.put] requestId=%s staged copy alloc failed\n",
+                    requestId.c_str());
+      Serial.flush();
+    }
     sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
                     "settings staging buffer unavailable");
     return;
@@ -743,6 +794,12 @@ void handleHttpSettingsPut() {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::decodeSystemSettingsLight(settingsObj, *candidate,
                                               decodeError)) {
+    if (kLogSettingsCommit) {
+      Serial.printf("[settings.put] requestId=%s decode failed code=%s\n",
+                    requestId.c_str(),
+                    v3::storage::configErrorCodeToString(decodeError.code));
+      Serial.flush();
+    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
                     v3::storage::configErrorCodeToString(decodeError.code));
     return;
@@ -750,19 +807,43 @@ void handleHttpSettingsPut() {
   v3::storage::ConfigValidationError validationError = {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::validateSystemConfigLight(*candidate, validationError)) {
+    if (kLogSettingsCommit) {
+      Serial.printf("[settings.put] requestId=%s validate failed code=%s\n",
+                    requestId.c_str(),
+                    v3::storage::configErrorCodeToString(validationError.code));
+      Serial.flush();
+    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
                     v3::storage::configErrorCodeToString(validationError.code));
     return;
   }
 
   if (!gStorage->stageSystemConfig(*candidate)) {
+    if (kLogSettingsCommit) {
+      Serial.printf("[settings.put] requestId=%s stage failed\n", requestId.c_str());
+      Serial.flush();
+    }
     sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
                     "settings staging buffer unavailable");
     return;
   }
+  if (kLogSettingsCommit) {
+    Serial.printf("[settings.put] requestId=%s commit start\n", requestId.c_str());
+    Serial.flush();
+  }
   if (!gStorage->commitStaged()) {
+    if (kLogSettingsCommit) {
+      Serial.printf("[settings.put] requestId=%s commit failed\n", requestId.c_str());
+      Serial.flush();
+    }
     sendConfigError(409, "COMMIT_FAILED", requestId, "settings commit failed");
     return;
+  }
+  if (kLogSettingsCommit) {
+    Serial.printf("[settings.put] requestId=%s commit ok activeVersion=%lu\n",
+                  requestId.c_str(),
+                  static_cast<unsigned long>(gStorage->activeRevision()));
+    Serial.flush();
   }
   JsonDocument doc;
   doc["ok"] = true;
@@ -1232,8 +1313,15 @@ void initTransportRuntime(PortalService& portal,
  */
 void serviceTransportRuntime() {
   if (!gTransportInitialized) return;
+  const uint32_t httpStartedMs = millis();
+  feedTaskWatchdog();
   gHttpServer.handleClient();
+  feedTaskWatchdog();
+  logTransportTiming("http.handleClient", millis() - httpStartedMs);
+  const uint32_t wsStartedMs = millis();
   gWsServer.loop();
+  feedTaskWatchdog();
+  logTransportTiming("ws.loop", millis() - wsStartedMs);
 }
 
 bool hasRecentTransportActivity(uint32_t nowMs, uint32_t windowMs) {
