@@ -55,6 +55,75 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
   - stable fallback checkpoints,
   - stop conditions and rollback requirement before proceeding.
 
+### Transport Rewrite Pass 1 (Response Lifecycle Consolidation)
+
+- Applied pass-1 internal consolidation in `src/portal/transport_runtime.cpp`:
+  - migrated remaining API JSON responses to unified helpers (`sendJsonResponse` / `sendJsonLiteral`).
+  - migrated static-page 404 responses to helper path (`sendNotFoundForPath`).
+  - kept frontend route/payload behavior unchanged.
+- Goal of this pass:
+  - enforce deterministic client lifecycle handling across transport response paths.
+  - reduce risk of lingering sockets under mixed page navigation + live polling load.
+- Verification note:
+  - local shell build check unavailable due PlatformIO Python launcher path issue in this environment.
+  - on-device validation required from IDE/normal upload workflow.
+
+### Transport Rewrite Pass 2 (Connection Policy Correction)
+
+- Observed from device logs:
+  - forcing close on every JSON response created high connection churn under runtime polling.
+  - resulted in repeated socket write failures (`fd 50`) and long stalled page loads after save.
+- Applied policy correction in `src/portal/transport_runtime.cpp`:
+  - JSON/no-content/error responses now use keep-alive response headers.
+  - static file responses remain explicit close + bounded manual streaming.
+  - explicit post-mutation close remains in place for `settings.put` / `card.put`.
+- Intent:
+  - reduce fd/socket exhaustion pressure while keeping mutation transition deterministic.
+
+### Transport Rewrite Pass 3 (Mutation Close Rollback A/B)
+
+- New evidence indicated failures start immediately after `card.put` close handling.
+- Removed explicit post-mutation forced client close from:
+  - `settings.put`
+  - `card.put`
+- Kept other transport safeguards unchanged (bounded static streaming, disconnected-client drop guards).
+- Purpose:
+  - isolate whether `client.stop()` after mutation responses was triggering the post-save write-failure cascade.
+
+### Transport Rewrite Decision Update (Live Stream Scoping)
+
+- Decision:
+  - Scope runtime live transport to Live page only.
+  - Suspend `/api/v3/runtime/metrics` and `/api/v3/runtime/cards/delta` when user is not on Live page.
+  - On Live re-entry, perform clean live-state restart (fresh baseline then delta).
+- Reason:
+  - reduce post-save/page-navigation backpressure collisions,
+  - reduce socket churn and write-fail storms,
+  - align with thermal-efficiency architecture policy.
+
+### Transport Rewrite Pass 4 (Live Page Poll Discipline)
+
+- Updated `data/index.html` live polling behavior:
+  - runtime polling now runs only when the Live page tab is visible.
+  - polling stops automatically on tab hide and before unload.
+  - single-flight guard added for metrics and delta requests (no overlapping in-flight fetches).
+  - polling cadence adjusted from fixed 1000ms to 1200ms.
+- Goal:
+  - reduce background transport pressure during non-Live navigation,
+  - reduce socket backpressure collision during post-save page transitions.
+
+### Transport Containment Switch (Forced Reboot After Save)
+
+- Added guarded fallback in `src/portal/transport_runtime.cpp`:
+  - compile-time flag: `AT_FORCE_REBOOT_AFTER_SAVE`
+  - when enabled, successful `settings.put` and `card.put` responses schedule a short delayed reboot.
+  - response payload now includes `forcedRebootScheduled` for operator visibility.
+- Safety posture:
+  - default state remains OFF (no behavior change unless explicitly enabled).
+  - use only as temporary containment if post-save transport stalls persist.
+- Cleanup requirement:
+  - remove this fallback once transport write-stall root cause is fixed and stress tests pass.
+
 ## 2026-03-06
 
 ### Settings UX Simplification + WiFi Workflow Backlog Note

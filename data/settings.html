@@ -40,6 +40,20 @@
       .muted { color: var(--muted-strong); }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--muted-strong); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
+      .card { animation: card-in 220ms ease-out both; }
+      @keyframes card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .activity-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.45); z-index: 9998; }
+      .activity-overlay.show { display: flex; }
+      .activity-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); padding: 14px 16px; min-width: 260px; max-width: 86vw; box-shadow: var(--shadow); display: grid; gap: 8px; }
+      .activity-head { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 700; }
+      .spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--line); border-top-color: var(--accent-2); animation: spin 900ms linear infinite; }
+      .activity-detail { color: var(--muted-strong); font-size: 13px; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      .reboot-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.65); z-index: 9999; }
+      .reboot-overlay.show { display: flex; }
+      .reboot-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); padding: 14px 16px; min-width: 260px; max-width: 86vw; box-shadow: var(--shadow); }
+      .reboot-title { font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+      .reboot-detail { color: var(--muted-strong); font-size: 13px; }
       @media (max-width: 900px) {
         .field { grid-template-columns: 120px 1fr; gap: 8px; }
         .field label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -105,15 +119,33 @@
         <div>&copy; Advanced Timer V3</div>
         <div class="name">Developed by Yahya Tamim</div>
       </footer>
+      <div id="activityOverlay" class="activity-overlay" aria-live="polite" role="status">
+        <div class="activity-panel">
+          <div class="activity-head"><span class="spinner"></span><span id="activityTitle">Processing...</span></div>
+          <div id="activityDetail" class="activity-detail">Please wait.</div>
+        </div>
+      </div>
+      <div id="rebootOverlay" class="reboot-overlay" aria-live="polite" role="status">
+        <div class="reboot-panel">
+          <div class="reboot-title">Reboot In Progress</div>
+          <div id="rebootDetail" class="reboot-detail">Preparing reboot request...</div>
+        </div>
+      </div>
 
       <script>
         const themeSelect = document.getElementById("themeSelect");
         const resultEl = document.getElementById("result");
         const logEl = document.getElementById("log");
+        const activityOverlayEl = document.getElementById("activityOverlay");
+        const activityTitleEl = document.getElementById("activityTitle");
+        const activityDetailEl = document.getElementById("activityDetail");
+        const rebootOverlayEl = document.getElementById("rebootOverlay");
+        const rebootDetailEl = document.getElementById("rebootDetail");
           const actionIds = ["btnReload", "btnApply", "btnReboot"];
         let requestInFlight = false;
         let currentConfig = null;
         let dirty = false;
+        let bypassUnsavedGuard = false;
 
         const fScanSec = document.getElementById("fScanSec");
         const fScanSecValue = document.getElementById("fScanSecValue");
@@ -201,6 +233,57 @@
           logEl.textContent = `[${stamp()}] ${msg}${body ? "\n" + body : ""}`;
         }
 
+        function showActivity(title, detail) {
+          activityTitleEl.textContent = title || "Processing...";
+          activityDetailEl.textContent = detail || "Please wait.";
+          activityOverlayEl.classList.add("show");
+        }
+
+        function hideActivity() {
+          activityOverlayEl.classList.remove("show");
+        }
+
+        function attachNavLoadingFeedback() {
+          document.querySelectorAll(".nav a").forEach((anchor) => {
+            anchor.addEventListener("click", () => {
+              showActivity("Loading page...", `Opening ${anchor.getAttribute("href")} ...`);
+            });
+          });
+        }
+
+        function sleep(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        function setRebootOverlay(message, visible = true) {
+          rebootDetailEl.textContent = message;
+          rebootOverlayEl.classList.toggle("show", visible);
+        }
+
+        async function waitForPortalRecovery(pathname) {
+          const deadlineMs = Date.now() + 60000;
+          let attempts = 0;
+          while (Date.now() < deadlineMs) {
+            attempts += 1;
+            setRebootOverlay(`Waiting for device to return... attempt ${attempts}`);
+            await sleep(1100);
+            try {
+              const resp = await fetch(`/api/v3/health?reconnect=${Date.now()}`, {
+                method: "GET",
+                cache: "no-store",
+              });
+              if (resp.ok) {
+                bypassUnsavedGuard = true;
+                location.replace(`${pathname}?reconnected=${Date.now()}`);
+                return;
+              }
+            } catch (_) {
+              // Device still rebooting.
+            }
+          }
+          throw new Error("Timed out while waiting for device to reconnect.");
+        }
+
         function markDirty() {
           dirty = true;
           document.title = "* AT-V3 Portal | Settings";
@@ -273,6 +356,7 @@
         }
 
       async function loadActive() {
+        showActivity("Loading settings...", "Synchronizing active values...");
         setBusy(true);
         const data = await api("/api/v3/settings", "GET");
         currentConfig = data.settings || {};
@@ -280,10 +364,12 @@
         clearDirty();
         setResult(true, "Loaded active settings.", `version=${data.activeVersion}`);
         setLog(true, "Load success", "Settings form synchronized from split settings endpoint.");
+        hideActivity();
         setBusy(false);
       }
 
         async function saveAndApply() {
+        showActivity("Applying settings...", "Validating and saving to device...");
         setBusy(true);
         const cfg = applyFormToConfig(currentConfig || {});
         const data = await api("/api/v3/settings", "PUT", {
@@ -296,6 +382,7 @@
         const restartHint = data.requiresRestart ? " restart required" : "";
         setResult(true, "Settings applied.", `version=${data.activeVersion}${restartHint}`);
         setLog(true, "Apply success", JSON.stringify(data, null, 2));
+        hideActivity();
         setBusy(false);
       }
 
@@ -305,18 +392,29 @@
             return;
         }
         setBusy(true);
-        const data = await api("/api/v3/system/reboot", "POST", {
-          requestId: `reboot-${Date.now()}`,
-          apiVersion: "2.0",
-        });
-        setResult(true, "Reboot requested.", "Device is restarting.");
-        setLog(true, "Reboot requested", JSON.stringify(data, null, 2));
-        setBusy(false);
+        setRebootOverlay("Sending reboot request...");
+        try {
+          await api("/api/v3/system/reboot", "POST", {
+            requestId: `reboot-${Date.now()}`,
+            apiVersion: "2.0",
+          });
+        } catch (_) {
+          // Ignore immediate disconnect after reboot command.
+        }
+        try {
+          await waitForPortalRecovery(window.location.pathname);
+        } catch (e) {
+          setBusy(false);
+          setResult(false, "Reboot reconnect failed.", String(e));
+          setLog(false, "Reboot reconnect failed", String(e));
+          setRebootOverlay(String(e), true);
+        }
       }
 
         async function runAction(label, fn) {
           if (requestInFlight) return;
           try { await fn(); } catch (e) {
+            hideActivity();
             setBusy(false);
             setResult(false, `${label} failed.`, String(e));
             setLog(false, `${label} failed`, String(e));
@@ -341,12 +439,14 @@
         });
 
         window.addEventListener("beforeunload", (ev) => {
+          if (bypassUnsavedGuard) return;
           if (!dirty) return;
           ev.preventDefault();
           ev.returnValue = "";
         });
 
         const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
+        attachNavLoadingFeedback();
         renderTimezoneOptions();
         themeSelect.value = savedTheme;
         applyTheme(savedTheme);

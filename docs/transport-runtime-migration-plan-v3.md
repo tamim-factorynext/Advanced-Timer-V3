@@ -56,6 +56,13 @@ Out of scope:
 - Prefer one active live channel per client session (WebSocket or HTTP polling), not duplicate parallel streams for the same data.
 - If no active portal client is consuming live data, skip live transport serialization/sends.
 
+6. Live-page scoped runtime streaming
+- Runtime live endpoints (`/api/v3/runtime/metrics`, `/api/v3/runtime/cards/delta`) are active only while the user is on Live page.
+- Leaving Live page suspends runtime polling/streaming.
+- Returning to Live page performs a clean restart:
+  - fresh baseline read,
+  - then delta loop resume from a known sequence point.
+
 ## Migration Phases
 
 ## Phase 0: Baseline Freeze

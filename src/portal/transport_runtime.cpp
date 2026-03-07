@@ -56,10 +56,20 @@ constexpr bool kLogCardCommit = true;
 constexpr bool kLogTransportTiming = true;
 constexpr bool kLogTransportResponses = true;
 constexpr uint32_t kSlowTransportLogMs = 100;
-constexpr uint32_t kStreamWriteStallTimeoutMs = 1500;
+constexpr uint32_t kStreamWriteStallTimeoutMs = 5000;
+constexpr uint32_t kForcedRebootDelayMs = 250;
+#if defined(AT_FORCE_REBOOT_AFTER_SAVE) && (AT_FORCE_REBOOT_AFTER_SAVE != 0)
+constexpr bool kForceRebootAfterMutationSave = true;
+#else
+constexpr bool kForceRebootAfterMutationSave = false;
+#endif
 
-void prepareHttpResponse() {
-  gHttpServer.sendHeader("Connection", "close");
+void prepareHttpResponse(bool closeConnection = false) {
+  if (closeConnection) {
+    gHttpServer.sendHeader("Connection", "close");
+  } else {
+    gHttpServer.sendHeader("Connection", "keep-alive");
+  }
   gHttpServer.sendHeader("Cache-Control", "no-store");
 }
 
@@ -75,25 +85,55 @@ void logHttpResponse(const char* tag, int statusCode, size_t bytes) {
   Serial.flush();
 }
 
+bool canSendHttpResponse(const char* tag) {
+  WiFiClient client = gHttpServer.client();
+  if (client.connected()) return true;
+  if (kLogTransportResponses) {
+    const IPAddress remoteIp = client.remoteIP();
+    Serial.printf(
+        "[transport:drop] tag=%s reason=client_disconnected heap=%lu ip=%u.%u.%u.%u uri=%s\n",
+        tag, static_cast<unsigned long>(ESP.getFreeHeap()), remoteIp[0],
+        remoteIp[1], remoteIp[2], remoteIp[3], gHttpServer.uri().c_str());
+    Serial.flush();
+  }
+  client.stop();
+  return false;
+}
+
+void forceRebootAfterSaveIfEnabled(const char* tag, const String& requestId) {
+  if (!kForceRebootAfterMutationSave) return;
+  Serial.printf("[transport:reboot] reason=%s requestId=%s delayMs=%lu\n", tag,
+                requestId.c_str(),
+                static_cast<unsigned long>(kForcedRebootDelayMs));
+  Serial.flush();
+  WiFiClient client = gHttpServer.client();
+  if (client.connected()) {
+    client.flush();
+    client.stop();
+  }
+  delay(kForcedRebootDelayMs);
+  esp_restart();
+}
+
 void sendJsonResponse(int statusCode, const String& body) {
-  prepareHttpResponse();
+  if (!canSendHttpResponse("json")) return;
+  prepareHttpResponse(false);
   logHttpResponse("json", statusCode, body.length());
   gHttpServer.send(statusCode, "application/json", body);
-  gHttpServer.client().stop();
 }
 
 void sendJsonLiteral(int statusCode, const char* body) {
-  prepareHttpResponse();
+  if (!canSendHttpResponse("json.literal")) return;
+  prepareHttpResponse(false);
   logHttpResponse("json.literal", statusCode,
                   (body != nullptr) ? std::strlen(body) : 0U);
   gHttpServer.send(statusCode, "application/json", body);
-  gHttpServer.client().stop();
 }
 
 void sendNoContent() {
-  prepareHttpResponse();
+  if (!canSendHttpResponse("no-content")) return;
+  prepareHttpResponse(false);
   gHttpServer.send(204, "text/plain", "");
-  gHttpServer.client().stop();
 }
 void markTransportActivity() { gLastTransportActivityMs = millis(); }
 void feedTaskWatchdog() { (void)esp_task_wdt_reset(); }
@@ -105,17 +145,6 @@ void logTransportTiming(const char* tag, uint32_t elapsedMs) {
                 static_cast<unsigned long>(elapsedMs),
                 static_cast<unsigned long>(ESP.getFreeHeap()));
   Serial.flush();
-}
-
-void closeCurrentHttpClient(const char* reason) {
-  const IPAddress remoteIp = gHttpServer.client().remoteIP();
-  Serial.printf(
-      "[transport:client] close reason=%s connected=%u heap=%lu ip=%u.%u.%u.%u uri=%s\n",
-      reason, gHttpServer.client().connected() ? 1U : 0U,
-      static_cast<unsigned long>(ESP.getFreeHeap()), remoteIp[0], remoteIp[1],
-      remoteIp[2], remoteIp[3], gHttpServer.uri().c_str());
-  Serial.flush();
-  gHttpServer.client().stop();
 }
 
 const char* contentTypeForPath(const String& path) {
@@ -135,9 +164,13 @@ bool sendLittleFsFile(const char* path) {
   if (!LittleFS.exists(path)) return false;
   File file = LittleFS.open(path, "r");
   if (!file) return false;
+  if (!canSendHttpResponse("file")) {
+    file.close();
+    return true;
+  }
   const size_t fileSize = file.size();
   const String contentType = contentTypeForPath(String(path));
-  prepareHttpResponse();
+  prepareHttpResponse(true);
   if (kLogTransportTiming) {
     Serial.printf("[transport:file] start path=%s size=%lu heap=%lu connected=%u\n", path,
                   static_cast<unsigned long>(fileSize),
@@ -149,7 +182,7 @@ bool sendLittleFsFile(const char* path) {
   gHttpServer.send(200, contentType.c_str(), "");
   WiFiClient client = gHttpServer.client();
   size_t bytesSent = 0;
-  uint8_t buffer[1024];
+  uint8_t buffer[512];
   uint32_t lastProgressMs = millis();
   bool streamOk = true;
   while (file.available()) {
@@ -174,6 +207,8 @@ bool sendLittleFsFile(const char* path) {
         chunkSent += wrote;
         bytesSent += wrote;
         lastProgressMs = millis();
+        // Pace writes slightly to reduce socket backpressure under bursty UI traffic.
+        delay(1);
         continue;
       }
       if ((millis() - lastProgressMs) >= kStreamWriteStallTimeoutMs) {
@@ -227,7 +262,7 @@ const char* methodToString(const HTTPMethod method) {
 }
 
 void handleHttpCorsOptions() {
-  prepareHttpResponse();
+  prepareHttpResponse(false);
   gHttpServer.sendHeader("Access-Control-Allow-Origin", "*");
   gHttpServer.sendHeader("Access-Control-Allow-Methods",
                          "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD");
@@ -547,6 +582,7 @@ bool parseCardIdFromPathArg(uint8_t& outCardId) {
 
 void sendConfigError(int statusCode, const char* errorCode, const String& requestId,
                      const String& message) {
+  if (!canSendHttpResponse("config.error")) return;
   JsonDocument doc;
   doc["ok"] = false;
   doc["apiVersion"] = "2.0";
@@ -559,9 +595,18 @@ void sendConfigError(int statusCode, const char* errorCode, const String& reques
   String body;
   serializeJson(doc, body);
   logHttpResponse("config.error", statusCode, body.length());
-  prepareHttpResponse();
+  prepareHttpResponse(false);
   gHttpServer.send(statusCode, "application/json", body);
-  gHttpServer.client().stop();
+}
+
+void sendNotFoundForPath(const char* path) {
+  JsonDocument doc;
+  doc["ok"] = false;
+  doc["reason"] = "not_found";
+  doc["path"] = path;
+  String body;
+  serializeJson(doc, body);
+  sendJsonResponse(404, body);
 }
 
 /**
@@ -690,8 +735,7 @@ void handleHttpRuntimeCardsDeltaGet() {
     for (size_t i = 0; i < sinceRaw.length(); ++i) {
       const char c = sinceRaw.charAt(i);
       if (c < '0' || c > '9') {
-        gHttpServer.send(400, "application/json",
-                         "{\"ok\":false,\"reason\":\"invalid_since\"}");
+        sendJsonLiteral(400, "{\"ok\":false,\"reason\":\"invalid_since\"}");
         return;
       }
     }
@@ -756,8 +800,7 @@ void handleHttpDiagnosticsGet() {
     sendJsonLiteral(503, "{\"ok\":false,\"reason\":\"diagnostics_not_ready\"}");
     return;
   }
-  prepareHttpResponse();
-  gHttpServer.send(200, "application/json", state.json);
+  sendJsonResponse(200, String(state.json));
 }
 
 void handleHttpConfigRestorePost() {
@@ -811,7 +854,7 @@ void handleHttpConfigRestorePost() {
   doc["requiresRestart"] = true;
   String body;
   serializeJson(doc, body);
-  gHttpServer.send(200, "application/json", body);
+  sendJsonResponse(200, body);
 }
 
 void handleHttpSettingsGet() {
@@ -950,6 +993,7 @@ void handleHttpSettingsPut() {
   doc["tsMs"] = millis();
   doc["activeVersion"] = gStorage->activeRevision();
   doc["requiresRestart"] = true;
+  doc["forcedRebootScheduled"] = kForceRebootAfterMutationSave;
   String body;
   serializeJson(doc, body);
   sendJsonResponse(200, body);
@@ -959,7 +1003,7 @@ void handleHttpSettingsPut() {
                   static_cast<unsigned long>(ESP.getFreeHeap()));
     Serial.flush();
   }
-  closeCurrentHttpClient("settings.put.success");
+  forceRebootAfterSaveIfEnabled("settings.put.success", requestId);
 }
 
 void handleHttpSystemRebootPost() {
@@ -978,12 +1022,17 @@ void handleHttpSystemRebootPost() {
   esp_restart();
 }
 
+void handleHttpHealthGet() {
+  markTransportActivity();
+  logHttpAccess("api.health.get");
+  sendNoContent();
+}
+
 void handleHttpCardsIndexGet() {
   markTransportActivity();
   logHttpAccess("api.cards.index.get");
   if (gStorage == nullptr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
     return;
   }
   const v3::storage::SystemConfig& cfg = gStorage->activeSystemConfig();
@@ -1002,22 +1051,20 @@ void handleHttpCardsIndexGet() {
   }
   String body;
   serializeJson(doc, body);
-  gHttpServer.send(200, "application/json", body);
+  sendJsonResponse(200, body);
 }
 
 void handleHttpCardGetById(uint8_t cardId) {
   markTransportActivity();
   logHttpAccess("api.cards.by-id.get");
   if (gStorage == nullptr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
     return;
   }
   const v3::storage::SystemConfig& cfg = gStorage->activeSystemConfig();
   const int8_t index = findCardIndexById(cfg, cardId);
   if (index < 0) {
-    gHttpServer.send(404, "application/json",
-                     "{\"ok\":false,\"reason\":\"card_not_found\"}");
+    sendJsonLiteral(404, "{\"ok\":false,\"reason\":\"card_not_found\"}");
     return;
   }
   JsonDocument doc;
@@ -1030,15 +1077,14 @@ void handleHttpCardGetById(uint8_t cardId) {
   writeCardJson(card, cfg.cards[static_cast<uint8_t>(index)]);
   String body;
   serializeJson(doc, body);
-  gHttpServer.send(200, "application/json", body);
+  sendJsonResponse(200, body);
 }
 
 void handleHttpCardPutById(uint8_t cardId) {
   markTransportActivity();
   logHttpAccess("api.cards.by-id.put");
   if (gStorage == nullptr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
     return;
   }
   const String payload = gHttpServer.arg("plain");
@@ -1170,6 +1216,7 @@ void handleHttpCardPutById(uint8_t cardId) {
   doc["tsMs"] = millis();
   doc["activeVersion"] = gStorage->activeRevision();
   doc["requiresRestart"] = true;
+  doc["forcedRebootScheduled"] = kForceRebootAfterMutationSave;
   String body;
   serializeJson(doc, body);
   if (kLogCardCommit) {
@@ -1188,14 +1235,13 @@ void handleHttpCardPutById(uint8_t cardId) {
                   static_cast<unsigned long>(ESP.getFreeHeap()));
     Serial.flush();
   }
-  closeCurrentHttpClient("card.put.success");
+  forceRebootAfterSaveIfEnabled("card.put.success", requestId);
 }
 
 void handleHttpCardGetByPathArg() {
   uint8_t cardId = 0;
   if (!parseCardIdFromPathArg(cardId)) {
-    gHttpServer.send(400, "application/json",
-                     "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
+    sendJsonLiteral(400, "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
     return;
   }
   handleHttpCardGetById(cardId);
@@ -1204,8 +1250,7 @@ void handleHttpCardGetByPathArg() {
 void handleHttpCardPutByPathArg() {
   uint8_t cardId = 0;
   if (!parseCardIdFromPathArg(cardId)) {
-    gHttpServer.send(400, "application/json",
-                     "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
+    sendJsonLiteral(400, "{\"ok\":false,\"reason\":\"invalid_card_path\"}");
     return;
   }
   handleHttpCardPutById(cardId);
@@ -1225,12 +1270,11 @@ void handleHttpRootGet() {
     return;
   }
   if (gPortal == nullptr) {
-    gHttpServer.send(500, "application/json",
-                     "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"portal_not_ready\"}");
     return;
   }
-  gHttpServer.send(
-      200, "application/json",
+  sendJsonLiteral(
+      200,
       "{\"ok\":true,\"service\":\"advanced-timer-v3\",\"routes\":[\"/api/v3/"
       "diagnostics\",\"/api/v3/command\","
       "\"/api/v3/runtime/metrics\",\"/api/v3/runtime/cards\","
@@ -1304,83 +1348,70 @@ void initTransportRuntime(PortalService& portal,
     markTransportActivity();
     logHttpAccess("page.index");
     if (!sendLittleFsFile("/index.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/index.html\"}");
+      sendNotFoundForPath("/index.html");
     }
   });
   gHttpServer.on("/config", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.config");
     if (!sendLittleFsFile("/config.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/config\"}");
+      sendNotFoundForPath("/config");
     }
   });
   gHttpServer.on("/config.html", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.config.html");
     if (!sendLittleFsFile("/config.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/config.html\"}");
+      sendNotFoundForPath("/config.html");
     }
   });
   gHttpServer.on("/settings", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.settings");
     if (!sendLittleFsFile("/settings.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/settings\"}");
+      sendNotFoundForPath("/settings");
     }
   });
   gHttpServer.on("/settings.html", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.settings.html");
     if (!sendLittleFsFile("/settings.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/settings.html\"}");
+      sendNotFoundForPath("/settings.html");
     }
   });
   gHttpServer.on("/learn", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.learn");
     if (!sendLittleFsFile("/learn.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/learn\"}");
+      sendNotFoundForPath("/learn");
     }
   });
   gHttpServer.on("/learn.html", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.learn.html");
     if (!sendLittleFsFile("/learn.html")) {
-      gHttpServer.send(404, "application/json",
-                       "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/learn.html\"}");
+      sendNotFoundForPath("/learn.html");
     }
   });
   gHttpServer.on("/getting-started", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.getting-started");
     if (!sendLittleFsFile("/learn.html")) {
-      gHttpServer.send(
-          404, "application/json",
-          "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/getting-started\"}");
+      sendNotFoundForPath("/getting-started");
     }
   });
   gHttpServer.on("/tutorial", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.tutorial");
     if (!sendLittleFsFile("/learn.html")) {
-      gHttpServer.send(
-          404, "application/json",
-          "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/tutorial\"}");
+      sendNotFoundForPath("/tutorial");
     }
   });
   gHttpServer.on("/examples", HTTP_GET, []() {
     markTransportActivity();
     logHttpAccess("page.examples");
     if (!sendLittleFsFile("/learn.html")) {
-      gHttpServer.send(
-          404, "application/json",
-          "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"/examples\"}");
+      sendNotFoundForPath("/examples");
     }
   });
   gHttpServer.on("/favicon.ico", HTTP_GET, sendNoContent);
@@ -1438,6 +1469,11 @@ void initTransportRuntime(PortalService& portal,
   gHttpServer.on("/api/v3/system/reboot", HTTP_POST, handleHttpSystemRebootPost);
   gHttpServer.on("/api/v3/system/reboot/", HTTP_POST, handleHttpSystemRebootPost);
 
+  gHttpServer.on("/api/v3/health", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/health/", HTTP_OPTIONS, handleHttpCorsOptions);
+  gHttpServer.on("/api/v3/health", HTTP_GET, handleHttpHealthGet);
+  gHttpServer.on("/api/v3/health/", HTTP_GET, handleHttpHealthGet);
+
   gHttpServer.on("/api/v3/cards", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/cards/", HTTP_OPTIONS, handleHttpCorsOptions);
   gHttpServer.on("/api/v3/cards", HTTP_GET, handleHttpCardsIndexGet);
@@ -1473,7 +1509,7 @@ void initTransportRuntime(PortalService& portal,
     body += "\",\"method\":\"";
     body += methodToString(method);
     body += "\"}";
-    gHttpServer.send(404, "application/json", body);
+    sendJsonResponse(404, body);
   });
   gHttpServer.begin();
 
