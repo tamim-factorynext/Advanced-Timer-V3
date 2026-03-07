@@ -17,6 +17,8 @@ Notes:
 */
 #include "storage/v3_config_validator.h"
 
+#include "storage/v3_timezones.h"
+
 namespace v3::storage {
 
 namespace {
@@ -113,6 +115,7 @@ bool validateSystemConfigLight(const SystemConfig& candidate,
   }
 
   if (!isNonEmpty(candidate.time.timezone) ||
+      !isSupportedTimezone(candidate.time.timezone) ||
       !isNonEmpty(candidate.time.timeSync.primaryTimeServer) ||
       candidate.time.timeSync.syncIntervalSec == 0 ||
       candidate.time.timeSync.startupTimeoutSec == 0 ||

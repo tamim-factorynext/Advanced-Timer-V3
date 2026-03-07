@@ -18,17 +18,20 @@ Notes:
 
 #include <WiFi.h>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <time.h>
+
+#include "storage/v3_timezones.h"
 
 namespace v3::platform {
 
 namespace {
 
-constexpr bool kLogTimeSync = true;
-constexpr uint32_t kTimeSyncStatusLogIntervalMs = 10000;
+constexpr bool kLogTimeSync = false;
 constexpr int kMinimumSyncedYear = 2024;
 constexpr const char* kUtcTimezone = "UTC0";
+constexpr uint32_t kTimeSyncConnectDelayMs = 1000;
 
 void formatIp(const IPAddress& ip, char out[16]) {
   std::snprintf(out, 16, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
@@ -46,8 +49,9 @@ void WiFiRuntime::begin(const v3::storage::WiFiConfig& config,
   status_.online = false;
   timeSyncConfigured_ = false;
   lastTimeValid_ = false;
+  connectedSinceMs_ = 0;
   lastTimeSyncMs_ = 0;
-  lastTimeSyncLogMs_ = 0;
+  applyLocalTimezone();
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true, true);
   startBackupAccessNetworkAttempt(0);
@@ -56,6 +60,8 @@ void WiFiRuntime::begin(const v3::storage::WiFiConfig& config,
 void WiFiRuntime::tick(uint32_t nowMs) {
   if (WiFi.status() == WL_CONNECTED) {
     const bool becameConnected = (status_.state != WiFiState::StaConnected);
+    if (becameConnected)
+      connectedSinceMs_ = nowMs;
     status_.state = WiFiState::StaConnected;
     status_.phase = WiFiConnectPhase::None;
     status_.staConnected = true;
@@ -64,11 +70,15 @@ void WiFiRuntime::tick(uint32_t nowMs) {
     refreshStaIp();
 
     if (clockConfig_.timeSync.enabled) {
-      if (becameConnected || !timeSyncConfigured_) {
+      const bool connectionStable =
+          connectedSinceMs_ != 0 &&
+          (nowMs - connectedSinceMs_) >= kTimeSyncConnectDelayMs;
+      if (connectionStable && !timeSyncConfigured_) {
         configureTimeSync();
         lastTimeSyncMs_ = nowMs;
-      } else if ((nowMs - lastTimeSyncMs_) >=
-                 (clockConfig_.timeSync.syncIntervalSec * 1000UL)) {
+      } else if (connectionStable &&
+                 (nowMs - lastTimeSyncMs_) >=
+                     (clockConfig_.timeSync.syncIntervalSec * 1000UL)) {
         configureTimeSync();
         lastTimeSyncMs_ = nowMs;
       }
@@ -83,20 +93,7 @@ void WiFiRuntime::tick(uint32_t nowMs) {
                       static_cast<unsigned long>(epochNow),
                       localTime.tm_year + 1900, status_.staIp);
         Serial.flush();
-      } else if (!timeValid && kLogTimeSync &&
-                 (becameConnected ||
-                  (nowMs - lastTimeSyncLogMs_) >= kTimeSyncStatusLogIntervalMs)) {
-        Serial.printf(
-            "[time-sync] waiting valid=0 configured=%u server=%s tz=%s ip=%s epoch=%ld year=%d\n",
-            timeSyncConfigured_ ? 1U : 0U, clockConfig_.timeSync.primaryTimeServer,
-            clockConfig_.timezone, status_.staIp, static_cast<long>(epochNow),
-            (localtime_r(&epochNow, &localTime) != nullptr)
-                ? (localTime.tm_year + 1900)
-                : 0);
-        Serial.flush();
-        lastTimeSyncLogMs_ = nowMs;
-      }
-      lastTimeValid_ = timeValid;
+        lastTimeValid_ = timeValid;
     }
     return;
   }
@@ -139,9 +136,23 @@ void WiFiRuntime::startBackupAccessNetworkAttempt(uint32_t nowMs) {
   status_.phaseStartedMs = nowMs;
   status_.state = WiFiState::ConnectingBackupAccessNetwork;
   status_.phase = WiFiConnectPhase::BackupAccessNetwork;
+  connectedSinceMs_ = 0;
+  timeSyncConfigured_ = false;
   WiFi.mode(WIFI_STA);
   WiFi.begin(config_.backupAccessNetwork.ssid,
              config_.backupAccessNetwork.password);
+}
+
+void WiFiRuntime::applyLocalTimezone() const {
+  const char *posixTz =
+      v3::storage::resolvePosixTimezone(clockConfig_.timezone);
+  setenv("TZ", posixTz, 1);
+  tzset();
+  if (kLogTimeSync) {
+    Serial.printf("[time-sync] local timezone configured id=%s posix=%s\n",
+                  clockConfig_.timezone, posixTz);
+    Serial.flush();
+  }
 }
 
 void WiFiRuntime::configureTimeSync() {
@@ -156,9 +167,9 @@ void WiFiRuntime::configureTimeSync() {
         static_cast<long>(epochBefore));
     Serial.flush();
   }
-  configTzTime(kUtcTimezone, clockConfig_.timeSync.primaryTimeServer);
+  configTime(0, 0, clockConfig_.timeSync.primaryTimeServer);
+  applyLocalTimezone();
   timeSyncConfigured_ = true;
-  lastTimeSyncLogMs_ = 0;
 }
 
 void WiFiRuntime::startUserConfiguredNetworkAttempt(uint32_t nowMs) {
@@ -166,6 +177,8 @@ void WiFiRuntime::startUserConfiguredNetworkAttempt(uint32_t nowMs) {
   status_.phaseStartedMs = nowMs;
   status_.state = WiFiState::ConnectingUserConfiguredNetwork;
   status_.phase = WiFiConnectPhase::UserConfiguredNetwork;
+  connectedSinceMs_ = 0;
+  timeSyncConfigured_ = false;
   WiFi.mode(WIFI_STA);
   WiFi.begin(config_.userConfiguredNetwork.ssid,
              config_.userConfiguredNetwork.password);
@@ -181,6 +194,8 @@ void WiFiRuntime::enterOffline(uint32_t nowMs) {
   if (status_.offlineSinceMs == 0) {
     status_.offlineSinceMs = nowMs;
   }
+  connectedSinceMs_ = 0;
+  timeSyncConfigured_ = false;
   status_.staIp[0] = '\0';
 }
 

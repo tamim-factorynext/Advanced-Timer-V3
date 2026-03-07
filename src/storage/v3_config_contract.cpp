@@ -19,6 +19,7 @@ Notes:
 #include <string.h>
 
 #include "platform/hw_profile.h"
+#include "storage/v3_timezones.h"
 
 namespace v3::storage {
 
@@ -159,7 +160,7 @@ void makeDefaultSystemConfig(SystemConfig& cfg) {
   cfg.wifi.retryDelaySec = 30;
   cfg.wifi.staOnly = true;
 
-  strncpy(cfg.time.timezone, "Asia/Dhaka", sizeof(cfg.time.timezone) - 1);
+  strncpy(cfg.time.timezone, defaultTimezoneId(), sizeof(cfg.time.timezone) - 1);
   cfg.time.timeSync.enabled = true;
   strncpy(cfg.time.timeSync.primaryTimeServer, "pool.ntp.org",
           sizeof(cfg.time.timeSync.primaryTimeServer) - 1);

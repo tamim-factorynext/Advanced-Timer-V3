@@ -31,6 +31,17 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
   - temporary connect before save.
   - explicit save-selected-network action.
   - manual fallback for hidden SSID entry.
+- Clock/time follow-up now takes priority before returning to portal freeze work:
+  - keep system/NTP sync in UTC-first mode until local-time handling is reintroduced safely.
+  - implement timezone handling as a deliberate display/local-conversion layer, not mixed into initial sync setup.
+  - add a proper timezone selector in Settings, targeting the full 38-zone model with Bangladesh as the default/operator-friendly selection.
+  - after clock/timezone work is stable, resume investigation of the post-save portal freeze/watchdog issue (`v3-core1-services` stall after config/settings commit + page navigation).
+  - current implementation direction:
+    - SNTP sync runs in UTC.
+    - local wall-clock formatting uses a separate fixed-offset timezone catalog.
+    - first sync attempt is intentionally delayed a few seconds after WiFi reports connected.
+  - follow-up architectural task:
+    - revisit RTC schedule execution placement and complete/confirm migration so minute-level RTC matching runs on the networking core instead of consuming logic-core scan budget.
 
 ## 2026-03-04
 

@@ -79,7 +79,7 @@
         <div class="form-list">
           <div class="field"><label>User WiFi SSID</label><input id="fSsid" type="text" /></div>
           <div class="field"><label>User WiFi Password</label><input id="fPass" type="text" /></div>
-          <div class="field"><label>Timezone</label><input id="fTz" type="text" /></div>
+          <div class="field"><label>Timezone</label><select id="fTz"></select></div>
           <div class="field"><label>Primary NTP Server</label><input id="fNtp1" type="text" /></div>
           <div class="field">
             <label>Scan Period</label>
@@ -121,6 +121,52 @@
         const fNtp1 = document.getElementById("fNtp1");
         const fSsid = document.getElementById("fSsid");
         const fPass = document.getElementById("fPass");
+        const timezoneOptions = [
+          ["UTC-12:00", "(UTC-12:00) Baker Island"],
+          ["UTC-11:00", "(UTC-11:00) American Samoa"],
+          ["UTC-10:00", "(UTC-10:00) Hawaii"],
+          ["UTC-09:30", "(UTC-09:30) Marquesas"],
+          ["UTC-09:00", "(UTC-09:00) Alaska"],
+          ["UTC-08:00", "(UTC-08:00) Pacific Time"],
+          ["UTC-07:00", "(UTC-07:00) Mountain Time"],
+          ["UTC-06:00", "(UTC-06:00) Central Time"],
+          ["UTC-05:00", "(UTC-05:00) Eastern Time"],
+          ["UTC-04:00", "(UTC-04:00) Atlantic Time"],
+          ["UTC-03:30", "(UTC-03:30) Newfoundland"],
+          ["UTC-03:00", "(UTC-03:00) Argentina"],
+          ["UTC-02:00", "(UTC-02:00) South Georgia"],
+          ["UTC-01:00", "(UTC-01:00) Azores"],
+          ["UTC+00:00", "(UTC+00:00) UTC"],
+          ["UTC+01:00", "(UTC+01:00) Central Europe"],
+          ["UTC+02:00", "(UTC+02:00) Eastern Europe"],
+          ["UTC+03:00", "(UTC+03:00) East Africa"],
+          ["UTC+03:30", "(UTC+03:30) Iran"],
+          ["UTC+04:00", "(UTC+04:00) Gulf"],
+          ["UTC+04:30", "(UTC+04:30) Afghanistan"],
+          ["UTC+05:00", "(UTC+05:00) Pakistan"],
+          ["UTC+05:30", "(UTC+05:30) India"],
+          ["UTC+05:45", "(UTC+05:45) Nepal"],
+          ["UTC+06:00", "(UTC+06:00) Bangladesh"],
+          ["UTC+06:30", "(UTC+06:30) Myanmar"],
+          ["UTC+07:00", "(UTC+07:00) Indochina"],
+          ["UTC+08:00", "(UTC+08:00) China / Singapore"],
+          ["UTC+08:45", "(UTC+08:45) Eucla"],
+          ["UTC+09:00", "(UTC+09:00) Japan / Korea"],
+          ["UTC+09:30", "(UTC+09:30) Central Australia"],
+          ["UTC+10:00", "(UTC+10:00) Eastern Australia"],
+          ["UTC+10:30", "(UTC+10:30) Lord Howe"],
+          ["UTC+11:00", "(UTC+11:00) Solomon Islands"],
+          ["UTC+12:00", "(UTC+12:00) New Zealand"],
+          ["UTC+12:45", "(UTC+12:45) Chatham Islands"],
+          ["UTC+13:00", "(UTC+13:00) Tonga"],
+          ["UTC+14:00", "(UTC+14:00) Line Islands"],
+        ];
+        const timezoneAliases = {
+          "Asia/Dhaka": "UTC+06:00",
+          "UTC0": "UTC+00:00",
+          "UTC": "UTC+00:00",
+        };
+        const defaultTimezoneId = "UTC+06:00";
 
         function normalizeTheme(theme) {
           if (theme === "colorful-a") return "neon-orchid";
@@ -169,6 +215,17 @@
           fScanSecValue.textContent = `${seconds.toFixed(2)} s`;
         }
 
+        function renderTimezoneOptions() {
+          fTz.innerHTML = timezoneOptions.map(([value, label]) =>
+            `<option value="${value}">${label}</option>`).join("");
+        }
+
+        function normalizeTimezoneId(value) {
+          const raw = String(value || "").trim();
+          if (!raw) return defaultTimezoneId;
+          return timezoneAliases[raw] || raw;
+        }
+
         function loadFormFromConfig(cfg) {
           const scanMs = Number(cfg.scanPeriodMs || 10);
           const clampedMs = Math.min(1000, Math.max(10, scanMs));
@@ -177,7 +234,7 @@
           const wifi = cfg.wifi || {};
           const t = cfg.time || {};
           const ts = t.timeSync || {};
-          fTz.value = t.timezone ?? "";
+          fTz.value = normalizeTimezoneId(t.timezone);
           fNtp1.value = ts.primaryTimeServer ?? "";
           const user = wifi.userConfiguredNetwork || {};
           fSsid.value = user.ssid ?? "";
@@ -195,7 +252,7 @@
           cfg.wifi.userConfiguredNetwork.password = fPass.value;
           cfg.wifi.staOnly = true;
           cfg.time = cfg.time || {};
-          cfg.time.timezone = fTz.value;
+          cfg.time.timezone = normalizeTimezoneId(fTz.value);
           cfg.time.timeSync = cfg.time.timeSync || {};
           cfg.time.timeSync.primaryTimeServer = fNtp1.value;
           return cfg;
@@ -290,6 +347,7 @@
         });
 
         const savedTheme = normalizeTheme(localStorage.getItem("atv3_theme") || "dark");
+        renderTimezoneOptions();
         themeSelect.value = savedTheme;
         applyTheme(savedTheme);
         themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));

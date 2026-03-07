@@ -55,6 +55,7 @@ class WiFiRuntime {
  const WiFiStatus& status() const;
 
  private:
+  void applyLocalTimezone() const;
   void configureTimeSync();
   void startBackupAccessNetworkAttempt(uint32_t nowMs);
   void startUserConfiguredNetworkAttempt(uint32_t nowMs);
@@ -66,8 +67,8 @@ class WiFiRuntime {
   WiFiStatus status_ = {};
   bool timeSyncConfigured_ = false;
   bool lastTimeValid_ = false;
+  uint32_t connectedSinceMs_ = 0;
   uint32_t lastTimeSyncMs_ = 0;
-  uint32_t lastTimeSyncLogMs_ = 0;
 };
 
 }  // namespace v3::platform
