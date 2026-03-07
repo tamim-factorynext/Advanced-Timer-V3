@@ -4,6 +4,57 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-07
+
+### Portal Freeze Investigation (Core1 Post-Save Navigation)
+
+### Active Debug Scope (Temporary)
+
+- Target issue:
+  - `v3-core1-services` watchdog reset after `settings/card save` followed by page navigation (`/`, `/settings`, `/config`, `/learn`).
+- Current observed behavior:
+  - save/commit path succeeds (`/cfg/*` writes complete).
+  - failure starts on the next static file response path.
+- Temporary diagnostics currently enabled in `src/portal/transport_runtime.cpp`:
+  - response logs (`[transport:resp] ...`) with status/bytes/heap/path.
+  - static file lifecycle logs (`[transport:file] start/done ...`).
+  - card/settings commit lifecycle logs (`[card.put] ...`, `[settings.put] ...`).
+  - explicit post-mutation client close log (`[transport:client] close reason=...`).
+  - manual static-file chunk streaming (replacing `streamFile`) with watchdog feeds and explicit timeout/disconnect logs:
+    - `[transport:file] write timeout ...`
+    - `[transport:file] disconnected ...`
+    - final `sent/total ok=0|1`.
+
+### Cleanup Contract (When Root Cause Is Confirmed)
+
+- Remove temporary freeze-investigation diagnostics from production runtime:
+  - disable/remove verbose transport response logs.
+  - disable/remove card/settings commit trace lines used only for this investigation.
+  - remove temporary post-mutation forced client close if no longer required by final fix.
+  - keep only minimal permanent diagnostics for critical fault reporting.
+- Preserve only stable behavior changes that are part of the final fix.
+
+### Transport Rewrite Planning
+
+- Added migration path document:
+  - `docs/transport-runtime-migration-plan-v3.md`
+- Plan includes:
+  - phased endpoint migration order,
+  - non-negotiable transport constraints,
+  - load/stress acceptance gates,
+  - mandatory cutover cleanup contract to prevent compatibility-layer creep.
+- Added thermal-aware architecture requirement to migration plan:
+  - keep WiFi/radio activity bounded whenever possible.
+  - avoid duplicate live channels for same data stream.
+  - cap live cadence and suppress transport-heavy work when no active portal client is consuming data.
+  - include thermal/idle behavior checks in acceptance validation.
+- Aligned migration policy with execution preference:
+  - thermal efficiency is enforced by architecture/policy during migration (not by continuous measurement at every step).
+- Added explicit high-risk controls to migration plan:
+  - reversible phase boundaries,
+  - stable fallback checkpoints,
+  - stop conditions and rollback requirement before proceeding.
+
 ## 2026-03-06
 
 ### Settings UX Simplification + WiFi Workflow Backlog Note
