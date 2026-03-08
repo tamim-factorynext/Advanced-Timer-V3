@@ -70,6 +70,10 @@
       .node-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
       .node-title { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; color: var(--accent-2); }
       .node-icon { width: 18px; text-align: center; color: var(--accent); }
+      .node-state { font-weight: 800; letter-spacing: 0.2px; }
+      .node-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+      .node-row.muted { opacity: 0.62; }
+      .node-divider { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 7px; }
       .node-badges { display: flex; flex-wrap: wrap; gap: 6px; }
       .badge { display: inline-block; padding: 0.35em 0.6em; font-size: 11px; font-weight: 600; border-radius: 999px; border: 1px solid transparent; line-height: 1.1; }
       .text-bg-secondary { background: var(--chip); color: var(--text-2); border-color: var(--line); }
@@ -77,7 +81,10 @@
       .text-bg-danger { background: rgba(239, 68, 68, 0.18); color: var(--bad); border-color: rgba(239, 68, 68, 0.35); }
       .text-bg-info { background: rgba(125, 211, 252, 0.16); color: var(--accent-2); border-color: rgba(125, 211, 252, 0.35); }
       .text-bg-warning { background: rgba(245, 158, 11, 0.16); color: var(--warn); border-color: rgba(245, 158, 11, 0.35); }
+      .text-bg-dark { background: rgba(255, 255, 255, 0.06); color: var(--text-2); border-color: var(--line); }
       .badge-formula { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .icon-btn { border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--text-0); padding: 5px 8px; font-size: 12px; cursor: pointer; }
+      .icon-btn:hover { background: var(--bg-2); }
       .footer { margin-top: 10px; color: var(--text-2); font-size: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); padding: 8px 10px; }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--text-2); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
@@ -95,10 +102,27 @@
       .reboot-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); padding: 14px 16px; min-width: 260px; max-width: 86vw; box-shadow: var(--shadow); }
       .reboot-title { font-weight: 700; color: var(--accent); margin-bottom: 6px; }
       .reboot-detail { color: var(--text-2); font-size: 13px; }
+      .wizard-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.66); z-index: 10000; padding: 16px; }
+      .wizard-overlay.show { display: flex; }
+      .wizard-panel { width: min(680px, 96vw); border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); box-shadow: var(--shadow); }
+      .wizard-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .wizard-title { font-weight: 700; color: var(--accent-2); }
+      .wizard-step { font-size: 12px; color: var(--text-2); }
+      .wizard-body { padding: 12px 14px; display: grid; gap: 10px; }
+      .wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .wizard-field { display: grid; gap: 4px; }
+      .wizard-field label { font-size: 12px; color: var(--text-2); }
+      .wizard-field input, .wizard-field select { width: 100%; border: 1px solid var(--line); background: var(--chip); color: var(--text-0); border-radius: 8px; padding: 7px 8px; }
+      .wizard-footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+      .btn { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; background: var(--chip); color: var(--text-0); }
+      .btn:hover { background: var(--bg-2); }
+      .btn-primary { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
+      .btn-danger { border-color: var(--bad); color: var(--bad); }
       @media (max-width: 760px) {
         .status { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
         .clock-time { font-size: 24px; }
         .clock-date { font-size: 12px; }
+        .wizard-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -162,6 +186,24 @@
         <div id="rebootDetail" class="reboot-detail">Preparing reboot request...</div>
       </div>
     </div>
+    <div id="wizardOverlay" class="wizard-overlay" aria-live="polite" role="dialog" aria-modal="true">
+      <div class="wizard-panel">
+        <div class="wizard-head">
+          <div>
+            <div id="wizardTitle" class="wizard-title">DI Card Wizard</div>
+            <div id="wizardStep" class="wizard-step">Step 1 of 3</div>
+          </div>
+        </div>
+        <div id="wizardBody" class="wizard-body"></div>
+        <div class="wizard-footer">
+          <button id="wizCancel" type="button" class="btn btn-danger">Cancel</button>
+          <div>
+            <button id="wizBack" type="button" class="btn">Back</button>
+            <button id="wizNext" type="button" class="btn btn-primary">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
       const state = {
@@ -173,6 +215,14 @@
         staticCardsById: new Map(),
         cardRefById: new Map(),
         activeVersion: 0,
+        debugModeEnabled: false,
+        wizard: {
+          open: false,
+          step: 0,
+          cardId: null,
+          draft: null,
+        },
+        diDebugByCard: new Map(),
       };
 
       const el = {
@@ -193,6 +243,13 @@
       const rebootOverlayEl = document.getElementById("rebootOverlay");
       const rebootDetailEl = document.getElementById("rebootDetail");
       const rebootBtnEl = document.getElementById("btnReboot");
+      const wizardOverlayEl = document.getElementById("wizardOverlay");
+      const wizardTitleEl = document.getElementById("wizardTitle");
+      const wizardStepEl = document.getElementById("wizardStep");
+      const wizardBodyEl = document.getElementById("wizardBody");
+      const wizCancelEl = document.getElementById("wizCancel");
+      const wizBackEl = document.getElementById("wizBack");
+      const wizNextEl = document.getElementById("wizNext");
 
       function normalizeTheme(theme) {
         if (theme === "colorful-a") return "neon-orchid";
@@ -366,30 +423,71 @@
       function renderDiCard(c) {
         const staticCard = state.staticCardsById.get(Number(c.id));
         const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
         const setExpr = formatConditionBlock(params.turnOnCondition);
         const resetExpr = formatConditionBlock(params.turnOffCondition);
-        const headerTruth = truthToken(!!c.actualState, "HIGH", "LOW");
-        const headerClass = c.actualState ? "ok" : "warn";
+        const cardRef = state.cardRefById.get(Number(c.id)) || `DI${Number(c.index || 0)}`;
+        const displayIndex = Number(c.index || 0);
+        const headerTruth = isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "DISABLED";
+        const headerClass = isEnabled ? (c.actualState ? "ok" : "warn") : "warn";
+        const zoneMutedClass = isEnabled ? "" : " muted";
+        const setBadgeClass = isEnabled
+          ? (c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const resetBadgeClass = isEnabled
+          ? (c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const cmdToken = isEnabled ? truthToken(!!c.commandState, "ON", "OFF") : "--";
+        const physToken = isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "--";
+        const edgeToken = isEnabled ? truthToken(!!c.edgePulse, "TRIG", "CLR") : "--";
+        const countToken = isEnabled ? String(Number(c.liveValue ?? 0)) : "--";
+        const runtimeMode = String(c.inputSource || "");
+        const debugState = state.diDebugByCard.get(Number(c.id)) || {};
+        const debugMsg = String(debugState.message || "No command sent");
+        const effectiveMode = runtimeMode || String(debugState.mode || "REAL");
+        const isReal = effectiveMode === "REAL";
+        const isHigh = effectiveMode === "FORCED_HIGH";
+        const isLow = effectiveMode === "FORCED_LOW";
+        const debugMsgClass = debugState.ok === true
+          ? "text-bg-success"
+          : (debugState.ok === false ? "text-bg-danger" : "text-bg-secondary");
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-row node-divider">
+            <button type="button" class="icon-btn" title="Open Card Wizard" data-action="open-di-wizard" data-card-id="${c.id}">&#9881; Wizard</button>
+            <span class="badge text-bg-secondary">Debug</span>
+            <button type="button" class="icon-btn ${isReal ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="REAL">REAL</button>
+            <button type="button" class="icon-btn ${isHigh ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_HIGH">HIGH</button>
+            <button type="button" class="icon-btn ${isLow ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_LOW">LOW</button>
+            <span class="badge ${debugMsgClass}">${debugMsg}</span>
+          </div>
+        ` : "";
 
         return `
           <article class="node">
             <div class="node-head">
-              <div class="node-title"><span class="node-icon">&#x21E9;</span><span>Digital Input ${Number(c.index || 0)}</span></div>
-              <span class="${headerClass}">${headerTruth}</span>
+              <div class="node-title"><span class="node-icon">&#x21E9;</span><span>Digital Input ${displayIndex}</span></div>
+              <span class="node-state ${headerClass}">${headerTruth}</span>
             </div>
-            <div class="node-badges">
+            <div class="node-row">
+              <span class="badge text-bg-secondary">${cardRef}</span>
               <span class="badge text-bg-secondary">ID ${c.id}</span>
               <span class="badge text-bg-secondary">CH ${Number(params.channel ?? 0)}</span>
               <span class="badge text-bg-secondary">INV ${params.invert ? "ON" : "OFF"}</span>
               <span class="badge text-bg-secondary">EDGE ${shortEdgeMode(params.edgeMode)}</span>
               <span class="badge text-bg-secondary">DB ${Number(params.debounceMs ?? 0)}ms</span>
-              <span class="badge badge-formula ${c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger"}">SET: ${setExpr}</span>
-              <span class="badge badge-formula ${c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger"}">RST: ${resetExpr}</span>
-              <span class="badge text-bg-info">CMD ${truthToken(!!c.commandState, "ON", "OFF")}</span>
-              <span class="badge text-bg-info">PHYS ${truthToken(!!c.actualState, "HIGH", "LOW")}</span>
-              <span class="badge text-bg-info">EDGE ${truthToken(!!c.edgePulse, "TRIG", "CLR")}</span>
-              <span class="badge text-bg-warning">COUNT ${Number(c.liveValue ?? 0)}</span>
             </div>
+            <div class="node-row node-divider${zoneMutedClass}">
+              <span class="badge text-bg-info">CMD ${cmdToken}</span>
+              <span class="badge text-bg-info">PHYS ${physToken}</span>
+              <span class="badge text-bg-info">EDGE ${edgeToken}</span>
+              <span class="badge text-bg-warning">COUNT ${countToken}</span>
+            </div>
+            <div class="node-row node-divider${zoneMutedClass}">
+              ${isEnabled ? "" : '<span class="badge text-bg-dark">Disabled</span>'}
+              <span class="badge badge-formula ${setBadgeClass}">SET: ${setExpr}</span>
+              <span class="badge badge-formula ${resetBadgeClass}">RST: ${resetExpr}</span>
+            </div>
+            ${zone4Html}
           </article>
         `;
       }
@@ -424,10 +522,141 @@
         }));
       }
 
+      async function bootstrapDebugModeFlag() {
+        const settingsResp = await fetchJson("/api/v3/settings");
+        const settings = settingsResp && settingsResp.settings ? settingsResp.settings : {};
+        state.debugModeEnabled = !!settings.debugModeEnabled;
+      }
+
       async function fetchJson(path) {
         const resp = await fetch(path, { cache: "no-store" });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         return resp.json();
+      }
+
+      function closeDiWizard() {
+        state.wizard.open = false;
+        state.wizard.cardId = null;
+        state.wizard.draft = null;
+        state.wizard.step = 0;
+        wizardOverlayEl.classList.remove("show");
+      }
+
+      function renderDiWizardStep() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        const cardRef = state.cardRefById.get(Number(w.cardId)) || `DI ${Number(w.draft.index || 0)}`;
+        wizardTitleEl.textContent = `DI Card Wizard - ${cardRef}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of 3`;
+        wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
+        wizNextEl.textContent = w.step === 2 ? "Finish" : "Next";
+
+        if (w.step === 0) {
+          wizardBodyEl.innerHTML = `
+            <div class="wizard-grid">
+              <div class="wizard-field"><label>Card</label><input type="text" value="${cardRef}" disabled /></div>
+              <div class="wizard-field"><label>Status</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+              <div class="wizard-field"><label>Terminal Label</label><input type="text" value="Digital Input ${Number(w.draft.index || 0)}" disabled /></div>
+              <div class="wizard-field"><label>Channel</label><input type="text" value="${Number(w.draft.params.channel || 0)}" disabled /></div>
+            </div>
+          `;
+          return;
+        }
+
+        if (w.step === 1) {
+          wizardBodyEl.innerHTML = `
+            <div class="wizard-grid">
+              <div class="wizard-field"><label>Invert</label><select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>OFF</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>ON</option></select></div>
+              <div class="wizard-field"><label>Edge Mode</label><select id="wiz_edge"><option value="0" ${Number(w.draft.params.edgeMode || 0) === 0 ? "selected" : ""}>RISING</option><option value="1" ${Number(w.draft.params.edgeMode || 0) === 1 ? "selected" : ""}>FALLING</option><option value="2" ${Number(w.draft.params.edgeMode || 0) === 2 ? "selected" : ""}>CHANGE</option></select></div>
+              <div class="wizard-field"><label>Debounce (ms)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
+            </div>
+          `;
+          return;
+        }
+
+        wizardBodyEl.innerHTML = `
+          <div class="node-badges">
+            <span class="badge text-bg-secondary">Enabled ${w.draft.enabled ? "YES" : "NO"}</span>
+            <span class="badge text-bg-secondary">Invert ${w.draft.params.invert ? "ON" : "OFF"}</span>
+            <span class="badge text-bg-secondary">Edge ${shortEdgeMode(w.draft.params.edgeMode)}</span>
+            <span class="badge text-bg-secondary">Debounce ${Number(w.draft.params.debounceMs || 0)}ms</span>
+            <span class="badge badge-formula text-bg-secondary">SET: ${formatConditionBlock(w.draft.params.turnOnCondition)}</span>
+            <span class="badge badge-formula text-bg-secondary">RST: ${formatConditionBlock(w.draft.params.turnOffCondition)}</span>
+          </div>
+        `;
+      }
+
+      function syncDiWizardDraftFromStepFields() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        if (w.step === 0) {
+          const enabledEl = document.getElementById("wiz_enabled");
+          if (enabledEl) w.draft.enabled = enabledEl.value === "true";
+          return;
+        }
+        if (w.step === 1) {
+          const invertEl = document.getElementById("wiz_invert");
+          const edgeEl = document.getElementById("wiz_edge");
+          const dbEl = document.getElementById("wiz_db");
+          if (invertEl) w.draft.params.invert = invertEl.value === "true";
+          if (edgeEl) w.draft.params.edgeMode = Number(edgeEl.value || 0);
+          if (dbEl) {
+            const n = Number(dbEl.value || 0);
+            w.draft.params.debounceMs = Number.isFinite(n) && n >= 0 ? n : 0;
+          }
+        }
+      }
+
+      function openDiWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "DI") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
+        wizardOverlayEl.classList.add("show");
+        renderDiWizardStep();
+      }
+
+      async function submitDiForce(cardId, mode) {
+        const id = Number(cardId);
+        if (!Number.isFinite(id)) return;
+        const entry = { mode, ok: null, message: "Sending..." };
+        state.diDebugByCard.set(id, entry);
+        renderCards(sortedCardsFromStore());
+        try {
+          const resp = await fetch("/api/v3/command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify({
+              command: "setDiForce",
+              cardId: id,
+              mode,
+            }),
+          });
+          const data = await resp.json();
+          const accepted = !!(data && data.accepted);
+          state.diDebugByCard.set(id, {
+            mode,
+            ok: accepted,
+            message: accepted ? `Force ${mode}` : String(data?.message || data?.errorCode || "Rejected"),
+          });
+        } catch (err) {
+          state.diDebugByCard.set(id, {
+            mode,
+            ok: false,
+            message: String(err && err.message ? err.message : err),
+          });
+        }
+        renderCards(sortedCardsFromStore());
       }
 
       function sleep(ms) {
@@ -599,11 +828,46 @@
       window.addEventListener("beforeunload", stopLivePolling);
       attachNavLoadingFeedback();
       rebootBtnEl.addEventListener("click", requestRebootAndReconnect);
+      el.cards.addEventListener("click", (ev) => {
+        const target = ev.target.closest("[data-action]");
+        if (!target) return;
+        const action = target.getAttribute("data-action");
+        if (action === "open-di-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openDiWizard(id);
+          return;
+        }
+        if (action === "set-di-force") {
+          const id = Number(target.getAttribute("data-card-id"));
+          const mode = String(target.getAttribute("data-force-mode") || "REAL");
+          if (Number.isFinite(id)) submitDiForce(id, mode);
+        }
+      });
+      wizCancelEl.addEventListener("click", closeDiWizard);
+      wizBackEl.addEventListener("click", () => {
+        if (!state.wizard.open) return;
+        syncDiWizardDraftFromStepFields();
+        state.wizard.step = Math.max(0, state.wizard.step - 1);
+        renderDiWizardStep();
+      });
+      wizNextEl.addEventListener("click", () => {
+        if (!state.wizard.open) return;
+        syncDiWizardDraftFromStepFields();
+        if (state.wizard.step >= 2) {
+          closeDiWizard();
+          return;
+        }
+        state.wizard.step += 1;
+        renderDiWizardStep();
+      });
 
       async function initLivePage() {
         showActivity("Preparing Live View...", "Loading card configuration cache for badge rendering.");
         try {
-          await bootstrapStaticCardCache();
+          await Promise.all([
+            bootstrapStaticCardCache(),
+            bootstrapDebugModeFlag(),
+          ]);
         } catch (err) {
           state.lastError = String(err && err.message ? err.message : err);
           el.meta.textContent = `Static card bootstrap failed: ${state.lastError}`;

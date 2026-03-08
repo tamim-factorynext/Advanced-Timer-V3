@@ -151,6 +151,16 @@ Done when:
 - DI rendering is stable on mobile and desktop widths.
 - Disabled DI cards keep Zones 2/3 visible in muted inactive style and show `DISABLED` in header.
 
+Current implementation status (2026-03-08):
+- `in progress`
+- delivered:
+  - compact DI card rendering baseline,
+  - debug-gated Zone 4 behavior,
+  - DI wizard shell with `Back/Next/Cancel`,
+  - DI force controls (`REAL/HIGH/LOW`) wired to command API.
+- known limitation:
+  - runtime-reflected DI force mode is not yet sourced from firmware payload due DRAM budget guardrail (snapshot struct expansion rollback).
+
 ### Slice C2: DO + SIO
 
 Scope:

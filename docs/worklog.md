@@ -6,6 +6,44 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 
 ## 2026-03-08
 
+### End-Of-Day Recap (Live DI + Debug Controls)
+
+### Completed
+
+- DI live card UI moved to compact presentation:
+  - removed zone labels and zone border boxes,
+  - kept logical information order with compact divider rows.
+- DI header polish:
+  - card title uses `Digital Input <index>` format (example: `Digital Input 0`),
+  - dominant state text (`HIGH/LOW/DISABLED`) is visually emphasized.
+- DI debug mode behavior:
+  - Zone 4 appears only when `debugModeEnabled=true`,
+  - Zone 4 hidden when debug mode is off (no card space consumed).
+- DI wizard shell delivered (theme-aware modal):
+  - step flow with `Back`, `Next`, `Cancel`,
+  - opens from DI card wizard button.
+- DI debug force controls delivered in Zone 4:
+  - `REAL`, `HIGH`, `LOW`,
+  - command submission through `/api/v3/command` using `setDiForce`,
+  - inline per-card command feedback.
+
+### DRAM Budget Incident + Resolution
+
+- Attempted firmware-side runtime payload extension to expose force mode directly in `RuntimeSnapshotCard`.
+- Result: linker DRAM overflow (`dram0_0_seg`) by `528` bytes.
+- Resolution applied in same session:
+  - reverted `RuntimeSnapshotCard` size expansion,
+  - removed added force fields from kernel snapshot projection and runtime cards JSON path.
+- Outcome:
+  - build risk from this change path removed,
+  - DI debug force controls remain functional via command path,
+  - force-button active highlight currently uses frontend-local command state (not firmware-reflected runtime mode).
+
+### Carry-Over (Next Session)
+
+- Add low-overhead firmware-truth debug-state surface without increasing DRAM-heavy snapshot structs.
+- Continue card-by-card rollout with same compact visual language (next: `DO` + `SIO`).
+
 ### Live Card Layout Policy Freeze (4-Zone + Disabled-State + Debug Zone)
 
 ### Completed
