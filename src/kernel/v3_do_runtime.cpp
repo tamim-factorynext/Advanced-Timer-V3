@@ -20,6 +20,7 @@ Notes:
 #include "kernel/v3_do_runtime.h"
 
 namespace {
+constexpr uint32_t kCounterWrapMax = 1000000U;
 /**
  * @brief Checks whether DO runtime state is in an active mission phase.
  * @details Running phases are `OnDelay` and `Active`.
@@ -28,6 +29,11 @@ namespace {
  */
 bool isDoRunningState(cardState state) {
   return state == State_DO_OnDelay || state == State_DO_Active;
+}
+
+/** @brief Increments counter with explicit business-rule wrap-to-zero. */
+void incrementWrapU32(uint32_t& value) {
+  value = (value >= kCounterWrapMax) ? 0U : (value + 1U);
 }
 
 /**
@@ -151,7 +157,7 @@ void runV3DoStep(const V3DoRuntimeConfig& cfg, V3DoRuntimeState& runtime,
   const bool effectiveOutput = cfg.invert ? !missionOutput : missionOutput;
   const bool risingPhysical = (!previousPhysical && effectiveOutput);
   if (risingPhysical) {
-    runtime.liveValue += 1;
+    incrementWrapU32(runtime.liveValue);
   }
   runtime.edgePulse = risingPhysical;
 

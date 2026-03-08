@@ -446,6 +446,10 @@
         return def && def.storageUnit === "ms";
       }
 
+      function isCentiunitField(def) {
+        return def && def.storageUnit === "centi";
+      }
+
       function storageMsToUiSeconds(msValue) {
         const n = Number(msValue ?? 0);
         if (Number.isNaN(n)) return "0.00";
@@ -456,6 +460,18 @@
         const n = Number(secValue);
         if (Number.isNaN(n)) return fallbackMs;
         return Math.round(Math.max(0, n) * 1000);
+      }
+
+      function storageCentiToUiDecimal(centiValue) {
+        const n = Number(centiValue ?? 0);
+        if (Number.isNaN(n)) return "0.00";
+        return (n / 100).toFixed(2);
+      }
+
+      function uiDecimalToStorageCenti(uiValue, fallbackCenti = 0) {
+        const n = Number(uiValue);
+        if (Number.isNaN(n)) return fallbackCenti;
+        return Math.round(Math.max(0, n) * 100);
       }
 
       function fieldDefsForFamily(family) {
@@ -477,8 +493,8 @@
           { key: "channel", label: "ADC Channel", type: "number", unit: "pin" },
           { key: "inputMin", label: "Input Min", type: "number", unit: "raw" },
           { key: "inputMax", label: "Input Max", type: "number", unit: "raw" },
-          { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
-          { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
+          { key: "outputMin", label: "Output Min", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
+          { key: "outputMax", label: "Output Max", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "smoothingFactorPct", label: "Response Speed", type: "range", unit: "%", min: 0, max: 100, step: 1 }
         ];
         if (family === "SIO") return [
@@ -490,22 +506,22 @@
         ];
         if (family === "MATH") return [
           { key: "inputASource", label: "Input A Source", type: "math_input_source", useKey: "inputAUseCard", cardKey: "inputACardId" },
-          { key: "inputA", label: "Input A", type: "number", unit: "unit" },
+          { key: "inputA", label: "Input A", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "_mathSpacerA1", type: "spacer" },
           { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
           { key: "_mathSpacerOp1", type: "spacer" },
           { key: "_mathSpacerOp2", type: "spacer" },
           { key: "inputBSource", label: "Input B Source", type: "math_input_source", useKey: "inputBUseCard", cardKey: "inputBCardId" },
-          { key: "inputB", label: "Input B", type: "number", unit: "unit" },
+          { key: "inputB", label: "Input B", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "_mathSpacerB1", type: "spacer" },
-          { key: "inputMin", label: "Input Min", type: "number", unit: "unit" },
-          { key: "inputMax", label: "Input Max", type: "number", unit: "unit" },
+          { key: "inputMin", label: "Input Min", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
+          { key: "inputMax", label: "Input Max", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "_mathSpacerIn1", type: "spacer" },
-          { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
-          { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
+          { key: "outputMin", label: "Output Min", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
+          { key: "outputMax", label: "Output Max", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "_mathSpacerOut1", type: "spacer" },
           { key: "smoothingFactorPct", label: "Response Speed", type: "range", unit: "%", min: 0, max: 100, step: 1 },
-          { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit" },
+          { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit", step: 0.01, min: 0, max: 1000000, storageUnit: "centi" },
           { key: "_mathSpacerTail1", type: "spacer" }
         ];
         if (family === "RTC") return [
@@ -635,6 +651,8 @@
             const rawValue = params[def.key];
             const displayValue = isTimeSecondsField(def)
               ? storageMsToUiSeconds(rawValue ?? 0)
+              : isCentiunitField(def)
+                ? storageCentiToUiDecimal(rawValue ?? 0)
               : (rawValue ?? "");
             control = `<input id="${id}" type="number" ${step} ${min} ${max} value="${displayValue}" />`;
           }
@@ -990,6 +1008,9 @@
           } else if (isTimeSecondsField(def)) {
             const currentMs = Number(params[def.key] ?? 0);
             params[def.key] = uiSecondsToStorageMs(document.getElementById(`f_${def.key}`).value, currentMs);
+          } else if (isCentiunitField(def)) {
+            const currentCenti = Number(params[def.key] ?? 0);
+            params[def.key] = uiDecimalToStorageCenti(document.getElementById(`f_${def.key}`).value, currentCenti);
           } else {
             params[def.key] = readNum(`f_${def.key}`, params[def.key] ?? 0);
           }

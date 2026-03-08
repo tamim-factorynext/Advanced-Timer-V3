@@ -27,7 +27,8 @@ constexpr uint32_t kConfigSchemaVersion = 301;
 constexpr uint32_t kMinScanIntervalMs = 10;
 constexpr uint32_t kMaxScanIntervalMs = 1000;
 constexpr uint32_t kMathValueMin = 0;
-constexpr uint32_t kMathValueMax = 1000000;
+// Centiunit ceiling for decimal-capable value fields: 1,000,000.00
+constexpr uint32_t kMathValueMax = 100000000;
 constexpr uint8_t kMaxCards = 64;
 constexpr uint8_t kMaxWiFiSsidLen = 32;
 constexpr uint8_t kMaxWiFiPasswordLen = 64;

@@ -20,6 +20,7 @@ Notes:
 #include "kernel/v3_di_runtime.h"
 
 namespace {
+constexpr uint32_t kCounterWrapMax = 1000000U;
 /**
  * @brief Clears DI pulse/timing/counter fields used for qualified-edge tracking.
  * @details Called on reset/inhibit transitions.
@@ -31,6 +32,11 @@ void resetDiCounter(V3DiRuntimeState& runtime) {
   runtime.liveValue = 0;
   runtime.startOnMs = 0;
   runtime.startOffMs = 0;
+}
+
+/** @brief Increments uint32 counter with explicit wrap-to-zero at overflow. */
+void incrementWrapU32(uint32_t& value) {
+  value = (value >= kCounterWrapMax) ? 0U : (value + 1U);
 }
 }  // namespace
 
@@ -89,7 +95,7 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
     }
 
     runtime.edgePulse = true;
-    runtime.liveValue += 1;
+    incrementWrapU32(runtime.liveValue);
     runtime.commandState = effectiveSample;
     runtime.state = State_DI_Qualified;
     runtime.startOnMs = in.nowMs;
@@ -124,7 +130,7 @@ void runV3DiStep(const V3DiRuntimeConfig& cfg, V3DiRuntimeState& runtime,
   runtime.startOffMs = effectiveSample ? 1U : 0U;
   if (cfg.debounceTimeMs == 0) {
     runtime.edgePulse = true;
-    runtime.liveValue += 1;
+    incrementWrapU32(runtime.liveValue);
     runtime.commandState = effectiveSample;
     runtime.state = State_DI_Qualified;
     return;

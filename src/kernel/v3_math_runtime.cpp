@@ -19,13 +19,12 @@ Notes:
 */
 #include "kernel/v3_math_runtime.h"
 
-#include <limits.h>
-
 namespace {
 constexpr uint8_t kMathOpAdd = 0;
 constexpr uint8_t kMathOpSubSat = 1;
 constexpr uint8_t kMathOpMul = 2;
 constexpr uint8_t kMathOpDivSafe = 3;
+constexpr uint32_t kMathValueMax = 100000000U;
 
 /** @brief Clamps value to inclusive range. */
 uint32_t clampToRange(uint32_t value, uint32_t lo, uint32_t hi) {
@@ -36,14 +35,16 @@ uint32_t clampToRange(uint32_t value, uint32_t lo, uint32_t hi) {
 
 uint32_t saturatingAdd(uint32_t a, uint32_t b) {
   const uint64_t raw = static_cast<uint64_t>(a) + static_cast<uint64_t>(b);
-  return (raw > static_cast<uint64_t>(UINT32_MAX)) ? UINT32_MAX
-                                                    : static_cast<uint32_t>(raw);
+  return (raw > static_cast<uint64_t>(kMathValueMax))
+             ? kMathValueMax
+             : static_cast<uint32_t>(raw);
 }
 
 uint32_t saturatingMul(uint32_t a, uint32_t b) {
   const uint64_t raw = static_cast<uint64_t>(a) * static_cast<uint64_t>(b);
-  return (raw > static_cast<uint64_t>(UINT32_MAX)) ? UINT32_MAX
-                                                    : static_cast<uint32_t>(raw);
+  return (raw > static_cast<uint64_t>(kMathValueMax))
+             ? kMathValueMax
+             : static_cast<uint32_t>(raw);
 }
 
 /** @brief Computes operation raw result with saturating arithmetic where needed. */
@@ -82,7 +83,7 @@ uint32_t mapRange(uint32_t value, uint32_t inMin, uint32_t inMax, uint32_t outMi
                              : static_cast<int64_t>(outMin) +
                                    static_cast<int64_t>(delta);
   if (mapped <= 0) return 0U;
-  if (mapped >= static_cast<int64_t>(UINT32_MAX)) return UINT32_MAX;
+  if (mapped >= static_cast<int64_t>(kMathValueMax)) return kMathValueMax;
   return static_cast<uint32_t>(mapped);
 }
 
@@ -92,7 +93,8 @@ uint32_t applyEma(uint32_t previous, uint32_t sample, uint32_t alphaX100) {
   const uint64_t weighted =
       static_cast<uint64_t>(sample) * alpha +
       static_cast<uint64_t>(previous) * (100U - alpha);
-  return static_cast<uint32_t>((weighted + 50U) / 100U);
+  const uint32_t value = static_cast<uint32_t>((weighted + 50U) / 100U);
+  return (value > kMathValueMax) ? kMathValueMax : value;
 }
 }  // namespace
 
@@ -112,7 +114,7 @@ void runV3MathStep(const V3MathRuntimeConfig& cfg, V3MathRuntimeState& runtime,
   uint32_t nextValue = previousValue;
 
   if (in.turnOffCondition) {
-    nextValue = cfg.fallbackValue;
+    nextValue = (cfg.fallbackValue > kMathValueMax) ? kMathValueMax : cfg.fallbackValue;
   } else if (in.turnOnCondition) {
     const uint32_t raw = computeRawValue(cfg, in.inputA, in.inputB);
     const uint32_t clampedInput = clampToRange(raw, cfg.inputMin, cfg.inputMax);

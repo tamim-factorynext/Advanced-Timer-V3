@@ -22,7 +22,7 @@ Notes:
 #include "kernel/v3_condition_rules.h"
 
 namespace {
-constexpr uint32_t kMathValueMax = 1000000U;
+constexpr uint32_t kMathValueMax = 100000000U;
 /**
  * @brief Resolves the expected legacy card type for a fixed card-id slot.
  * @details Slot boundaries are supplied by config and define a contiguous id
@@ -486,6 +486,10 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
     out.ai.smoothingFactorPct = smoothingFactorPct;
     out.ai.outputMin = outputRange["min"] | 0U;
     out.ai.outputMax = outputRange["max"] | 100U;
+    if (out.ai.outputMin > kMathValueMax || out.ai.outputMax > kMathValueMax) {
+      reason = "AI value out of range (0..100000000)";
+      return false;
+    }
     return true;
   }
 
@@ -627,7 +631,7 @@ bool parseV3CardToTyped(JsonObjectConst v3Card, const logicCardType* sourceTypeB
         out.math.outputMin > kMathValueMax ||
         out.math.outputMax > kMathValueMax ||
         out.math.fallbackValue > kMathValueMax) {
-      reason = "MATH value out of range (0..1000000)";
+      reason = "MATH value out of range (0..100000000)";
       return false;
     }
     if (cfg["turnOnCondition"].is<JsonObjectConst>()) {

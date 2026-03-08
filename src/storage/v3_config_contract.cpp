@@ -109,9 +109,9 @@ void initMathCard(CardConfig& card, uint8_t id) {
   card.math.inputBCardId = id;
   card.math.inputB = 0;
   card.math.inputMin = 0;
-  card.math.inputMax = 100;
+  card.math.inputMax = 10000;
   card.math.outputMin = 0;
-  card.math.outputMax = 100;
+  card.math.outputMax = 10000;
   card.math.smoothingFactorPct = 100;
   card.math.fallbackValue = 0;
   card.math.turnOnCondition = makeInertConditionBlock(id);

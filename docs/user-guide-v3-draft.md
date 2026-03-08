@@ -59,12 +59,34 @@ Rules:
 - Referenced threshold card must expose numeric `liveValue` (RTC is not allowed).
 - Self-reference in the same clause is rejected.
 
+## 2.6 Config Apply and Reboot Requirement
+
+Portal save/apply writes configuration to active storage immediately, but runtime behavior does not switch to the new configuration until reboot.
+
+Applies to:
+
+- card edits from Config page,
+- system/settings edits from Settings page.
+
+Operational rule:
+
+- after any save/apply change, reboot the device to make the new config take effect.
+
 ## 2.4 Counter Range and Overflow
 
-Integrated counters use unsigned 32-bit range (`0 ... 4,294,967,295`).
+Integrated counters follow product business range (`0 ... 1,000,000`).
 
-- At max value, next increment wraps to `0`.
+- At `1,000,000`, next increment wraps to `0`.
 - Plan long-running deployments with wrap behavior in mind.
+
+## 2.7 Product Numeric Limits
+
+For predictable behavior, V3 enforces product-level numeric limits:
+
+- No negative values are supported anywhere in runtime/config value paths.
+- Decimal-capable numeric values use centiunits with two-decimal display.
+- Maximum supported user-facing value is `1,000,000.00`.
+- Any value above `1,000,000.00` is outside supported range.
 
 ## 3. DI Card (Digital Input)
 
@@ -144,6 +166,7 @@ Example: `FORCED_HIGH` with `invert=true` becomes effective low.
 - `inputMin`, `inputMax`
 - `outputMin`, `outputMax`
 - `smoothingFactorPct` (`0..100`, where `100 = 1.00`)
+- supported output range ceiling: `0.00..1,000,000.00` (centiunit-backed)
 
 Factory/new-card defaults:
 
@@ -276,7 +299,7 @@ Condition blocks on MATH (when configured) follow the same numeric compare-sourc
 - Internal storage and runtime use integer centiunits.
 - Portal should display values as two decimal places (`centi / 100.00`).
 - Config/API payloads should carry raw integer centiunits, not float text.
-- MATH numeric fields are capped to `0..1,000,000` centiunits for V3 safety envelope.
+- MATH numeric fields are capped to `0..100,000,000` centiunits (`0.00..1,000,000.00`) for V3 safety envelope.
 
 ## 7.4 Proposed Control Behavior
 

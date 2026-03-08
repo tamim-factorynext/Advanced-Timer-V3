@@ -187,6 +187,8 @@ bool validateSystemConfigLight(const SystemConfig& candidate,
     if (card.family == CardFamily::AI &&
         (card.ai.inputMin > card.ai.inputMax ||
          card.ai.outputMin > card.ai.outputMax ||
+         card.ai.outputMin > kMathValueMax ||
+         card.ai.outputMax > kMathValueMax ||
          card.ai.smoothingFactorPct > 100U)) {
       outError.code = ConfigErrorCode::InvalidAiRange;
       outError.cardIndex = i;
