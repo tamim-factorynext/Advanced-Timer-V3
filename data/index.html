@@ -363,7 +363,8 @@
       let cardsDeltaInFlight = false;
       let metricsTimer = null;
       let cardsDeltaTimer = null;
-      const kLivePollIntervalMs = 1200;
+      const kMinLivePollIntervalMs = 100;
+      let livePollIntervalMs = kMinLivePollIntervalMs;
 
       function canPollLive() {
         return document.visibilityState === "visible";
@@ -377,10 +378,20 @@
           state.connected = true;
           state.lastOkMs = Date.now();
           state.lastError = "none";
-          renderSummary({
+          const runtime = {
             ...(metrics.runtime || {}),
             tsMs: metrics.tsMs,
-          });
+          };
+          const scanPeriodMs = Number(runtime.scanPeriodMs || 0);
+          const desiredIntervalMs =
+            Number.isFinite(scanPeriodMs) && scanPeriodMs > kMinLivePollIntervalMs
+              ? Math.round(scanPeriodMs)
+              : kMinLivePollIntervalMs;
+          if (desiredIntervalMs !== livePollIntervalMs) {
+            livePollIntervalMs = desiredIntervalMs;
+            if (canPollLive()) startLivePolling();
+          }
+          renderSummary(runtime);
         } catch (err) {
           state.connected = false;
           state.lastError = String(err && err.message ? err.message : err);
@@ -431,8 +442,8 @@
         if (!canPollLive()) return;
         tickMetrics();
         tickCardsDelta();
-        metricsTimer = setInterval(tickMetrics, kLivePollIntervalMs);
-        cardsDeltaTimer = setInterval(tickCardsDelta, kLivePollIntervalMs);
+        metricsTimer = setInterval(tickMetrics, livePollIntervalMs);
+        cardsDeltaTimer = setInterval(tickCardsDelta, livePollIntervalMs);
       }
 
       document.addEventListener("visibilitychange", () => {

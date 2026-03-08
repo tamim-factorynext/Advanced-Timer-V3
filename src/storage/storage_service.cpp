@@ -306,6 +306,19 @@ bool ensureSplitDirs() {
   return true;
 }
 
+bool hasCompleteSplitLayout(const SystemConfig& cfg) {
+  if (!ensureStorageFsMounted()) return false;
+  if (!ensureSplitDirs()) return false;
+  if (!LittleFS.exists(kSplitSettingsPath)) return false;
+  if (!LittleFS.exists(kSplitCardsIndexPath)) return false;
+  for (uint8_t i = 0; i < cfg.cardCount; ++i) {
+    char cardPath[64] = {};
+    buildCardPath(cfg.cards[i].id, cardPath, sizeof(cardPath));
+    if (!LittleFS.exists(cardPath)) return false;
+  }
+  return true;
+}
+
 bool persistSplitConfig(const SystemConfig& cfg) {
   if (!ensureStorageFsMounted()) return false;
   if (!ensureSplitDirs()) return false;
@@ -344,6 +357,10 @@ bool persistSplitConfig(const SystemConfig& cfg) {
 bool persistSingleCardConfig(const SystemConfig& cfg, uint8_t cardId) {
   if (!ensureStorageFsMounted()) return false;
   if (!ensureSplitDirs()) return false;
+  // Selective write requires an existing split baseline.
+  if (!hasCompleteSplitLayout(cfg)) {
+    return persistSplitConfig(cfg);
+  }
   const int8_t index = findCardIndexById(cfg, cardId);
   if (index < 0) return false;
 
@@ -372,6 +389,10 @@ bool persistSingleCardConfig(const SystemConfig& cfg, uint8_t cardId) {
 bool persistSettingsOnlyConfig(const SystemConfig& cfg) {
   if (!ensureStorageFsMounted()) return false;
   if (!ensureSplitDirs()) return false;
+  // Settings-only write is safe only when cards/index baseline exists.
+  if (!hasCompleteSplitLayout(cfg)) {
+    return persistSplitConfig(cfg);
+  }
   JsonDocument settingsDoc;
   JsonObject settingsRoot = settingsDoc.to<JsonObject>();
   writeSettingsJson(settingsRoot, cfg);
@@ -647,6 +668,29 @@ void StorageService::begin() {
 
   logStorageStage("08 check bootstrap error");
   if (attemptedFileLoad && bootstrapError.code != ConfigErrorCode::None) {
+    // Recover from incomplete/corrupt split layout by rebuilding a valid
+    // default split baseline instead of hard-halting boot.
+    if (attemptedSplitLoad) {
+      Serial.println("[storage] split bootstrap invalid; recovering with default split baseline");
+      Serial.flush();
+      makeDefaultSystemConfig(candidate);
+      ConfigValidationError recoverValidationError = {ConfigErrorCode::None, 0};
+      const bool recoverValid =
+          validateSystemConfigLight(candidate, recoverValidationError);
+      if (recoverValid && persistSplitConfig(candidate)) {
+        bootstrapError = {ConfigErrorCode::None, 0};
+        source_ = BootstrapSource::DefaultConfig;
+      } else {
+        activeConfigPresent_ = false;
+        lastError_ = recoverValid
+                         ? ConfigValidationError{ConfigErrorCode::ConfigPayloadInvalidShape, 0}
+                         : recoverValidationError;
+        logStorageStage("09 bootstrap recovery failed");
+        return;
+      }
+    }
+  }
+  if (attemptedFileLoad && bootstrapError.code != ConfigErrorCode::None) {
     activeConfigPresent_ = false;
     lastError_ = bootstrapError;
     logStorageStage("09 bootstrap error path exit");
@@ -669,6 +713,13 @@ void StorageService::begin() {
     logStorageStage("13 migrate legacy -> split");
     if (!persistSplitConfig(candidate)) {
       Serial.println("[storage] legacy migration write failed; continuing in-RAM");
+      Serial.flush();
+    }
+  }
+  if (!attemptedSplitLoad && !attemptedLegacyLoad) {
+    logStorageStage("13b seed default -> split");
+    if (!persistSplitConfig(candidate)) {
+      Serial.println("[storage] default split seed write failed; continuing in-RAM");
       Serial.flush();
     }
   }

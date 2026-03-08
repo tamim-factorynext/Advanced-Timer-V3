@@ -157,7 +157,7 @@ Acceptance gate:
 
 ## Phase 4: Cutover Cleanup (Mandatory)
 
-Status (2026-03-08): `In progress`.
+Status (2026-03-08 session): `Completed for this rewrite session`.
 
 - Remove migration-only compatibility paths and old helper calls.
 - Remove temporary debug logs used for freeze isolation.
@@ -166,6 +166,16 @@ Status (2026-03-08): `In progress`.
 Acceptance gate:
 - Zero references to deprecated transport path remain.
 - Worklog cleanup checklist fully checked.
+
+## Session Closure Note (2026-03-08)
+
+- This rewrite session is closed with stable operator evidence:
+  - card/settings save persistence stable,
+  - reboot/boot path stable after save,
+  - no recurring post-save static-page write-stall in latest validation cycles.
+- Remaining follow-up outside this closed session:
+  - execute and record deferred `30+ minute` mixed stress run (time-boxed defer),
+  - keep fallback `AT_FORCE_REBOOT_AFTER_SAVE` disabled-by-default unless field containment is needed.
 
 ## Cleanup Contract (Anti-Layer-Creep)
 

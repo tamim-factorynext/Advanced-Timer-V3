@@ -68,6 +68,19 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
   - finish removal/reduction of migration-only diagnostics,
   - capture deferred long-run stress evidence in a follow-up session.
 
+### Rewrite Session Closure (2026-03-08 End)
+
+- Session outcome:
+  - post-save navigation freeze resolved in normal operator flows,
+  - save persistence and reboot boot-path stable for both settings and card edits,
+  - split-layout consistency safeguards added so selective writes cannot leave boot-breaking partial storage state.
+- Final verification evidence (operator run):
+  - card save response success with expected envelope (`status=SUCCESS`, `requiresRestart=true`),
+  - immediate reboot after save completes with normal bootstrap and WiFi reconnect,
+  - repeated reboot cycle remains stable (`reset reason=3`, no config bootstrap halt).
+- Carry-over (deferred):
+  - run and record full `30+ minute` mixed stress validation when schedule allows.
+
 ## 2026-03-07
 
 ### Portal Freeze Investigation (Core1 Post-Save Navigation)
