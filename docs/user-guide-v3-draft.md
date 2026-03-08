@@ -136,6 +136,31 @@ Live data-source rule:
 - badge evaluation/activity is updated from runtime stream/poll data,
 - runtime payload is not required to repeat static condition expression text.
 
+## 2.10 Live Card 4-Zone Layout (UI Contract)
+
+Live page cards follow one strict structure for all families:
+
+- Zone 1 (Header): icon, family label, logical terminal identity (`DI0`, `DO1`, etc.), dominant card state.
+- Zone 2 (Primary Runtime): compact high-value runtime signals for fast reading.
+- Zone 3 (Logic Strip): `SET` / `RST` configured expressions (for set/reset-supported families).
+- Zone 4 (Debug Actions): debug-only controls and card settings/wizard entry.
+
+Debug mode rule:
+
+- when `debugModeEnabled=false`, Zone 4 is not shown and does not consume card space,
+- when `debugModeEnabled=true`, Zone 4 is shown.
+
+Disabled card rule:
+
+- header state shows `DISABLED`,
+- Zones 2 and 3 remain visible in muted style for context continuity,
+- set/reset expression text stays visible, but active evaluation coloring is suppressed while disabled.
+
+Identity rule:
+
+- primary operator-facing card reference uses logical terminal labels (`DI0/DO1/...`),
+- raw GPIO/pin numbers are treated as advanced detail.
+
 ## 3. DI Card (Digital Input)
 
 ## 3.1 What DI Provides

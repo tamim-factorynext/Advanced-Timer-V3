@@ -706,5 +706,26 @@ Use one short entry per decision with this structure:
 - Impact: Requires static-cache refresh when `activeVersion` changes or after save/reboot flows.
 - References: `docs/api-contract-v3.md`, `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
 
+## DEC-0067: Live Card UI Uses Strict 4-Zone Layout + Debug-Gated Zone 4
+- Date: 2026-03-08
+- Status: Accepted
+- Context: Rendering all card information as badges reduced clarity and harmed scanability, especially as card count grows.
+- Decision: Standardize Live cards to strict 4-zone layout:
+  - Zone 1 (Header): icon, family title, logical terminal identity (`DI0/DO1/...`) and dominant live-state indicator.
+  - Zone 2 (Primary Runtime): compact family-specific runtime row(s) for high-value live signals.
+  - Zone 3 (Logic Strip): `SET` and `RST` expression display for families that support set/reset.
+  - Zone 4 (Debug Actions): reserved for debug-related controls and card wizard entry only.
+  - `debugModeEnabled=false`: Zone 4 is not rendered at all (no card real-estate consumed).
+  - `debugModeEnabled=true`: Zone 4 is rendered and can include settings icon + debug controls.
+- Decision: Disabled-card behavior keeps structure stable:
+  - Zone 1 shows `DISABLED`.
+  - Zones 2 and 3 remain visible in muted/inactive presentation.
+  - Zone 3 keeps configured expressions visible but suppresses active evaluation coloring.
+- Decision: User-facing card identity uses logical terminal labels (`DI0`, `DO1`, etc.) as primary reference; raw GPIO/pin mapping is treated as advanced detail.
+- Impact: Improves operator comprehension and card-to-card uniformity across all themes.
+- Impact: Preserves commissioning/debug power without cluttering normal operations.
+- Impact: Reduces cognitive load while keeping configuration visibility intact for disabled cards.
+- References: `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
+
 
 

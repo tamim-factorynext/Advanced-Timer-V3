@@ -114,6 +114,64 @@ Done when:
 - Example expressions from documentation render exactly as specified.
 - Live page makes no extra per-scan config API requests after initial bootstrap.
 
+## 3.2 Card-By-Card Live Badge Rollout Plan
+
+Execution policy:
+- Implement and validate one family at a time.
+- Keep runtime endpoints unchanged; use one-time config bootstrap cache for static text.
+- Keep set/reset expression text stable; use runtime booleans only for badge active/inactive coloring.
+- Enforce strict 4-zone card layout in all family slices:
+- Zone 1 header, Zone 2 primary runtime, Zone 3 logic strip, Zone 4 debug actions.
+- Zone 4 rendered only when `debugModeEnabled=true`.
+- Use logical terminal identity labels (`DI0/DO1/...`) as primary visible card reference.
+
+### Slice C1: DI First (Start Here)
+
+Goal:
+- Deliver complete DI live card visualization as baseline pattern for all later families.
+
+Scope:
+- Add DI card icon and DI-specific static parameter badges:
+- `channel`, `invert`, `edgeMode`, `debounceMs`
+- Apply strict 4-zone DI layout:
+- Zone 1 uses `DIx` terminal identity and dominant state indicator.
+- Zone 2 shows DI runtime row (`CMD`, `PHYS`, `EDGE`, `COUNT`).
+- Zone 3 shows `SET`/`RST` expression strip.
+- Zone 4 reserved for debug controls only and hidden when debug mode is disabled.
+- Render DI set/reset expression badges using configured condition blocks:
+- expression format `A`, `A & B`, `A | B`
+- token vocabulary `ON/OFF`, `HIGH/LOW`, `TRIG/CLR`, `IDLE/RUN/DONE`, `TRUE/FALSE`
+- Use runtime fields for dynamic DI badges:
+- `commandState`, `actualState`, `edgePulse`, `liveValue`
+- Use `turnOnConditionMet` and `turnOffConditionMet` only for SET/RST badge color state.
+
+Done when:
+- DI cards show all static parameter badges and set/reset expression badges at all times.
+- DI set/reset badge color follows runtime evaluation without changing expression text.
+- DI rendering is stable on mobile and desktop widths.
+- Disabled DI cards keep Zones 2/3 visible in muted inactive style and show `DISABLED` in header.
+
+### Slice C2: DO + SIO
+
+Scope:
+- Add DO/SIO static parameter badges.
+- Add DO/SIO runtime mission-state badges and counters.
+- Apply same set/reset expression renderer as DI.
+
+### Slice C3: AI + Alarm(RTC)
+
+Scope:
+- Add static parameter badges for AI and Alarm.
+- No set/reset badges for AI/Alarm; show explicit static `No SET/RST` badge.
+- Render family-relevant runtime badges only.
+
+### Slice C4: MATH
+
+Scope:
+- Add static MATH operation/input/range badges.
+- Add MATH set/reset expression badges and runtime value badges.
+- Final cross-family visual polish and compactness pass.
+
 ## 3.1 Card Wizard Follow-Up Slices (After P4)
 
 ## Slice P5: Live Card Wizard Shell + Debug Gating

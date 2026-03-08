@@ -251,6 +251,18 @@ Build:
 - expression token vocabulary is fixed:
 - `commandState=ON/OFF`, `actualState=HIGH/LOW`, `edgePulse=TRIG/CLR`, `missionState=IDLE/RUN/DONE`, constant clauses as `CardRef:TRUE/FALSE`.
 - badge color (not text) indicates runtime evaluation result.
+- Live card layout contract (strict 4-zone):
+- Zone 1: header with icon + family title + logical terminal identity (`DI0/DO1/...`) + dominant live-state indicator.
+- Zone 2: primary runtime signals (family-specific compact row).
+- Zone 3: set/reset logic strip (families with set/reset support only).
+- Zone 4: debug actions area (settings icon/card wizard and debug-only controls).
+- Zone 4 is debug-gated:
+- `debugModeEnabled=false` -> Zone 4 is not rendered and consumes no card space.
+- `debugModeEnabled=true` -> Zone 4 is visible.
+- Disabled-card display policy:
+- keep Zones 2 and 3 visible in muted inactive style for context stability.
+- show configured set/reset expressions but suppress active evaluation coloring.
+- show `DISABLED` in header state indicator.
 - Live badge data-source policy (resource-safe):
 - do not expand runtime card payload with static condition-expression text.
 - perform one-time static bootstrap from config APIs (`GET /api/v3/cards` + `GET /api/v3/cards/{id}`).

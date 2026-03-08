@@ -6,6 +6,52 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 
 ## 2026-03-08
 
+### Live Card Layout Policy Freeze (4-Zone + Disabled-State + Debug Zone)
+
+### Completed
+
+- Accepted strict 4-zone card layout for Live page:
+  - Zone 1: header (icon, family label, logical terminal identity, dominant state)
+  - Zone 2: primary runtime signals
+  - Zone 3: set/reset expression strip (where supported)
+  - Zone 4: debug actions and card wizard entry only
+- Accepted debug gate policy for Zone 4:
+  - `debugModeEnabled=false` -> Zone 4 not rendered, no card real-estate consumed
+  - `debugModeEnabled=true` -> Zone 4 rendered
+- Accepted disabled-card display policy:
+  - header shows `DISABLED`
+  - Zones 2 and 3 remain visible in muted style
+  - set/reset expression text remains visible while evaluation coloring is suppressed
+- Accepted card identity display policy:
+  - primary reference is logical terminal identity (`DI0/DO1/...`)
+  - raw GPIO/pin is advanced-detail context
+- Documentation updated:
+  - `docs/decisions.md` (`DEC-0067`)
+  - `docs/portal-v3-plan.md`
+  - `docs/portal-execution-board-v3.md`
+  - `docs/user-guide-v3-draft.md`
+
+### Live Card Rollout Kickoff: DI First Implementation
+
+### Completed
+
+- Added card-by-card live badge rollout plan to execution board (`Slice C1..C4`) with DI as first implementation slice.
+- Started DI implementation on live page:
+  - one-time static config bootstrap cache:
+    - `GET /api/v3/cards`
+    - `GET /api/v3/cards/{id}`
+  - DI static badges rendered from config:
+    - `channel`, `invert`, `edgeMode`, `debounceMs`
+  - DI set/reset expression badges rendered from condition blocks with frozen token convention.
+  - DI set/reset badge color driven by runtime evaluation:
+    - `turnOnConditionMet`
+    - `turnOffConditionMet`
+  - DI runtime badges rendered:
+    - `CMD`, `PHYS`, `EDGE`, `COUNT`
+- File updated:
+  - `data/index.html`
+  - `docs/portal-execution-board-v3.md`
+
 ### Live Badge Data-Source Policy Lock (ESP32 Resource Guard)
 
 ### Completed

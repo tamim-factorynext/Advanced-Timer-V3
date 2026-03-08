@@ -67,6 +67,17 @@
       .node { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--node-bg); padding: 10px; }
       .node h4 { margin: 0 0 7px; font-size: 14px; display: flex; justify-content: space-between; color: var(--accent-2); }
       .node .meta { font-size: 12px; color: var(--text-2); display: grid; gap: 4px; }
+      .node-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .node-title { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; color: var(--accent-2); }
+      .node-icon { width: 18px; text-align: center; color: var(--accent); }
+      .node-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+      .badge { display: inline-block; padding: 0.35em 0.6em; font-size: 11px; font-weight: 600; border-radius: 999px; border: 1px solid transparent; line-height: 1.1; }
+      .text-bg-secondary { background: var(--chip); color: var(--text-2); border-color: var(--line); }
+      .text-bg-success { background: rgba(74, 222, 128, 0.18); color: var(--ok); border-color: rgba(74, 222, 128, 0.35); }
+      .text-bg-danger { background: rgba(239, 68, 68, 0.18); color: var(--bad); border-color: rgba(239, 68, 68, 0.35); }
+      .text-bg-info { background: rgba(125, 211, 252, 0.16); color: var(--accent-2); border-color: rgba(125, 211, 252, 0.35); }
+      .text-bg-warning { background: rgba(245, 158, 11, 0.16); color: var(--warn); border-color: rgba(245, 158, 11, 0.35); }
+      .badge-formula { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .footer { margin-top: 10px; color: var(--text-2); font-size: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); padding: 8px 10px; }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--text-2); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
@@ -159,6 +170,9 @@
         lastError: "none",
         cardsSeq: 0,
         cardsById: new Map(),
+        staticCardsById: new Map(),
+        cardRefById: new Map(),
+        activeVersion: 0,
       };
 
       const el = {
@@ -264,6 +278,8 @@
           RTC: "Alarm",
         };
         el.cards.innerHTML = cards.map((c) => {
+          const family = runtimeTypeToFamily(c.type);
+          if (family === "DI") return renderDiCard(c);
           const truth = c.actualState ? "ON" : "OFF";
           const truthClass = c.actualState ? "ok" : "warn";
           const typeLabel = runtimeTypeLabelMap[c.type] || c.type || "Card";
@@ -281,8 +297,131 @@
         }).join("");
       }
 
+      function runtimeTypeToFamily(type) {
+        if (type === "DigitalInput") return "DI";
+        if (type === "DigitalOutput") return "DO";
+        if (type === "AnalogInput") return "AI";
+        if (type === "SoftIO") return "SIO";
+        if (type === "Math") return "MATH";
+        if (type === "RTC") return "RTC";
+        return "UNKNOWN";
+      }
+
+      function sourceRef(cardId) {
+        return state.cardRefById.get(Number(cardId)) || `#${Number(cardId)}`;
+      }
+
+      function truthToken(value, highToken, lowToken) {
+        return value ? highToken : lowToken;
+      }
+
+      function shortEdgeMode(v) {
+        const n = Number(v);
+        if (n === 0) return "RISING";
+        if (n === 1) return "FALLING";
+        if (n === 2) return "CHANGE";
+        return String(v ?? "?");
+      }
+
+      function formatClause(clause) {
+        if (!clause || typeof clause !== "object") return "NA";
+        const source = sourceRef(clause.sourceCardId);
+        const op = String(clause.operator || "ALWAYS_FALSE");
+        if (op === "ALWAYS_TRUE") return `${source}:TRUE`;
+        if (op === "ALWAYS_FALSE") return `${source}:FALSE`;
+        if (op === "LOGICAL_TRUE") return `${source}:ON`;
+        if (op === "LOGICAL_FALSE") return `${source}:OFF`;
+        if (op === "PHYSICAL_ON") return `${source}:HIGH`;
+        if (op === "PHYSICAL_OFF") return `${source}:LOW`;
+        if (op === "TRIGGERED") return `${source}:TRIG`;
+        if (op === "TRIGGER_CLEARED") return `${source}:CLR`;
+        if (op === "RUNNING") return `${source}:RUN`;
+        if (op === "FINISHED") return `${source}:DONE`;
+        if (op === "STOPPED") return `${source}:IDLE`;
+
+        const cmp = {
+          GT: ">",
+          GTE: ">=",
+          LT: "<",
+          LTE: "<=",
+          EQ: "=",
+          NEQ: "!=",
+        }[op] || "?";
+        const rhs = clause.useThresholdCard
+          ? sourceRef(clause.thresholdCardId)
+          : String(Number(clause.thresholdValue || 0));
+        return `${source}${cmp}${rhs}`;
+      }
+
+      function formatConditionBlock(block) {
+        if (!block || typeof block !== "object") return "NA";
+        const a = formatClause(block.clauseA);
+        const b = formatClause(block.clauseB);
+        const combiner = String(block.combiner || "NONE");
+        if (combiner === "AND") return `${a} & ${b}`;
+        if (combiner === "OR") return `${a} | ${b}`;
+        return a;
+      }
+
+      function renderDiCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const setExpr = formatConditionBlock(params.turnOnCondition);
+        const resetExpr = formatConditionBlock(params.turnOffCondition);
+        const headerTruth = truthToken(!!c.actualState, "HIGH", "LOW");
+        const headerClass = c.actualState ? "ok" : "warn";
+
+        return `
+          <article class="node">
+            <div class="node-head">
+              <div class="node-title"><span class="node-icon">&#x21E9;</span><span>Digital Input ${Number(c.index || 0)}</span></div>
+              <span class="${headerClass}">${headerTruth}</span>
+            </div>
+            <div class="node-badges">
+              <span class="badge text-bg-secondary">ID ${c.id}</span>
+              <span class="badge text-bg-secondary">CH ${Number(params.channel ?? 0)}</span>
+              <span class="badge text-bg-secondary">INV ${params.invert ? "ON" : "OFF"}</span>
+              <span class="badge text-bg-secondary">EDGE ${shortEdgeMode(params.edgeMode)}</span>
+              <span class="badge text-bg-secondary">DB ${Number(params.debounceMs ?? 0)}ms</span>
+              <span class="badge badge-formula ${c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger"}">SET: ${setExpr}</span>
+              <span class="badge badge-formula ${c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger"}">RST: ${resetExpr}</span>
+              <span class="badge text-bg-info">CMD ${truthToken(!!c.commandState, "ON", "OFF")}</span>
+              <span class="badge text-bg-info">PHYS ${truthToken(!!c.actualState, "HIGH", "LOW")}</span>
+              <span class="badge text-bg-info">EDGE ${truthToken(!!c.edgePulse, "TRIG", "CLR")}</span>
+              <span class="badge text-bg-warning">COUNT ${Number(c.liveValue ?? 0)}</span>
+            </div>
+          </article>
+        `;
+      }
+
       function sortedCardsFromStore() {
         return Array.from(state.cardsById.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+      }
+
+      async function bootstrapStaticCardCache() {
+        const indexResp = await fetchJson("/api/v3/cards");
+        const cardsIndex = Array.isArray(indexResp.cards) ? indexResp.cards : [];
+        state.activeVersion = Number(indexResp.activeVersion || 0);
+        state.staticCardsById.clear();
+        state.cardRefById.clear();
+
+        const familyCount = {};
+        for (const item of cardsIndex) {
+          if (!item || typeof item.id !== "number") continue;
+          const family = String(item.family || "UNKNOWN");
+          const ordinal = Number(familyCount[family] || 0);
+          familyCount[family] = ordinal + 1;
+          const familyToken = family === "RTC" ? "Alarm" : family;
+          state.cardRefById.set(Number(item.id), `${familyToken}${ordinal}`);
+        }
+
+        await Promise.all(cardsIndex.map(async (item) => {
+          if (!item || typeof item.id !== "number") return;
+          const detail = await fetchJson(`/api/v3/cards/${item.id}`);
+          if (detail && detail.card && typeof detail.card.id === "number") {
+            state.staticCardsById.set(Number(detail.card.id), detail.card);
+          }
+        }));
       }
 
       async function fetchJson(path) {
@@ -304,6 +443,10 @@
         activityTitleEl.textContent = title || "Loading...";
         activityDetailEl.textContent = detail || "Please wait.";
         activityOverlayEl.classList.add("show");
+      }
+
+      function hideActivity() {
+        activityOverlayEl.classList.remove("show");
       }
 
       function attachNavLoadingFeedback() {
@@ -457,7 +600,20 @@
       attachNavLoadingFeedback();
       rebootBtnEl.addEventListener("click", requestRebootAndReconnect);
 
-      startLivePolling();
+      async function initLivePage() {
+        showActivity("Preparing Live View...", "Loading card configuration cache for badge rendering.");
+        try {
+          await bootstrapStaticCardCache();
+        } catch (err) {
+          state.lastError = String(err && err.message ? err.message : err);
+          el.meta.textContent = `Static card bootstrap failed: ${state.lastError}`;
+        } finally {
+          hideActivity();
+        }
+        startLivePolling();
+      }
+
+      initLivePage();
     </script>
   </body>
 </html>
