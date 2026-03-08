@@ -703,6 +703,24 @@ bool decodeSystemConfigLight(JsonObjectConst root, SystemConfig& outDecoded,
   return true;
 }
 
+/**
+ * @brief Parses optional persistent debug-mode setting.
+ * @param systemObj Root/system JSON object.
+ * @param outDebugMode Parsed debug-mode flag destination.
+ * @retval true Debug section absent or valid.
+ * @retval false Debug section present but invalid.
+ * @par Used By
+ * decodeSystemSettingsLight().
+ */
+bool parseDebugModeConfig(JsonObjectConst systemObj, bool& outDebugMode) {
+  if (systemObj["debugModeEnabled"].isNull()) {
+    return true;
+  }
+  if (!systemObj["debugModeEnabled"].is<bool>()) return false;
+  outDebugMode = systemObj["debugModeEnabled"].as<bool>();
+  return true;
+}
+
 bool decodeSystemSettingsLight(JsonObjectConst root, SystemConfig& inOutConfig,
                                ConfigValidationError& outError) {
   outError = {ConfigErrorCode::None, 0};
@@ -716,6 +734,10 @@ bool decodeSystemSettingsLight(JsonObjectConst root, SystemConfig& inOutConfig,
   }
   inOutConfig.schemaVersion = systemObj["schemaVersion"].as<uint32_t>();
   inOutConfig.scanPeriodMs = systemObj["scanPeriodMs"].as<uint32_t>();
+  if (!parseDebugModeConfig(systemObj, inOutConfig.debugModeEnabled)) {
+    outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
+    return false;
+  }
   if (!parseWiFiConfig(systemObj, inOutConfig.wifi)) {
     outError = {ConfigErrorCode::ConfigPayloadInvalidShape, 0};
     return false;

@@ -88,6 +88,14 @@ For predictable behavior, V3 enforces product-level numeric limits:
 - Maximum supported user-facing value is `1,000,000.00`.
 - Any value above `1,000,000.00` is outside supported range.
 
+## 2.8 Debug Mode Setting (Commissioning)
+
+Settings includes persistent `debugModeEnabled` toggle.
+
+- This value is saved in system settings and survives reboot.
+- Use this mode during commissioning/programming windows to keep debug workflows explicit and durable across sessions.
+- In current implementation phase, this toggle is persisted and exposed in settings/config APIs; enforcement of debug-only command visibility/policies is implemented in follow-up slices.
+
 ## 3. DI Card (Digital Input)
 
 ## 3.1 What DI Provides

@@ -633,6 +633,7 @@ This section defines the high-level principles and protocol-level rules for the 
 - The UI **MUST NOT** recompute or reinterpret authoritative logical results from the firmware. All runtime state displayed to the user must be from the kernel's snapshot.
 - All configuration edits are staged locally in the portal until explicitly sent to the device via the `save staged` or `commit` API commands.
 - Runtime controls in the UI (e.g., Force, Mask buttons) must reflect the actual, kernel-acknowledged state, not an optimistic local state.
+- Settings must include a persistent `debugModeEnabled` toggle that survives reboot and can be used to gate/surface commissioning controls in UI/runtime policy.
 
 ## 15. Command and API Contract
 

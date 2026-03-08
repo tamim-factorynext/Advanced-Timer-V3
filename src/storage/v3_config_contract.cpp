@@ -143,6 +143,7 @@ void makeDefaultSystemConfig(SystemConfig& cfg) {
   cfg = {};
   cfg.schemaVersion = kConfigSchemaVersion;
   cfg.scanPeriodMs = kMinScanIntervalMs;
+  cfg.debugModeEnabled = false;
   strncpy(cfg.wifi.backupAccessNetwork.ssid, "advancedtimer",
           sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
   strncpy(cfg.wifi.backupAccessNetwork.password, "12345678",

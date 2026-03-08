@@ -652,5 +652,15 @@ Use one short entry per decision with this structure:
 - Impact: Preserves split-config persistence layout without changing API contract shape.
 - References: `src/portal/transport_runtime.cpp`, `src/storage/storage_service.h`, `src/storage/storage_service.cpp`, `docs/worklog.md`.
 
+## DEC-0063: Persist Debug Mode Toggle In System Settings Contract
+- Date: 2026-03-08
+- Status: Accepted
+- Context: Commissioning workflows need a durable operator-selected debug mode that survives reboot and can be surfaced by portal UX/policy in later slices.
+- Decision: Add `debugModeEnabled` as a persistent boolean system setting in V3 config contract and wire it through settings decode/validate/serialize and portal settings UI/API.
+- Impact: Provides contract-stable persistence for commissioning intent across device reboots.
+- Impact: Keeps initial scope focused on settings persistence first; debug-command gating and output-mask enforcement are delivered in follow-up command/runtime slices.
+- Impact: Allows portal live/settings pages to safely drive feature visibility from one authoritative persisted flag.
+- References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_contract.cpp`, `src/storage/v3_config_decoder.cpp`, `src/storage/storage_service.cpp`, `src/portal/transport_runtime.cpp`, `data/settings.html`, `docs/schema-v3.md`, `docs/api-contract-v3.md`, `docs/user-guide-v3-draft.md`.
+
 
 

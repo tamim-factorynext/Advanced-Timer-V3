@@ -6,6 +6,44 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 
 ## 2026-03-08
 
+### Settings Contract: Persistent Debug Mode Toggle (End-to-End)
+
+### Completed
+
+- Added persistent system settings flag:
+  - `debugModeEnabled` (bool)
+  - files:
+    - `src/storage/v3_config_contract.h`
+    - `src/storage/v3_config_contract.cpp`
+
+- Wired settings decode path:
+  - optional parse and shape validation for `debugModeEnabled` in settings payload decode.
+  - file:
+    - `src/storage/v3_config_decoder.cpp`
+
+- Wired settings serialization path:
+  - include `debugModeEnabled` in settings JSON emitted from storage and transport layers.
+  - files:
+    - `src/storage/storage_service.cpp`
+    - `src/portal/transport_runtime.cpp`
+
+- Updated Settings UI:
+  - added `Debug Mode` toggle to settings form.
+  - load/save round-trip now includes `debugModeEnabled`.
+  - file:
+    - `data/settings.html`
+
+- Documentation updates:
+  - schema rule/field update.
+  - settings API example payload update.
+  - user-guide behavior note.
+  - decision log entry.
+  - files:
+    - `docs/schema-v3.md`
+    - `docs/api-contract-v3.md`
+    - `docs/user-guide-v3-draft.md`
+    - `docs/decisions.md`
+
 ### Post-Save Navigation Freeze Root Cause + Fix Closure
 
 ### Final Root Cause Signal (Observed)

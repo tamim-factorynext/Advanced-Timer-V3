@@ -316,6 +316,7 @@ void writeConditionBlock(JsonObject dst, const v3::storage::ConditionBlock& bloc
 void writeSettingsJson(JsonObject out, const v3::storage::SystemConfig& cfg) {
   out["schemaVersion"] = cfg.schemaVersion;
   out["scanPeriodMs"] = cfg.scanPeriodMs;
+  out["debugModeEnabled"] = cfg.debugModeEnabled;
 
   JsonObject wifi = out["wifi"].to<JsonObject>();
   JsonObject backup = wifi["backupAccessNetwork"].to<JsonObject>();

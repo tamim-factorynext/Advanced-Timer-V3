@@ -23,6 +23,37 @@
       .field { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; }
       .field label { font-size: 13px; color: var(--muted-strong); }
       .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
+      .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+      .switch input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+      .switch-track {
+        width: 46px;
+        height: 24px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface-field);
+        position: relative;
+        transition: background 140ms ease, border-color 140ms ease;
+      }
+      .switch-track::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--muted-strong);
+        transition: transform 140ms ease, background 140ms ease;
+      }
+      .switch input:checked + .switch-track {
+        background: color-mix(in srgb, var(--accent-2) 30%, var(--surface-field));
+        border-color: var(--accent-2);
+      }
+      .switch input:checked + .switch-track::after {
+        transform: translateX(22px);
+        background: var(--accent-2);
+      }
+      .switch-text { min-width: 30px; font-size: 12px; color: var(--muted-strong); font-weight: 600; }
       .range-wrap { display: flex; align-items: center; gap: 8px; }
       .range-wrap input[type="range"] { flex: 1; padding: 0; accent-color: var(--accent-2); }
       .range-value { min-width: 56px; text-align: right; color: var(--muted-strong); font-size: 12px; }
@@ -91,6 +122,14 @@
       <section class="card">
         <div><strong>System Settings</strong> <span class="muted">(WiFi, time, scan)</span></div>
         <div class="form-list">
+          <div class="field">
+            <label>Debug Mode</label>
+            <label class="switch" for="fDebugMode">
+              <input id="fDebugMode" type="checkbox" />
+              <span class="switch-track"></span>
+              <span id="fDebugModeText" class="switch-text">OFF</span>
+            </label>
+          </div>
           <div class="field"><label>User WiFi SSID</label><input id="fSsid" type="text" /></div>
           <div class="field"><label>User WiFi Password</label><input id="fPass" type="text" /></div>
           <div class="field"><label>Timezone</label><select id="fTz"></select></div>
@@ -149,6 +188,8 @@
 
         const fScanSec = document.getElementById("fScanSec");
         const fScanSecValue = document.getElementById("fScanSecValue");
+        const fDebugMode = document.getElementById("fDebugMode");
+        const fDebugModeText = document.getElementById("fDebugModeText");
         const fTz = document.getElementById("fTz");
         const fNtp1 = document.getElementById("fNtp1");
         const fSsid = document.getElementById("fSsid");
@@ -298,6 +339,10 @@
           fScanSecValue.textContent = `${seconds.toFixed(2)} s`;
         }
 
+        function syncDebugModeLabel() {
+          fDebugModeText.textContent = fDebugMode.checked ? "ON" : "OFF";
+        }
+
         function renderTimezoneOptions() {
           fTz.innerHTML = timezoneOptions.map(([value, label]) =>
             `<option value="${value}">${label}</option>`).join("");
@@ -314,6 +359,8 @@
           const clampedMs = Math.min(1000, Math.max(10, scanMs));
           fScanSec.value = (clampedMs / 1000).toFixed(2);
           syncScanPeriodLabel();
+          fDebugMode.checked = !!cfg.debugModeEnabled;
+          syncDebugModeLabel();
           const wifi = cfg.wifi || {};
           const t = cfg.time || {};
           const ts = t.timeSync || {};
@@ -329,6 +376,7 @@
           const scanSec = Number(fScanSec.value || 0.01);
           const scanMs = Math.round(scanSec * 1000);
           cfg.scanPeriodMs = Math.min(1000, Math.max(10, scanMs));
+          cfg.debugModeEnabled = !!fDebugMode.checked;
           cfg.wifi = cfg.wifi || {};
           cfg.wifi.userConfiguredNetwork = cfg.wifi.userConfiguredNetwork || {};
           cfg.wifi.userConfiguredNetwork.ssid = fSsid.value;
@@ -433,6 +481,10 @@
         [fTz, fNtp1, fSsid, fPass].forEach((el) => {
           el.addEventListener("change", () => markDirty());
         });
+        fDebugMode.addEventListener("change", () => {
+          syncDebugModeLabel();
+          markDirty();
+        });
         fScanSec.addEventListener("input", () => {
           syncScanPeriodLabel();
           markDirty();
@@ -451,6 +503,7 @@
         themeSelect.value = savedTheme;
         applyTheme(savedTheme);
         themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+        syncDebugModeLabel();
 
         runAction("Initial load", loadActive);
       </script>

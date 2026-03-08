@@ -247,6 +247,7 @@ struct CardConfig {
 struct SystemConfig {
   uint32_t schemaVersion;
   uint32_t scanPeriodMs;
+  bool debugModeEnabled;
   WiFiConfig wifi;
   ClockConfig time;
   uint8_t cardCount;

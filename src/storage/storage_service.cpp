@@ -146,6 +146,7 @@ void writeConditionBlock(JsonObject dst, const ConditionBlock& block) {
 void writeSettingsJson(JsonObject out, const SystemConfig& cfg) {
   out["schemaVersion"] = cfg.schemaVersion;
   out["scanPeriodMs"] = cfg.scanPeriodMs;
+  out["debugModeEnabled"] = cfg.debugModeEnabled;
 
   JsonObject wifi = out["wifi"].to<JsonObject>();
   JsonObject backup = wifi["backupAccessNetwork"].to<JsonObject>();

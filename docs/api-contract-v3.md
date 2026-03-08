@@ -240,7 +240,11 @@ Condition-block shape rule (applies to request/response config payloads):
   "status": "SUCCESS",
   "tsMs": 12345678,
   "activeVersion": 42,
-  "settings": {}
+  "settings": {
+    "schemaVersion": 301,
+    "scanPeriodMs": 10,
+    "debugModeEnabled": false
+  }
 }
 ```
 
@@ -251,7 +255,11 @@ Request:
 {
   "requestId": "set-1001",
   "apiVersion": "2.0",
-  "settings": {}
+  "settings": {
+    "schemaVersion": 301,
+    "scanPeriodMs": 10,
+    "debugModeEnabled": true
+  }
 }
 ```
 

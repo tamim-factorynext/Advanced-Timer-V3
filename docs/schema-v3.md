@@ -31,6 +31,7 @@ It is the implementation-facing contract for staged config validation and commit
     "jitterBudgetUs": 500,
     "overrunBudgetUs": 1000
   },
+  "debugModeEnabled": false,
   "cards": [],
   "bindings": [],
   "wifi": {
@@ -48,6 +49,7 @@ It is the implementation-facing contract for staged config validation and commit
 - `configId`: required, unique immutable ID for this staged/committed payload.
 - `createdAt`: required, RFC3339 UTC timestamp.
 - `scan`: required object.
+- `debugModeEnabled`: required bool. Enables persistent commissioning/debug mode policy.
 - `cards`: required non-empty array.
 - `bindings`: optional array (default empty).
 - `wifi`: required object.
@@ -382,6 +384,7 @@ Top-level `bindings` allows typed parameter binding.
 - V-CFG-022: reject RTC schedule fields below minute granularity (`second`, `millisecond`, `ms`).
 - V-CFG-023: reject MATH `smoothingFactorPct` outside `0..100`.
 - V-CFG-027: reject MATH numeric fields outside `0..100,000,000` centiunits (`0.00..1,000,000.00`).
+- V-CFG-028: reject non-boolean `debugModeEnabled`.
 
 ## 10. Open Decisions To Freeze
 
