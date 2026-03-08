@@ -251,6 +251,11 @@ Build:
 - expression token vocabulary is fixed:
 - `commandState=ON/OFF`, `actualState=HIGH/LOW`, `edgePulse=TRIG/CLR`, `missionState=IDLE/RUN/DONE`, constant clauses as `CardRef:TRUE/FALSE`.
 - badge color (not text) indicates runtime evaluation result.
+- Live badge data-source policy (resource-safe):
+- do not expand runtime card payload with static condition-expression text.
+- perform one-time static bootstrap from config APIs (`GET /api/v3/cards` + `GET /api/v3/cards/{id}`).
+- use runtime APIs (`/api/v3/runtime/metrics`, `/api/v3/runtime/cards/delta`) only for dynamic updates and badge evaluation state/color.
+- refresh static cache after save/reboot or when `activeVersion` changes.
 
 Exit gate:
 - Advanced debug/simulation tools operate without degrading core runtime UX.

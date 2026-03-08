@@ -696,5 +696,15 @@ Use one short entry per decision with this structure:
 - Impact: Removes ambiguity between expression text and runtime evaluation state responsibilities.
 - References: `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/naming-glossary-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
 
+## DEC-0066: Live Badge Data Source Uses Frontend Static Bootstrap (No Runtime Payload Expansion)
+- Date: 2026-03-08
+- Status: Accepted
+- Context: Live set/reset badge text needs condition configuration details, but ESP32 transport/memory budgets favor minimal runtime payloads.
+- Decision: Keep runtime card payload unchanged. Live page loads static badge-expression inputs via one-time config bootstrap (`GET /api/v3/cards` + per-card `GET /api/v3/cards/{id}`), then uses runtime endpoints (`/api/v3/runtime/metrics`, `/api/v3/runtime/cards/delta`) only for dynamic values and badge evaluation color updates.
+- Impact: Avoids backend complexity and snapshot/delta payload growth on resource-limited target.
+- Impact: Preserves clear split between static config text and dynamic runtime truth.
+- Impact: Requires static-cache refresh when `activeVersion` changes or after save/reboot flows.
+- References: `docs/api-contract-v3.md`, `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
+
 
 

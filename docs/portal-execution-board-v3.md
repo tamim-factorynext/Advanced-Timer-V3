@@ -89,6 +89,12 @@ Goal:
 Scope:
 - Render static parameter badges on every live card.
 - Render dynamic one-line `SET` and `RST` expression badges on every live card.
+- Build static badge-expression cache via one-time config bootstrap:
+- `GET /api/v3/cards` then per-card `GET /api/v3/cards/{id}`.
+- Keep runtime polling limited to:
+- `/api/v3/runtime/metrics`
+- `/api/v3/runtime/cards/delta`
+- Do not add static badge expression text fields into runtime payload.
 - Apply frozen expression format:
 - primary-only -> `A`
 - AND -> `A & B`
@@ -106,6 +112,7 @@ Done when:
 - Set/reset badges remain single-line and readable on smartphone and desktop.
 - Runtime evaluation color changes do not alter badge text format.
 - Example expressions from documentation render exactly as specified.
+- Live page makes no extra per-scan config API requests after initial bootstrap.
 
 ## 3.1 Card Wizard Follow-Up Slices (After P4)
 

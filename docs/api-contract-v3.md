@@ -222,6 +222,8 @@ Success response:
 Rules:
 - `/api/v3/snapshot` is removed from active routing.
 - Clients should compose runtime view from `runtime/metrics` + `runtime/cards`.
+- Runtime card payload remains dynamic-state focused and is not expanded with static config-expression text for Live badges.
+- Live badge expression text should be sourced from config endpoints (`GET /api/v3/cards` + `GET /api/v3/cards/{id}`) and cached client-side until config version changes.
 
 ## 6.2 Config Lifecycle
 

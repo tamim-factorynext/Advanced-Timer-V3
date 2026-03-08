@@ -130,6 +130,12 @@ Evaluation rule:
 - badge text shows configured expression,
 - badge color shows current evaluation result from runtime (`true` or `false`).
 
+Live data-source rule:
+
+- badge expression text is built from card configuration (loaded at Live-page start),
+- badge evaluation/activity is updated from runtime stream/poll data,
+- runtime payload is not required to repeat static condition expression text.
+
 ## 3. DI Card (Digital Input)
 
 ## 3.1 What DI Provides

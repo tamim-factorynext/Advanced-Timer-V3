@@ -6,6 +6,27 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 
 ## 2026-03-08
 
+### Live Badge Data-Source Policy Lock (ESP32 Resource Guard)
+
+### Completed
+
+- Accepted frontend-first data-source split for Live set/reset badges:
+  - static expression data loaded once from config APIs:
+    - `GET /api/v3/cards`
+    - `GET /api/v3/cards/{id}`
+  - dynamic badge evaluation/color updated from runtime APIs:
+    - `GET /api/v3/runtime/metrics`
+    - `GET /api/v3/runtime/cards/delta`
+- Explicitly rejected runtime payload expansion for badge text to avoid unnecessary backend complexity/payload growth on ESP32.
+- Added static-cache refresh trigger rule:
+  - refresh after save/reboot flow or when `activeVersion` changes.
+- Documentation updated:
+  - `docs/decisions.md` (`DEC-0066`)
+  - `docs/portal-v3-plan.md`
+  - `docs/portal-execution-board-v3.md`
+  - `docs/api-contract-v3.md`
+  - `docs/user-guide-v3-draft.md`
+
 ### Live Card Badge Convention Freeze (Pre-Implementation)
 
 ### Completed
