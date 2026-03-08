@@ -58,6 +58,26 @@ Define one user-first naming vocabulary for portal, API, config, and diagnostics
 | `useThresholdCard` | `useCardCompareValue` | Boolean mode switch between constant and card-reference RHS. |
 | `missionState` | `phase` | Simpler user-facing wording for DO/SIO phase state. |
 
+## 5.1 Live Badge Token Vocabulary (Frozen)
+
+These tokens are for compact Live page badge rendering and Card Wizard preview text.
+
+| Signal Source | Token Pair | Example |
+| --- | --- | --- |
+| `commandState` | `ON` / `OFF` | `DI1:ON` |
+| `actualState` | `HIGH` / `LOW` | `DO0:HIGH` |
+| `edgePulse` | `TRIG` / `CLR` | `Alarm0:TRIG` |
+| `missionState` | `IDLE` / `RUN` / `DONE` | `SIO0:RUN` |
+| constant clause | `TRUE` / `FALSE` | `DO2:TRUE` |
+
+Badge expression format rules:
+
+- Primary-only combiner: render only clause A text.
+- AND combiner: render as `A & B`.
+- OR combiner: render as `A | B`.
+- Do not render explicit combiner labels (`[AND]`, `[OR]`, `[NONE]`).
+- Badge text is static expression; badge color reflects runtime evaluation result.
+
 ## 6. AI/MATH Naming
 
 | Current Key | Canonical Key | Notes |

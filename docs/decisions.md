@@ -662,5 +662,39 @@ Use one short entry per decision with this structure:
 - Impact: Allows portal live/settings pages to safely drive feature visibility from one authoritative persisted flag.
 - References: `src/storage/v3_config_contract.h`, `src/storage/v3_config_contract.cpp`, `src/storage/v3_config_decoder.cpp`, `src/storage/storage_service.cpp`, `src/portal/transport_runtime.cpp`, `data/settings.html`, `docs/schema-v3.md`, `docs/api-contract-v3.md`, `docs/user-guide-v3-draft.md`.
 
+## DEC-0064: Live Runtime Card Wizard Scope + Debug-Gated Visibility
+- Date: 2026-03-08
+- Status: Accepted
+- Context: Live Runtime needs a guided per-card edit flow for field commissioning, while preserving safety and avoiding overlap confusion with full Config Studio editing.
+- Decision: Add a Live Runtime `Card Wizard` popup opened from per-card settings icon, visible only when `debugModeEnabled=true`. Wizard supports full per-card parameter editing including set/reset condition rules, then executes explicit finish flow: validate/save selected card and reboot device to apply.
+- Impact: Establishes one clear operator workflow for commissioning edits directly from Live page while keeping full expert editing in Config Studio.
+- Impact: Enforces safer discoverability by hiding edit entrypoint outside debug mode.
+- Impact: Keeps apply semantics aligned with current product rule that config edits require reboot to take effect.
+- Impact: Requires strong final confirmation and diff summary before save+reboot action.
+- References: `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/worklog.md`, `requirements-v3-contract.md`, `data/index.html`, `data/config.html`.
+
+## DEC-0065: Freeze Live Card Badge Rendering Contract (Set/Reset + State Tokens)
+- Date: 2026-03-08
+- Status: Accepted
+- Context: Live Runtime cards must expose all relevant settings continuously, with compact set/reset visibility on both mobile and desktop, before UI implementation begins.
+- Decision: Freeze one-line badge convention for Live cards:
+  - Always show static parameter badges plus dynamic `SET` and `RST` badges.
+  - Badge text carries expression only; evaluation truth is shown by badge color (active/inactive), not by extra text labels.
+  - Combiner is implicit in expression formatting:
+    - primary-only: show clause A only,
+    - AND: `A & B`,
+    - OR: `A | B`.
+  - Do not render explicit combiner tags such as `[AND]`, `[OR]`, or `[NONE]`.
+  - Clause token vocabulary is frozen:
+    - `commandState` -> `ON/OFF`,
+    - `actualState` -> `HIGH/LOW`,
+    - `edgePulse` -> `TRIG/CLR`,
+    - `missionState` -> `IDLE/RUN/DONE`,
+    - constant operators remain explicit with source card context (`DO2:TRUE`, `AI1:FALSE`).
+- Impact: Locks display language so Live page, Card Wizard preview, and docs use one consistent operator-facing syntax.
+- Impact: Improves scanability by keeping set/reset logic visible without opening editor screens.
+- Impact: Removes ambiguity between expression text and runtime evaluation state responsibilities.
+- References: `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/naming-glossary-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
+
 
 

@@ -269,7 +269,7 @@
           return isStateOperator(op) || isTriggerOperator(op) || isNumericOperator(op);
         }
         if (sourceFamily === "RTC") {
-          return isStateOperator(op) || isTriggerOperator(op);
+          return op === "LOGICAL_TRUE" || op === "LOGICAL_FALSE" || isTriggerOperator(op);
         }
         if (sourceFamily === "DO" || sourceFamily === "SIO") {
           return isStateOperator(op) || isTriggerOperator(op) || isNumericOperator(op) || isProcessOperator(op);
@@ -404,11 +404,16 @@
           AI: "Analog Input",
           SIO: "Soft IO",
           MATH: "Math",
-          RTC: "RTC",
+          RTC: "Alarm",
         };
         const familyLabel = familyLabelMap[card?.family] || String(card?.family || "Card");
         const indexLabel = (typeof familyIndex === "number") ? familyIndex : "?";
         return `${familyLabel} ${indexLabel}`;
+      }
+
+      function familyDisplayName(family) {
+        if (family === "RTC") return "Alarm";
+        return family;
       }
 
       function renderCardList() {
@@ -903,7 +908,7 @@
         const card = currentConfig?.cards?.[selectedCardIndex];
         if (!card) return;
         cId.value = card.id;
-        cFamily.value = card.family;
+        cFamily.value = familyDisplayName(card.family);
         cEnabled.value = String(!!card.enabled);
         renderFamilyFields(card);
 

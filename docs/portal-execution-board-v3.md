@@ -81,6 +81,66 @@ Done when:
 - Request ID from submit is visible in UI and matched in diagnostics data.
 - Queue-full and reject reasons are visible without logs.
 
+## Slice P4B: Live Badge Rendering Baseline
+
+Goal:
+- Lock and implement compact always-visible card badges before wizard editing behavior.
+
+Scope:
+- Render static parameter badges on every live card.
+- Render dynamic one-line `SET` and `RST` expression badges on every live card.
+- Apply frozen expression format:
+- primary-only -> `A`
+- AND -> `A & B`
+- OR -> `A | B`
+- no explicit combiner label tags (`[AND]`, `[OR]`, `[NONE]`).
+- Apply frozen state tokens:
+- `commandState`: `ON/OFF`
+- `actualState`: `HIGH/LOW`
+- `edgePulse`: `TRIG/CLR`
+- `missionState`: `IDLE/RUN/DONE`
+- constants with source card reference (`DO2:TRUE`, `AI1:FALSE`).
+- Badge color reflects runtime evaluation true/false.
+
+Done when:
+- Set/reset badges remain single-line and readable on smartphone and desktop.
+- Runtime evaluation color changes do not alter badge text format.
+- Example expressions from documentation render exactly as specified.
+
+## 3.1 Card Wizard Follow-Up Slices (After P4)
+
+## Slice P5: Live Card Wizard Shell + Debug Gating
+
+Goal:
+- Add guided per-card edit popup entry from Live cards with strict debug-mode gating.
+
+Scope:
+- Add per-card settings icon on Live cards.
+- Show icon only when `debugModeEnabled=true`.
+- Build wizard shell (stepper, back/next/cancel, loading/error patterns).
+- Add read-only card summary and diff-preview placeholders.
+
+Done when:
+- Settings icon is not visible when debug mode is disabled.
+- Clicking settings icon opens wizard for selected card in debug mode.
+- Wizard can close/cancel without mutating device state.
+
+## Slice P6: Live Card Wizard Full Card Edit + Save/Reboot Apply
+
+Goal:
+- Complete full per-card editing in wizard and apply through save + reboot flow.
+
+Scope:
+- Support full per-card parameter editing including set/reset condition rules.
+- Submit through existing `GET/PUT /api/v3/cards/{id}` API path.
+- Finish step shows explicit final confirmation and changed-fields summary.
+- On successful save, trigger reboot flow and reconnect UX.
+
+Done when:
+- Operator can edit one card end-to-end from Live wizard and device reboots/reconnects automatically.
+- Validation failures are mapped to wizard step/field feedback.
+- Save failure and reboot failure paths are handled with clear operator messaging.
+
 ## 4. Minimal Weekly Cadence
 
 - Monday: lock one slice scope and acceptance checks.

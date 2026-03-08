@@ -239,6 +239,18 @@ Build:
 - Breakpoint control and clear behavior indicators are mandatory first-pass features.
 - Simulation/force controls are hidden by default and become visible only when enabled from Settings.
 - Telemetry and diagnostics correlation for incident replay.
+- Live Runtime Card Wizard:
+- per-card settings icon opens guided card editor popup.
+- wizard supports full per-card parameter surface including set/reset condition rules.
+- wizard visibility is gated by `debugModeEnabled=true` only.
+- finish action performs explicit save + reboot flow to apply changes.
+- Live card badge rendering contract:
+- every card shows static parameter badges continuously.
+- every card shows compact one-line `SET` and `RST` expression badges continuously.
+- combiner display is expression-based only (`A`, `A & B`, `A | B`) with no explicit `[AND]/[OR]/[NONE]` tag.
+- expression token vocabulary is fixed:
+- `commandState=ON/OFF`, `actualState=HIGH/LOW`, `edgePulse=TRIG/CLR`, `missionState=IDLE/RUN/DONE`, constant clauses as `CardRef:TRUE/FALSE`.
+- badge color (not text) indicates runtime evaluation result.
 
 Exit gate:
 - Advanced debug/simulation tools operate without degrading core runtime UX.
@@ -318,10 +330,10 @@ These questions are intentionally unresolved and should be reviewed in the marat
 - At what threshold should `Chart.js` be rejected or deferred in favor of simpler visuals?
 
 2. Card editing UX model (Live vs Config split):
-- Should we adopt a dual-mode approach:
-- `Config Studio` remains full expert editor for direct parameter edits.
-- `Live Runtime` adds guided `Card Wizard` flow for safer operational changes.
-- If dual-mode is adopted, what exact edit boundaries are allowed on Live page before forcing handoff to Config Studio?
+- Dual-mode approach is accepted:
+- `Config Studio` remains full expert editor.
+- `Live Runtime` includes guided `Card Wizard` for per-card commissioning edits in debug mode.
+- Full cross-card topology/binding editing boundaries remain Config Studio-owned unless explicitly promoted in future decision.
 - What diff/confirmation model is mandatory to prevent confusion when edits can originate from both pages?
 - What synchronization signals must always be visible (`activeVersion`, last change source, last change timestamp) after any commit?
 

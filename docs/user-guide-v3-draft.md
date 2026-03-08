@@ -96,6 +96,40 @@ Settings includes persistent `debugModeEnabled` toggle.
 - Use this mode during commissioning/programming windows to keep debug workflows explicit and durable across sessions.
 - In current implementation phase, this toggle is persisted and exposed in settings/config APIs; enforcement of debug-only command visibility/policies is implemented in follow-up slices.
 
+## 2.9 Live Card Set/Reset Badge Convention
+
+Live cards keep configuration visibility always on:
+
+- static parameter badges are always visible,
+- dynamic `SET` and `RST` expression badges are always visible.
+
+Expression text convention:
+
+- primary-only clause: show one clause only (no combiner text),
+- two-clause AND: `A & B`,
+- two-clause OR: `A | B`,
+- do not show `[AND]`, `[OR]`, or `[NONE]` labels inside badge text.
+
+State token convention:
+
+- `commandState`: `ON/OFF`
+- `actualState`: `HIGH/LOW`
+- `edgePulse`: `TRIG/CLR`
+- `missionState`: `IDLE/RUN/DONE`
+- constant comparison: `CardRef:TRUE` or `CardRef:FALSE`
+
+Examples (display style):
+
+- `SET: DI1:ON & SIO0:OFF`
+- `RST: Alarm0:ON | AI0>=15.00`
+- `SET: DO2:TRUE`
+- `RST: AI1:FALSE`
+
+Evaluation rule:
+
+- badge text shows configured expression,
+- badge color shows current evaluation result from runtime (`true` or `false`).
+
 ## 3. DI Card (Digital Input)
 
 ## 3.1 What DI Provides

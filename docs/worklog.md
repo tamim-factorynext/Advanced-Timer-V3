@@ -6,6 +6,45 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 
 ## 2026-03-08
 
+### Live Card Badge Convention Freeze (Pre-Implementation)
+
+### Completed
+
+- Locked one-line set/reset badge rendering convention for Live cards before implementation.
+- Accepted documentation-level rules:
+  - always-visible static parameter badges,
+  - always-visible dynamic `SET` / `RST` badges,
+  - expression-only combiner rendering (`A`, `A & B`, `A | B`),
+  - no explicit combiner tags (`[AND]`, `[OR]`, `[NONE]`),
+  - frozen token vocabulary:
+    - `commandState`: `ON/OFF`
+    - `actualState`: `HIGH/LOW`
+    - `edgePulse`: `TRIG/CLR`
+    - `missionState`: `IDLE/RUN/DONE`
+    - constant clauses with source reference (`DO2:TRUE`, `AI1:FALSE`)
+  - badge color reserved for runtime evaluation result.
+- Documentation updated:
+  - `docs/decisions.md` (`DEC-0065`)
+  - `docs/portal-v3-plan.md` (Phase 6 contract bullets)
+  - `docs/portal-execution-board-v3.md` (`Slice P4B`)
+  - `docs/naming-glossary-v3.md` (live badge token table)
+  - `docs/user-guide-v3-draft.md` (operator-facing badge examples)
+
+### Card Wizard Decision Lock (Live Runtime)
+
+### Completed
+
+- Accepted Card Wizard direction and documented it across planning/decision artifacts.
+- Locked behavior:
+  - Live card settings icon opens guided Card Wizard popup.
+  - Icon visibility is gated by `debugModeEnabled=true`.
+  - Wizard supports full per-card parameter editing including set/reset condition rules.
+  - Wizard finish path is explicit save + reboot so changes take effect.
+- Documentation updated:
+  - `docs/decisions.md` (`DEC-0064`)
+  - `docs/portal-v3-plan.md` (Phase 6 + Open Questions resolution note)
+  - `docs/portal-execution-board-v3.md` (new follow-up slices `P5/P6`)
+
 ### Settings Contract: Persistent Debug Mode Toggle (End-to-End)
 
 ### Completed

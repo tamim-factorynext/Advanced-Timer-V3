@@ -257,6 +257,24 @@ The behavior of the `set` condition changes fundamentally for `DO` and `SIO` car
 
 - In `Gated` mode, the `set` condition is **level-triggered**. It must **remain true** for the entire duration of the mission (`delayBeforeON` and `onDuration` phases). If the `set` condition becomes false at any point during the mission, the mission is immediately aborted, and the card returns to its idle state.
 
+### 8.5. Portal Badge Rendering Convention (Live Runtime)
+
+To keep runtime-condition visibility compact and unambiguous across mobile and desktop views, Live page set/reset badges MUST follow this convention:
+
+- show both `SET` and `RST` expression badges continuously,
+- render combiner implicitly as expression text only:
+  - primary-only -> `A`
+  - AND -> `A & B`
+  - OR -> `A | B`
+- do not render explicit combiner tags (`[AND]`, `[OR]`, `[NONE]`),
+- use fixed state tokens:
+  - `commandState`: `ON/OFF`
+  - `actualState`: `HIGH/LOW`
+  - `edgePulse`: `TRIG/CLR`
+  - `missionState`: `IDLE/RUN/DONE`
+  - constant clauses: `CardRef:TRUE/FALSE`
+- badge color (not text content) indicates runtime evaluation result.
+
 ## 9. Card-Specific Requirements
 
 ## 8.1 DI (Digital Input)
