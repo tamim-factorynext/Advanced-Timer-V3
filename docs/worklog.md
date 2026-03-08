@@ -81,6 +81,73 @@ Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contrac
 - Carry-over (deferred):
   - run and record full `30+ minute` mixed stress validation when schedule allows.
 
+### 2026-03-08 (Recap: Numeric Limits + Config UX Consistency)
+
+### Completed
+
+- Config UX clarity updates:
+  - renamed AI/MATH smoothing label to `Response Speed (%)`.
+  - changed AI/MATH response-speed input to slider-style control with live value text.
+  - restructured MATH desktop field order for visual consistency:
+    - `Input A` row,
+    - `Operation` in left-only row with empty right cells,
+    - `Input B` row,
+    - remaining range/behavior fields below.
+  - file:
+    - `data/config.html`
+
+- Two-decimal portal handling for centiunit-backed fields:
+  - added UI conversion path for decimal display `<->` centiunit storage (`x100`) for applicable AI/MATH value fields.
+  - fields now render as `0.00` style values where applicable.
+  - file:
+    - `data/config.html`
+
+- Defaults aligned with no-smoothing baseline:
+  - AI default `smoothingFactorPct = 100`.
+  - MATH default `smoothingFactorPct = 100`.
+  - MATH default range max aligned to centiunit `10000` (`100.00`) for initial factory card behavior.
+  - file:
+    - `src/storage/v3_config_contract.cpp`
+
+- Product numeric ceiling expanded and aligned end-to-end:
+  - hard business cap moved to `1,000,000.00` user-facing (`100,000,000` centiunits internal).
+  - storage contract/validator + typed parser/rules updated to enforce the same ceiling.
+  - portal field max values updated to `1,000,000.00` for applicable AI/MATH decimal fields.
+  - files:
+    - `src/storage/v3_config_contract.h`
+    - `src/storage/v3_config_validator.cpp`
+    - `src/kernel/v3_typed_config_rules.cpp`
+    - `src/kernel/v3_typed_card_parser.cpp`
+    - `data/config.html`
+
+- Runtime counter wrap policy switched to business behavior:
+  - DI/DO/SIO `liveValue` counters now wrap at `1,000,000` then return to `0`.
+  - explicit wrap helper introduced in runtime modules to avoid implicit overflow behavior.
+  - note: DO internal `repeatCounter` kept as mission-internal increment path (not forced to business wrap) to preserve mission progression semantics.
+  - files:
+    - `src/kernel/v3_di_runtime.cpp`
+    - `src/kernel/v3_do_runtime.cpp`
+
+- MATH runtime internal arithmetic aligned to business ceiling:
+  - ADD/MUL saturate to `100,000,000` centiunits.
+  - range mapping and EMA outputs capped to `100,000,000` centiunits.
+  - turn-off fallback output clamped to same ceiling.
+  - file:
+    - `src/kernel/v3_math_runtime.cpp`
+
+- Documentation alignment:
+  - added explicit reboot-required-after-save rule for settings/card edits.
+  - added explicit product numeric-limit section (no negatives; max `1,000,000.00`).
+  - updated MATH ceiling language and schema validation text to new centiunit cap.
+  - files:
+    - `docs/user-guide-v3-draft.md`
+    - `docs/schema-v3.md`
+
+### Verification Notes
+
+- Source-level consistency checks completed across touched files.
+- Firmware build/flash verification was not executed in this shell session.
+
 ## 2026-03-07
 
 ### Portal Freeze Investigation (Core1 Post-Save Navigation)
