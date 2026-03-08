@@ -4,6 +4,70 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-08
+
+### Post-Save Navigation Freeze Root Cause + Fix Closure
+
+### Final Root Cause Signal (Observed)
+
+- Save APIs succeeded, but post-save navigation intermittently stalled in static file writes (`WiFiClient write fd=50 errno=11`) and occasionally escalated to watchdog reset.
+- A large persistent heap drop after save correlated with the freeze window.
+- Single-card save path was unnecessarily rewriting full split config (all card files + settings + index), increasing FS/heap/transport pressure.
+
+### Final Fixes Applied
+
+- Storage lifecycle memory fix:
+  - staged config buffer is now released after commit success/failure, instead of being retained.
+  - files:
+    - `src/storage/storage_service.h`
+    - `src/storage/storage_service.cpp`
+
+- Card save write-scope optimization:
+  - `PUT /api/v3/cards/{id}` now writes only:
+    - `/cfg/cards/{id}.json`
+    - `/cfg/cards/index.json`
+  - files:
+    - `src/storage/storage_service.h`
+    - `src/storage/storage_service.cpp`
+    - `src/portal/transport_runtime.cpp`
+
+- Settings save write-scope optimization:
+  - `PUT /api/v3/settings` now writes only:
+    - `/cfg/settings.json`
+  - files:
+    - `src/storage/storage_service.h`
+    - `src/storage/storage_service.cpp`
+    - `src/portal/transport_runtime.cpp`
+
+### Cleanup Applied After Fix Confirmation
+
+- Disabled freeze-investigation-level transport/storage verbosity for normal runs.
+- Removed temporary settings/card mutation trace logging blocks from transport handlers.
+- Removed dead compile-time debug-switch scaffolding from transport/storage write paths to reduce maintenance noise.
+- Preserved only behavior changes that resolved the issue.
+
+### Thermal / WiFi Reduction Emphasis
+
+- Reduced unnecessary write bursts after portal saves:
+  - card save no longer rewrites unrelated card/settings files,
+  - settings save no longer rewrites card files.
+- Kept live polling discipline aligned with thermal policy:
+  - Live page polling remains visibility-scoped and cadence-capped (`1200ms`).
+- Net effect:
+  - less filesystem burst load and less avoidable transport churn, reducing radio-active work and heat risk during normal operator flows.
+
+### Transport Runtime Migration Stage Update
+
+- Current stage: Phase 4 Cutover Cleanup (`in progress`) with provisional Phase 3 exit.
+- Phase 3 provisional exit note:
+  - short-run mixed save+navigate checks are stable,
+  - long-run `30+ minute` stress evidence deferred due schedule/time.
+- Temporary risk control retained:
+  - `AT_FORCE_REBOOT_AFTER_SAVE` remains available as disabled-by-default fallback until long-run stress evidence is captured.
+- Remaining to close migration cleanly:
+  - finish removal/reduction of migration-only diagnostics,
+  - capture deferred long-run stress evidence in a follow-up session.
+
 ## 2026-03-07
 
 ### Portal Freeze Investigation (Core1 Post-Save Navigation)

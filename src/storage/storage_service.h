@@ -138,6 +138,22 @@ class StorageService {
    */
   bool commitStaged();
   /**
+   * @brief Commits a single-card update using validated full config snapshot.
+   * @details Persists only changed card payload and cards index to reduce
+   * filesystem/transport pressure versus full split rewrite.
+   * @param config Validated full config snapshot containing updated card.
+   * @param cardId Target card id to persist.
+   * @return `true` when single-card commit completed.
+   */
+  bool commitSingleCard(const SystemConfig& config, uint8_t cardId);
+  /**
+   * @brief Commits settings-only update using validated full config snapshot.
+   * @details Persists only settings payload to reduce write load.
+   * @param config Validated full config snapshot containing updated settings.
+   * @return `true` when settings-only commit completed.
+   */
+  bool commitSettingsOnly(const SystemConfig& config);
+  /**
    * @brief Restores active config from default contract values.
    * @return `true` when restore completed.
    */
@@ -164,6 +180,7 @@ class StorageService {
   uint32_t stagedRevision_ = 0;
 
   bool ensureConfigBuffer(SystemConfig*& target);
+  void releaseStagedBuffer();
 };
 
 }  // namespace v3::storage

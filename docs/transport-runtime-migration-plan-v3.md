@@ -1,6 +1,31 @@
 # Transport Runtime Migration Plan (V3)
 
-Status: Draft execution plan for rewriting `src/portal/transport_runtime.cpp` with strict cleanup controls.
+Status: Active execution plan for rewriting `src/portal/transport_runtime.cpp` with strict cleanup controls.
+
+## 2026-03-08 Implementation Snapshot
+
+- Post-save navigation freeze is currently stabilized after:
+  - staged config buffer release after commit/failure,
+  - card save write-scope reduction (`card file + index`),
+  - settings save write-scope reduction (`settings file only`).
+- Thermal/WiFi reduction controls currently active:
+  - Live page polling cadence capped at `1200ms` (~0.83 Hz per runtime endpoint),
+  - polling runs only when Live page is visible,
+  - transport activity-aware runtime projection cadence (`active` vs `idle`) in `src/main.cpp`.
+- Remaining migration focus before closure:
+  - complete final cutover cleanup and leave only permanent operational telemetry.
+
+## Phase 3 Exit Note (Provisional)
+
+- Status: `Provisional pass` on March 8, 2026.
+- Basis:
+  - repeated save+navigate flows stabilized,
+  - no recurring `WiFiClient write()` storm in latest short-run checks,
+  - no new watchdog reset observed in latest short-run checks.
+- Constraint:
+  - full `30+ minute` mixed stress evidence is deferred due schedule/time.
+- Risk handling:
+  - keep `AT_FORCE_REBOOT_AFTER_SAVE` fallback flag available but disabled by default until long-run stress evidence is completed.
 
 ## Objective
 
@@ -107,7 +132,32 @@ Acceptance gate:
 Acceptance gate:
 - 30+ minute stress run without transport-triggered reboot/watchdog.
 
+## Short-Term Goals (Next 1-2 Sessions)
+
+1. Stabilization evidence capture
+- Run and record:
+  - card save -> navigate (`/settings`, `/learn`, `/config`, `/`)
+  - settings save -> navigate same sequence
+  - live page open with polling active during navigation cycles
+- Record serial evidence in `docs/worklog.md`.
+
+2. Thermal/WiFi behavior confirmation
+- Confirm live polling remains:
+  - visibility-scoped (hidden tab = stopped),
+  - cadence-capped (`1200ms` interval),
+  - non-overlapping request model (single-flight guards).
+
+3. Phase 3 load-hardening entry
+- Execute one 30+ minute mixed load run:
+  - repeated saves + cross-page navigation + live polling.
+- Pass target:
+  - no `WiFiClient write()` storm,
+  - no watchdog reset,
+  - no partial static page transfer.
+
 ## Phase 4: Cutover Cleanup (Mandatory)
+
+Status (2026-03-08): `In progress`.
 
 - Remove migration-only compatibility paths and old helper calls.
 - Remove temporary debug logs used for freeze isolation.

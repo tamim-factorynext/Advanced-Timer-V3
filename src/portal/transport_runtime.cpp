@@ -45,17 +45,6 @@ PortalService* gPortal = nullptr;
 v3::storage::StorageService* gStorage = nullptr;
 bool gTransportInitialized = false;
 uint32_t gLastTransportActivityMs = 0;
-constexpr bool kLogHttpVerboseReads = false;
-constexpr bool kLogHttpPageNavigation = true;
-constexpr bool kLogHttpMutations = false;
-constexpr bool kLogHttpActions = false;
-constexpr bool kLogTransport404 = false;
-constexpr bool kLogClientConnections = true;
-constexpr bool kLogSettingsCommit = true;
-constexpr bool kLogCardCommit = true;
-constexpr bool kLogTransportTiming = true;
-constexpr bool kLogTransportResponses = true;
-constexpr uint32_t kSlowTransportLogMs = 100;
 constexpr uint32_t kStreamWriteStallTimeoutMs = 5000;
 constexpr uint32_t kForcedRebootDelayMs = 250;
 #if defined(AT_FORCE_REBOOT_AFTER_SAVE) && (AT_FORCE_REBOOT_AFTER_SAVE != 0)
@@ -74,28 +63,15 @@ void prepareHttpResponse(bool closeConnection = false) {
 }
 
 void logHttpResponse(const char* tag, int statusCode, size_t bytes) {
-  if (!kLogTransportResponses) return;
-  const IPAddress remoteIp = gHttpServer.client().remoteIP();
-  Serial.printf(
-      "[transport:resp] tag=%s status=%d bytes=%lu connected=%u heap=%lu ip=%u.%u.%u.%u uri=%s\n",
-      tag, statusCode, static_cast<unsigned long>(bytes),
-      gHttpServer.client().connected() ? 1U : 0U,
-      static_cast<unsigned long>(ESP.getFreeHeap()), remoteIp[0], remoteIp[1],
-      remoteIp[2], remoteIp[3], gHttpServer.uri().c_str());
-  Serial.flush();
+  (void)tag;
+  (void)statusCode;
+  (void)bytes;
 }
 
 bool canSendHttpResponse(const char* tag) {
+  (void)tag;
   WiFiClient client = gHttpServer.client();
   if (client.connected()) return true;
-  if (kLogTransportResponses) {
-    const IPAddress remoteIp = client.remoteIP();
-    Serial.printf(
-        "[transport:drop] tag=%s reason=client_disconnected heap=%lu ip=%u.%u.%u.%u uri=%s\n",
-        tag, static_cast<unsigned long>(ESP.getFreeHeap()), remoteIp[0],
-        remoteIp[1], remoteIp[2], remoteIp[3], gHttpServer.uri().c_str());
-    Serial.flush();
-  }
   client.stop();
   return false;
 }
@@ -115,16 +91,18 @@ void forceRebootAfterSaveIfEnabled(const char* tag, const String& requestId) {
   esp_restart();
 }
 
-void sendJsonResponse(int statusCode, const String& body) {
+void sendJsonResponse(int statusCode, const String& body,
+                      bool closeConnection = false) {
   if (!canSendHttpResponse("json")) return;
-  prepareHttpResponse(false);
+  prepareHttpResponse(closeConnection);
   logHttpResponse("json", statusCode, body.length());
   gHttpServer.send(statusCode, "application/json", body);
 }
 
-void sendJsonLiteral(int statusCode, const char* body) {
+void sendJsonLiteral(int statusCode, const char* body,
+                     bool closeConnection = false) {
   if (!canSendHttpResponse("json.literal")) return;
-  prepareHttpResponse(false);
+  prepareHttpResponse(closeConnection);
   logHttpResponse("json.literal", statusCode,
                   (body != nullptr) ? std::strlen(body) : 0U);
   gHttpServer.send(statusCode, "application/json", body);
@@ -139,12 +117,8 @@ void markTransportActivity() { gLastTransportActivityMs = millis(); }
 void feedTaskWatchdog() { (void)esp_task_wdt_reset(); }
 
 void logTransportTiming(const char* tag, uint32_t elapsedMs) {
-  if (!kLogTransportTiming) return;
-  if (elapsedMs < kSlowTransportLogMs) return;
-  Serial.printf("[transport:slow] %s elapsed=%lums heap=%lu\n", tag,
-                static_cast<unsigned long>(elapsedMs),
-                static_cast<unsigned long>(ESP.getFreeHeap()));
-  Serial.flush();
+  (void)tag;
+  (void)elapsedMs;
 }
 
 const char* contentTypeForPath(const String& path) {
@@ -171,13 +145,6 @@ bool sendLittleFsFile(const char* path) {
   const size_t fileSize = file.size();
   const String contentType = contentTypeForPath(String(path));
   prepareHttpResponse(true);
-  if (kLogTransportTiming) {
-    Serial.printf("[transport:file] start path=%s size=%lu heap=%lu connected=%u\n", path,
-                  static_cast<unsigned long>(fileSize),
-                  static_cast<unsigned long>(ESP.getFreeHeap()),
-                  gHttpServer.client().connected() ? 1U : 0U);
-    Serial.flush();
-  }
   gHttpServer.setContentLength(fileSize);
   gHttpServer.send(200, contentType.c_str(), "");
   WiFiClient client = gHttpServer.client();
@@ -193,13 +160,6 @@ bool sendLittleFsFile(const char* path) {
       feedTaskWatchdog();
       if (!client.connected()) {
         streamOk = false;
-        if (kLogTransportTiming) {
-          Serial.printf("[transport:file] disconnected path=%s sent=%lu/%lu heap=%lu\n",
-                        path, static_cast<unsigned long>(bytesSent),
-                        static_cast<unsigned long>(fileSize),
-                        static_cast<unsigned long>(ESP.getFreeHeap()));
-          Serial.flush();
-        }
         break;
       }
       const size_t wrote = client.write(buffer + chunkSent, bytesRead - chunkSent);
@@ -207,7 +167,6 @@ bool sendLittleFsFile(const char* path) {
         chunkSent += wrote;
         bytesSent += wrote;
         lastProgressMs = millis();
-        // Pace writes slightly to reduce socket backpressure under bursty UI traffic.
         delay(1);
         continue;
       }
@@ -228,16 +187,9 @@ bool sendLittleFsFile(const char* path) {
   }
   feedTaskWatchdog();
   file.close();
-  const uint32_t elapsedMs = millis() - startedMs;
+  (void)startedMs;
   logHttpResponse("file", 200, bytesSent);
-  if (kLogTransportTiming) {
-    Serial.printf("[transport:file] done path=%s elapsed=%lums sent=%lu/%lu ok=%u heap=%lu\n", path,
-                  static_cast<unsigned long>(elapsedMs),
-                  static_cast<unsigned long>(bytesSent),
-                  static_cast<unsigned long>(fileSize), streamOk ? 1U : 0U,
-                  static_cast<unsigned long>(ESP.getFreeHeap()));
-    Serial.flush();
-  }
+  (void)streamOk;
   client.stop();
   return true;
 }
@@ -477,19 +429,7 @@ void writeCardJson(JsonObject out, const v3::storage::CardConfig& card) {
 }
 
 void logHttpAccess(const char* routeTag) {
-  const bool isGet = (gHttpServer.method() == HTTP_GET);
-  const bool isPageRoute =
-      (routeTag != nullptr) && (strncmp(routeTag, "page.", 5) == 0);
-  if (!isGet && !kLogHttpMutations) return;
-  if (isGet && !kLogHttpVerboseReads) {
-    if (!(kLogHttpPageNavigation && isPageRoute)) return;
-  }
-  const IPAddress remoteIp = gHttpServer.client().remoteIP();
-  const String uri = gHttpServer.uri();
-  Serial.printf("[http] %s %s from %u.%u.%u.%u route=%s\n",
-                methodToString(gHttpServer.method()), uri.c_str(), remoteIp[0],
-                remoteIp[1], remoteIp[2], remoteIp[3], routeTag);
-  Serial.flush();
+  (void)routeTag;
 }
 
 void writeRuntimeCardJson(JsonObject item, const RuntimeSnapshotCard& card) {
@@ -580,8 +520,9 @@ bool parseCardIdFromPathArg(uint8_t& outCardId) {
   return true;
 }
 
-void sendConfigError(int statusCode, const char* errorCode, const String& requestId,
-                     const String& message) {
+void sendConfigError(int statusCode, const char* errorCode,
+                     const String& requestId, const String& message,
+                     bool closeConnection = false) {
   if (!canSendHttpResponse("config.error")) return;
   JsonDocument doc;
   doc["ok"] = false;
@@ -595,7 +536,7 @@ void sendConfigError(int statusCode, const char* errorCode, const String& reques
   String body;
   serializeJson(doc, body);
   logHttpResponse("config.error", statusCode, body.length());
-  prepareHttpResponse(false);
+  prepareHttpResponse(closeConnection);
   gHttpServer.send(statusCode, "application/json", body);
 }
 
@@ -826,11 +767,6 @@ void handleHttpConfigRestorePost() {
     sendConfigError(400, "INVALID_REQUEST", requestId, "source is required");
     return;
   }
-  if (kLogHttpActions) {
-    Serial.printf("[http-action] config.restore requestId=%s source=%s\n",
-                  requestId.c_str(), source);
-    Serial.flush();
-  }
   bool restored = false;
   if (strcmp(source, "FACTORY") == 0) {
     restored = gStorage->restoreFactory();
@@ -861,11 +797,6 @@ void handleHttpSettingsGet() {
   markTransportActivity();
   logHttpAccess("api.settings.get");
   const uint32_t startedMs = millis();
-  if (kLogTransportTiming) {
-    Serial.printf("[settings.get] start heap=%lu\n",
-                  static_cast<unsigned long>(ESP.getFreeHeap()));
-    Serial.flush();
-  }
   if (gStorage == nullptr) {
     sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
     return;
@@ -882,28 +813,24 @@ void handleHttpSettingsGet() {
   serializeJson(doc, body);
   sendJsonResponse(200, body);
   feedTaskWatchdog();
-  const uint32_t elapsedMs = millis() - startedMs;
-  if (kLogTransportTiming) {
-    Serial.printf("[settings.get] done elapsed=%lums bytes=%u heap=%lu\n",
-                  static_cast<unsigned long>(elapsedMs),
-                  static_cast<unsigned>(body.length()),
-                  static_cast<unsigned long>(ESP.getFreeHeap()));
-    Serial.flush();
-  }
+  (void)startedMs;
 }
 
 void handleHttpSettingsPut() {
   markTransportActivity();
   logHttpAccess("api.settings.put");
+  constexpr bool kCloseConnectionAfterMutationResponse = true;
   if (gStorage == nullptr) {
-    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   const String payload = gHttpServer.arg("plain");
   JsonDocument requestDoc;
   const DeserializationError jsonErr = deserializeJson(requestDoc, payload);
   if (jsonErr) {
-    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload");
+    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
 
@@ -913,77 +840,36 @@ void handleHttpSettingsPut() {
   String requestId = root["requestId"].is<const char*>()
                          ? String(root["requestId"].as<const char*>())
                          : String();
-  if (kLogHttpActions || kLogSettingsCommit) {
-    Serial.printf("[settings.put] requestId=%s payloadBytes=%u\n", requestId.c_str(),
-                  static_cast<unsigned>(payload.length()));
-    Serial.flush();
-  }
 
   v3::storage::SystemConfig* candidate = gStorage->prepareStagedFromActive();
   if (candidate == nullptr) {
-    if (kLogSettingsCommit) {
-      Serial.printf("[settings.put] requestId=%s staged copy alloc failed\n",
-                    requestId.c_str());
-      Serial.flush();
-    }
     sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
-                    "settings staging buffer unavailable");
+                    "settings staging buffer unavailable",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   v3::storage::ConfigValidationError decodeError = {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::decodeSystemSettingsLight(settingsObj, *candidate,
                                               decodeError)) {
-    if (kLogSettingsCommit) {
-      Serial.printf("[settings.put] requestId=%s decode failed code=%s\n",
-                    requestId.c_str(),
-                    v3::storage::configErrorCodeToString(decodeError.code));
-      Serial.flush();
-    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
-                    v3::storage::configErrorCodeToString(decodeError.code));
+                    v3::storage::configErrorCodeToString(decodeError.code),
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   v3::storage::ConfigValidationError validationError = {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::validateSystemConfigLight(*candidate, validationError)) {
-    if (kLogSettingsCommit) {
-      Serial.printf("[settings.put] requestId=%s validate failed code=%s\n",
-                    requestId.c_str(),
-                    v3::storage::configErrorCodeToString(validationError.code));
-      Serial.flush();
-    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
-                    v3::storage::configErrorCodeToString(validationError.code));
+                    v3::storage::configErrorCodeToString(validationError.code),
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
 
-  if (!gStorage->stageSystemConfig(*candidate)) {
-    if (kLogSettingsCommit) {
-      Serial.printf("[settings.put] requestId=%s stage failed\n", requestId.c_str());
-      Serial.flush();
-    }
-    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
-                    "settings staging buffer unavailable");
+  if (!gStorage->commitSettingsOnly(*candidate)) {
+    sendConfigError(409, "COMMIT_FAILED", requestId, "settings commit failed",
+                    kCloseConnectionAfterMutationResponse);
     return;
-  }
-  if (kLogSettingsCommit) {
-    Serial.printf("[settings.put] requestId=%s commit start\n", requestId.c_str());
-    Serial.flush();
-  }
-  if (!gStorage->commitStaged()) {
-    if (kLogSettingsCommit) {
-      Serial.printf("[settings.put] requestId=%s commit failed\n", requestId.c_str());
-      Serial.flush();
-    }
-    sendConfigError(409, "COMMIT_FAILED", requestId, "settings commit failed");
-    return;
-  }
-  if (kLogSettingsCommit) {
-    Serial.printf("[settings.put] requestId=%s commit ok activeVersion=%lu\n",
-                  requestId.c_str(),
-                  static_cast<unsigned long>(gStorage->activeRevision()));
-    Serial.flush();
   }
   JsonDocument doc;
   doc["ok"] = true;
@@ -996,13 +882,7 @@ void handleHttpSettingsPut() {
   doc["forcedRebootScheduled"] = kForceRebootAfterMutationSave;
   String body;
   serializeJson(doc, body);
-  sendJsonResponse(200, body);
-  if (kLogSettingsCommit) {
-    Serial.printf("[settings.put] requestId=%s response sent connected=%u heap=%lu\n",
-                  requestId.c_str(), gHttpServer.client().connected() ? 1U : 0U,
-                  static_cast<unsigned long>(ESP.getFreeHeap()));
-    Serial.flush();
-  }
+  sendJsonResponse(200, body, kCloseConnectionAfterMutationResponse);
   forceRebootAfterSaveIfEnabled("settings.put.success", requestId);
 }
 
@@ -1083,15 +963,18 @@ void handleHttpCardGetById(uint8_t cardId) {
 void handleHttpCardPutById(uint8_t cardId) {
   markTransportActivity();
   logHttpAccess("api.cards.by-id.put");
+  constexpr bool kCloseConnectionAfterMutationResponse = true;
   if (gStorage == nullptr) {
-    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}");
+    sendJsonLiteral(500, "{\"ok\":false,\"reason\":\"storage_not_ready\"}",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   const String payload = gHttpServer.arg("plain");
   JsonDocument requestDoc;
   const DeserializationError jsonErr = deserializeJson(requestDoc, payload);
   if (jsonErr) {
-    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload");
+    sendConfigError(400, "INVALID_REQUEST", "", "invalid JSON payload",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
 
@@ -1101,59 +984,33 @@ void handleHttpCardPutById(uint8_t cardId) {
   String requestId = root["requestId"].is<const char*>()
                          ? String(root["requestId"].as<const char*>())
                          : String();
-  if (kLogHttpActions || kLogCardCommit) {
-    Serial.printf("[card.put] id=%u requestId=%s payloadBytes=%u heap=%lu connected=%u\n",
-                  static_cast<unsigned>(cardId), requestId.c_str(),
-                  static_cast<unsigned>(payload.length()),
-                  static_cast<unsigned long>(ESP.getFreeHeap()),
-                  gHttpServer.client().connected() ? 1U : 0U);
-    Serial.flush();
-  }
 
   v3::storage::CardConfig decodedCard = {};
   v3::storage::ConfigValidationError decodeError = {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::decodeCardConfigLight(cardObj, decodedCard, decodeError, 0)) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s decode failed code=%s\n",
-                    static_cast<unsigned>(cardId), requestId.c_str(),
-                    v3::storage::configErrorCodeToString(decodeError.code));
-      Serial.flush();
-    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
-                    v3::storage::configErrorCodeToString(decodeError.code));
+                    v3::storage::configErrorCodeToString(decodeError.code),
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   if (decodedCard.id != cardId) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s card id mismatch decoded=%u\n",
-                    static_cast<unsigned>(cardId), requestId.c_str(),
-                    static_cast<unsigned>(decodedCard.id));
-      Serial.flush();
-    }
-    sendConfigError(422, "VALIDATION_FAILED", requestId, "card id mismatch");
+    sendConfigError(422, "VALIDATION_FAILED", requestId, "card id mismatch",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
 
   v3::storage::SystemConfig* candidate = gStorage->prepareStagedFromActive();
   if (candidate == nullptr) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s staging buffer unavailable\n",
-                    static_cast<unsigned>(cardId), requestId.c_str());
-      Serial.flush();
-    }
     sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
-                    "card staging buffer unavailable");
+                    "card staging buffer unavailable",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   const int8_t index = findCardIndexById(*candidate, cardId);
   if (index < 0) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s card not found\n",
-                    static_cast<unsigned>(cardId), requestId.c_str());
-      Serial.flush();
-    }
-    sendConfigError(404, "CARD_NOT_FOUND", requestId, "card not found");
+    sendConfigError(404, "CARD_NOT_FOUND", requestId, "card not found",
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
   candidate->cards[static_cast<uint8_t>(index)] = decodedCard;
@@ -1161,51 +1018,16 @@ void handleHttpCardPutById(uint8_t cardId) {
   v3::storage::ConfigValidationError validationError = {
       v3::storage::ConfigErrorCode::None, 0};
   if (!v3::storage::validateSystemConfigLight(*candidate, validationError)) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s validate failed code=%s\n",
-                    static_cast<unsigned>(cardId), requestId.c_str(),
-                    v3::storage::configErrorCodeToString(validationError.code));
-      Serial.flush();
-    }
     sendConfigError(422, "VALIDATION_FAILED", requestId,
-                    v3::storage::configErrorCodeToString(validationError.code));
+                    v3::storage::configErrorCodeToString(validationError.code),
+                    kCloseConnectionAfterMutationResponse);
     return;
   }
 
-  if (!gStorage->stageSystemConfig(*candidate)) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s stage failed\n",
-                    static_cast<unsigned>(cardId), requestId.c_str());
-      Serial.flush();
-    }
-    sendConfigError(503, "INSUFFICIENT_MEMORY", requestId,
-                    "card staging buffer unavailable");
+  if (!gStorage->commitSingleCard(*candidate, cardId)) {
+    sendConfigError(409, "COMMIT_FAILED", requestId, "card commit failed",
+                    kCloseConnectionAfterMutationResponse);
     return;
-  }
-  if (kLogCardCommit) {
-    Serial.printf("[card.put] id=%u requestId=%s commit start heap=%lu connected=%u\n",
-                  static_cast<unsigned>(cardId), requestId.c_str(),
-                  static_cast<unsigned long>(ESP.getFreeHeap()),
-                  gHttpServer.client().connected() ? 1U : 0U);
-    Serial.flush();
-  }
-  if (!gStorage->commitStaged()) {
-    if (kLogCardCommit) {
-      Serial.printf("[card.put] id=%u requestId=%s commit failed\n",
-                    static_cast<unsigned>(cardId), requestId.c_str());
-      Serial.flush();
-    }
-    sendConfigError(409, "COMMIT_FAILED", requestId, "card commit failed");
-    return;
-  }
-  if (kLogCardCommit) {
-    Serial.printf(
-        "[card.put] id=%u requestId=%s commit ok activeVersion=%lu heap=%lu connected=%u\n",
-        static_cast<unsigned>(cardId), requestId.c_str(),
-        static_cast<unsigned long>(gStorage->activeRevision()),
-        static_cast<unsigned long>(ESP.getFreeHeap()),
-        gHttpServer.client().connected() ? 1U : 0U);
-    Serial.flush();
   }
 
   JsonDocument doc;
@@ -1219,22 +1041,7 @@ void handleHttpCardPutById(uint8_t cardId) {
   doc["forcedRebootScheduled"] = kForceRebootAfterMutationSave;
   String body;
   serializeJson(doc, body);
-  if (kLogCardCommit) {
-    Serial.printf("[card.put] id=%u requestId=%s response bytes=%u heap=%lu connected=%u\n",
-                  static_cast<unsigned>(cardId), requestId.c_str(),
-                  static_cast<unsigned>(body.length()),
-                  static_cast<unsigned long>(ESP.getFreeHeap()),
-                  gHttpServer.client().connected() ? 1U : 0U);
-    Serial.flush();
-  }
-  sendJsonResponse(200, body);
-  if (kLogCardCommit) {
-    Serial.printf("[card.put] id=%u requestId=%s response sent connected=%u heap=%lu\n",
-                  static_cast<unsigned>(cardId), requestId.c_str(),
-                  gHttpServer.client().connected() ? 1U : 0U,
-                  static_cast<unsigned long>(ESP.getFreeHeap()));
-    Serial.flush();
-  }
+  sendJsonResponse(200, body, kCloseConnectionAfterMutationResponse);
   forceRebootAfterSaveIfEnabled("card.put.success", requestId);
 }
 
@@ -1297,21 +1104,9 @@ void onWebSocketEvent(uint8_t clientNum, WStype_t type, uint8_t* payload,
   markTransportActivity();
   if (gPortal == nullptr) return;
   if (type == WStype_CONNECTED) {
-    if (kLogClientConnections) {
-      const IPAddress remoteIp = gWsServer.remoteIP(clientNum);
-      Serial.printf("[client] ws connected id=%u ip=%u.%u.%u.%u\n",
-                    static_cast<unsigned>(clientNum), remoteIp[0], remoteIp[1],
-                    remoteIp[2], remoteIp[3]);
-      Serial.flush();
-    }
     return;
   }
   if (type == WStype_DISCONNECTED) {
-    if (kLogClientConnections) {
-      Serial.printf("[client] ws disconnected id=%u\n",
-                    static_cast<unsigned>(clientNum));
-      Serial.flush();
-    }
     return;
   }
   if (type != WStype_TEXT) return;
@@ -1495,14 +1290,6 @@ void initTransportRuntime(PortalService& portal,
     markTransportActivity();
     const HTTPMethod method = gHttpServer.method();
     const String uri = gHttpServer.uri();
-    if (kLogTransport404) {
-      Serial.printf("[transport] 404 method=%s path=%s\n",
-                    methodToString(method), uri.c_str());
-      const IPAddress remoteIp = gHttpServer.client().remoteIP();
-      Serial.printf("[transport] 404 from %u.%u.%u.%u\n", remoteIp[0],
-                    remoteIp[1], remoteIp[2], remoteIp[3]);
-      Serial.flush();
-    }
 
     String body = "{\"ok\":false,\"reason\":\"not_found\",\"path\":\"";
     body += uri;

@@ -37,7 +37,6 @@ constexpr const char* kSplitSettingsPath = "/cfg/settings.json";
 constexpr const char* kSplitCardsIndexPath = "/cfg/cards/index.json";
 constexpr bool kLogStorageBootstrapStages = false;
 constexpr bool kLogStorageFileTrace = false;
-constexpr bool kLogStorageWrites = true;
 
 inline void feedBootWatchdog() {
   const esp_err_t err = esp_task_wdt_reset();
@@ -262,69 +261,46 @@ void buildCardPath(uint8_t cardId, char* outPath, size_t outPathSize) {
            static_cast<unsigned>(cardId));
 }
 
+int8_t findCardIndexById(const SystemConfig& cfg, uint8_t cardId) {
+  for (uint8_t i = 0; i < cfg.cardCount; ++i) {
+    if (cfg.cards[i].id == cardId) return static_cast<int8_t>(i);
+  }
+  return -1;
+}
+
 bool writeJsonAtomic(const char* path, JsonDocument& doc) {
   char tmpPath[96] = {};
   snprintf(tmpPath, sizeof(tmpPath), "%s.tmp", path);
 
   File file = LittleFS.open(tmpPath, "w");
   if (!file) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] open failed path=%s tmp=%s\n", path, tmpPath);
-      Serial.flush();
-    }
     return false;
   }
   const size_t written = serializeJson(doc, file);
   file.flush();
   file.close();
   if (written == 0) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] serialize failed path=%s tmp=%s\n", path, tmpPath);
-      Serial.flush();
-    }
     LittleFS.remove(tmpPath);
     return false;
   }
   if (LittleFS.rename(tmpPath, path)) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] commit ok path=%s bytes=%lu\n", path,
-                    static_cast<unsigned long>(written));
-      Serial.flush();
-    }
     return true;
   }
   if (LittleFS.exists(path)) {
     LittleFS.remove(path);
   }
   if (!LittleFS.rename(tmpPath, path)) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] rename failed path=%s tmp=%s\n", path, tmpPath);
-      Serial.flush();
-    }
     LittleFS.remove(tmpPath);
     return false;
-  }
-  if (kLogStorageWrites) {
-    Serial.printf("[storage:write] replace ok path=%s bytes=%lu\n", path,
-                  static_cast<unsigned long>(written));
-    Serial.flush();
   }
   return true;
 }
 
 bool ensureSplitDirs() {
   if (!LittleFS.mkdir(kSplitRootDir) && !LittleFS.exists(kSplitRootDir)) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] mkdir failed path=%s\n", kSplitRootDir);
-      Serial.flush();
-    }
     return false;
   }
   if (!LittleFS.mkdir(kSplitCardsDir) && !LittleFS.exists(kSplitCardsDir)) {
-    if (kLogStorageWrites) {
-      Serial.printf("[storage:write] mkdir failed path=%s\n", kSplitCardsDir);
-      Serial.flush();
-    }
     return false;
   }
   return true;
@@ -334,12 +310,6 @@ bool persistSplitConfig(const SystemConfig& cfg) {
   if (!ensureStorageFsMounted()) return false;
   if (!ensureSplitDirs()) return false;
 
-  if (kLogStorageWrites) {
-    Serial.printf("[storage:write] persist split start cards=%u\n",
-                  static_cast<unsigned>(cfg.cardCount));
-    Serial.flush();
-  }
-
   for (uint8_t i = 0; i < cfg.cardCount; ++i) {
     JsonDocument cardDoc;
     JsonObject cardRoot = cardDoc.to<JsonObject>();
@@ -347,11 +317,6 @@ bool persistSplitConfig(const SystemConfig& cfg) {
     char cardPath[64] = {};
     buildCardPath(cfg.cards[i].id, cardPath, sizeof(cardPath));
     if (!writeJsonAtomic(cardPath, cardDoc)) {
-      if (kLogStorageWrites) {
-        Serial.printf("[storage:write] card persist failed id=%u path=%s\n",
-                      static_cast<unsigned>(cfg.cards[i].id), cardPath);
-        Serial.flush();
-      }
       return false;
     }
   }
@@ -373,15 +338,44 @@ bool persistSplitConfig(const SystemConfig& cfg) {
     item["enabled"] = cfg.cards[i].enabled;
   }
   if (!writeJsonAtomic(kSplitCardsIndexPath, indexDoc)) return false;
-
-  if (LittleFS.exists(kLegacyActiveConfigPath)) {
-    LittleFS.remove(kLegacyActiveConfigPath);
-  }
-  if (kLogStorageWrites) {
-    Serial.println("[storage:write] persist split done");
-    Serial.flush();
-  }
   return true;
+}
+
+bool persistSingleCardConfig(const SystemConfig& cfg, uint8_t cardId) {
+  if (!ensureStorageFsMounted()) return false;
+  if (!ensureSplitDirs()) return false;
+  const int8_t index = findCardIndexById(cfg, cardId);
+  if (index < 0) return false;
+
+  const CardConfig& card = cfg.cards[static_cast<uint8_t>(index)];
+  JsonDocument cardDoc;
+  JsonObject cardRoot = cardDoc.to<JsonObject>();
+  writeCardJson(cardRoot, card);
+  char cardPath[64] = {};
+  buildCardPath(card.id, cardPath, sizeof(cardPath));
+  if (!writeJsonAtomic(cardPath, cardDoc)) return false;
+
+  JsonDocument indexDoc;
+  JsonObject indexRoot = indexDoc.to<JsonObject>();
+  indexRoot["layoutVersion"] = 1;
+  indexRoot["cardCount"] = cfg.cardCount;
+  JsonArray cards = indexRoot["cards"].to<JsonArray>();
+  for (uint8_t i = 0; i < cfg.cardCount; ++i) {
+    JsonObject item = cards.add<JsonObject>();
+    item["id"] = cfg.cards[i].id;
+    item["family"] = familyToString(cfg.cards[i].family);
+    item["enabled"] = cfg.cards[i].enabled;
+  }
+  return writeJsonAtomic(kSplitCardsIndexPath, indexDoc);
+}
+
+bool persistSettingsOnlyConfig(const SystemConfig& cfg) {
+  if (!ensureStorageFsMounted()) return false;
+  if (!ensureSplitDirs()) return false;
+  JsonDocument settingsDoc;
+  JsonObject settingsRoot = settingsDoc.to<JsonObject>();
+  writeSettingsJson(settingsRoot, cfg);
+  return writeJsonAtomic(kSplitSettingsPath, settingsDoc);
 }
 
 bool tryLoadCandidateFromSplit(SystemConfig& outCandidate,
@@ -592,16 +586,21 @@ bool tryLoadCandidateFromFile(SystemConfig& outCandidate,
 }  // namespace
 
 StorageService::~StorageService() {
-  if (stagedConfig_ != nullptr) {
-    delete stagedConfig_;
-    stagedConfig_ = nullptr;
-  }
+  releaseStagedBuffer();
 }
 
 bool StorageService::ensureConfigBuffer(SystemConfig*& target) {
   if (target != nullptr) return true;
   target = new (std::nothrow) SystemConfig();
   return target != nullptr;
+}
+
+void StorageService::releaseStagedBuffer() {
+  stagedConfigPresent_ = false;
+  if (stagedConfig_ != nullptr) {
+    delete stagedConfig_;
+    stagedConfig_ = nullptr;
+  }
 }
 
 /**
@@ -752,10 +751,38 @@ SystemConfig* StorageService::prepareStagedFromActive() {
 
 bool StorageService::commitStaged() {
   if (!stagedConfigPresent_ || stagedConfig_ == nullptr) return false;
-  if (!persistSplitConfig(*stagedConfig_)) return false;
+  if (!persistSplitConfig(*stagedConfig_)) {
+    releaseStagedBuffer();
+    return false;
+  }
   activeConfig_.system = *stagedConfig_;
   activeConfigPresent_ = true;
-  stagedConfigPresent_ = false;
+  releaseStagedBuffer();
+  activeRevision_ += 1;
+  return true;
+}
+
+bool StorageService::commitSingleCard(const SystemConfig& config,
+                                      uint8_t cardId) {
+  if (!persistSingleCardConfig(config, cardId)) {
+    releaseStagedBuffer();
+    return false;
+  }
+  activeConfig_.system = config;
+  activeConfigPresent_ = true;
+  releaseStagedBuffer();
+  activeRevision_ += 1;
+  return true;
+}
+
+bool StorageService::commitSettingsOnly(const SystemConfig& config) {
+  if (!persistSettingsOnlyConfig(config)) {
+    releaseStagedBuffer();
+    return false;
+  }
+  activeConfig_.system = config;
+  activeConfigPresent_ = true;
+  releaseStagedBuffer();
   activeRevision_ += 1;
   return true;
 }
