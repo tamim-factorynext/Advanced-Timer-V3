@@ -34,6 +34,9 @@
       .field.field-spacer { visibility: hidden; }
       .field label { font-size: 12px; color: var(--muted-strong); }
       .field input, .field select { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--text); padding: 7px; }
+      .range-wrap { display: flex; align-items: center; gap: 8px; }
+      .range-wrap input[type="range"] { flex: 1; padding: 0; accent-color: var(--accent-2); }
+      .range-value { min-width: 46px; text-align: right; color: var(--muted-strong); font-size: 12px; }
       .hint { font-size: 11px; color: var(--muted); }
       .hint:empty { display: none; }
       .eval-block { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--surface-log); }
@@ -476,7 +479,7 @@
           { key: "inputMax", label: "Input Max", type: "number", unit: "raw" },
           { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
           { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
-          { key: "smoothingFactorPct", label: "Smoothing", type: "number", unit: "%", min: 0, max: 100 }
+          { key: "smoothingFactorPct", label: "Response Speed", type: "range", unit: "%", min: 0, max: 100, step: 1 }
         ];
         if (family === "SIO") return [
           { key: "invert", label: "Invert", type: "bool" },
@@ -486,17 +489,24 @@
           { key: "repeatCount", label: "Repeat Count", type: "number", unit: "0 = Infinite" }
         ];
         if (family === "MATH") return [
-          { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
           { key: "inputASource", label: "Input A Source", type: "math_input_source", useKey: "inputAUseCard", cardKey: "inputACardId" },
           { key: "inputA", label: "Input A", type: "number", unit: "unit" },
+          { key: "_mathSpacerA1", type: "spacer" },
+          { key: "operation", label: "Operation", type: "enum", options: { 0: "Add", 1: "Subtract (Saturating)", 2: "Multiply", 3: "Divide (Safe)" } },
+          { key: "_mathSpacerOp1", type: "spacer" },
+          { key: "_mathSpacerOp2", type: "spacer" },
           { key: "inputBSource", label: "Input B Source", type: "math_input_source", useKey: "inputBUseCard", cardKey: "inputBCardId" },
           { key: "inputB", label: "Input B", type: "number", unit: "unit" },
+          { key: "_mathSpacerB1", type: "spacer" },
           { key: "inputMin", label: "Input Min", type: "number", unit: "unit" },
           { key: "inputMax", label: "Input Max", type: "number", unit: "unit" },
+          { key: "_mathSpacerIn1", type: "spacer" },
           { key: "outputMin", label: "Output Min", type: "number", unit: "unit" },
           { key: "outputMax", label: "Output Max", type: "number", unit: "unit" },
-          { key: "smoothingFactorPct", label: "Smoothing", type: "number", unit: "%", min: 0, max: 100 },
-          { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit" }
+          { key: "_mathSpacerOut1", type: "spacer" },
+          { key: "smoothingFactorPct", label: "Response Speed", type: "range", unit: "%", min: 0, max: 100, step: 1 },
+          { key: "fallbackValue", label: "Fallback", type: "number", unit: "unit" },
+          { key: "_mathSpacerTail1", type: "spacer" }
         ];
         if (family === "RTC") return [
           { key: "year", label: "Year", type: "rtc_year" },
@@ -556,6 +566,9 @@
         const numericCards = (Array.isArray(currentConfig?.cards) ? currentConfig.cards : [])
           .filter((c) => familyHasNumericLiveValue(c?.family));
         familyFieldsEl.innerHTML = activeFieldDefs.map((def) => {
+          if (def.type === "spacer") {
+            return `<div class="field field-spacer" aria-hidden="true"></div>`;
+          }
           const id = `f_${def.key}`;
           const hintId = `h_${def.key}`;
           const label = def.unit ? `${def.label} (${def.unit})` : def.label;
@@ -608,6 +621,13 @@
             }).join("");
             const constantSelected = useCard ? "" : "selected";
             control = `<select id="${id}"><option value="CONST" ${constantSelected}>Use constant value</option>${cardOptions}</select>`;
+          } else if (def.type === "range") {
+            const step = def.step != null ? `step="${def.step}"` : "";
+            const min = def.min != null ? `min="${def.min}"` : "";
+            const max = def.max != null ? `max="${def.max}"` : "";
+            const rawValue = params[def.key];
+            const displayValue = Number(rawValue ?? 0);
+            control = `<div class="range-wrap"><input id="${id}" type="range" ${step} ${min} ${max} value="${displayValue}" /><span id="v_${def.key}" class="range-value">${displayValue}%</span></div>`;
           } else {
             const step = def.step != null ? `step="${def.step}"` : "";
             const min = def.min != null ? `min="${def.min}"` : "";
@@ -641,9 +661,16 @@
             if (!hintEl) return;
             hintEl.textContent = "";
           };
+          const updateRangeValue = () => {
+            if (def.type !== "range") return;
+            const valueEl = document.getElementById(`v_${def.key}`);
+            if (!valueEl) return;
+            valueEl.textContent = `${el.value}%`;
+          };
           updateHint();
-          el.addEventListener("input", () => { updateHint(); updateMathInputEditability(); markDirty(); });
-          el.addEventListener("change", () => { updateHint(); updateMathInputEditability(); markDirty(); });
+          updateRangeValue();
+          el.addEventListener("input", () => { updateHint(); updateRangeValue(); updateMathInputEditability(); markDirty(); });
+          el.addEventListener("change", () => { updateHint(); updateRangeValue(); updateMathInputEditability(); markDirty(); });
         });
         updateMathInputEditability();
       }

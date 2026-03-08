@@ -79,7 +79,7 @@ void initAiCard(CardConfig& card, uint8_t id, uint8_t channel) {
   card.ai.inputMax = 4095;
   card.ai.outputMin = 0;
   card.ai.outputMax = 10000;
-  card.ai.smoothingFactorPct = 25;
+  card.ai.smoothingFactorPct = 100;
 }
 
 void initSioCard(CardConfig& card, uint8_t id) {
@@ -112,7 +112,7 @@ void initMathCard(CardConfig& card, uint8_t id) {
   card.math.inputMax = 100;
   card.math.outputMin = 0;
   card.math.outputMax = 100;
-  card.math.smoothingFactorPct = 0;
+  card.math.smoothingFactorPct = 100;
   card.math.fallbackValue = 0;
   card.math.turnOnCondition = makeInertConditionBlock(id);
   card.math.turnOffCondition = makeInertConditionBlock(id);
