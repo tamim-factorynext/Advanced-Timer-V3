@@ -727,5 +727,46 @@ Use one short entry per decision with this structure:
 - Impact: Reduces cognitive load while keeping configuration visibility intact for disabled cards.
 - References: `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/user-guide-v3-draft.md`, `docs/worklog.md`.
 
+## DEC-0068: DI Live Card Operator-Focused Zone-4 Controls + 3-Column Desktop Grid
+- Date: 2026-03-09
+- Status: Accepted
+- Context: DI Live card debug area and identity badges still carried extra visual noise for end users during commissioning, reducing scan speed and clarity.
+- Decision:
+  - Keep strict 4-zone layout but simplify DI operator surface:
+    - remove Zone-1 technical identity badges (`DIx`, `ID`, `CH`) from card body,
+    - keep logical identity in header title only.
+  - Standardize DI Zone-4 controls:
+    - left-aligned force button group `LOW | REAL | HIGH`,
+    - active mode indicated by theme-aware color highlight,
+    - right-aligned action renamed from `Wizard` to `Edit`,
+    - remove debug indicator badge and command status/result badge from Zone-4.
+  - Lock Live card responsive grid baseline:
+    - desktop `3 columns`,
+    - tablet `2 columns`,
+    - mobile `1 column`.
+- Impact:
+  - Improves operator scanability by removing low-meaning technical details from DI body badges.
+  - Keeps commissioning action path clear: force controls on left, edit action on right.
+  - Preserves theme compatibility because active state styling remains CSS-variable based.
+  - Provides a stable card density target for rollout of other families.
+- References: `data/index.html`, `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/worklog.md`.
+
+## DEC-0069: Freeze Compact KEY:VALUE Badge Notation For Live Cards
+- Date: 2026-03-09
+- Status: Accepted
+- Context: Live cards need concise, one-line badge text that remains readable on phone widths and consistent across families.
+- Decision:
+  - Standardize live badges to compact `KEY:VALUE` notation with no space after `:`.
+  - Apply this for both static parameter badges and runtime badges.
+  - Use short keys by default (`SIG`, `TRG`, `DEB`, `CMD`, `PHYS`, `EDGE`, `COUNT`), while preserving already-frozen semantic token values (`ON/OFF`, `HIGH/LOW`, `TRIG/CLR`, `IDLE/RUN/DONE`).
+  - DI reference examples:
+    - static: `SIG:NORM|INV`, `TRG:RISE|FALL|CHG`, `DEB:<seconds>s` (for example `DEB:0.05s`)
+    - runtime: `CMD:<ON|OFF>`, `PHYS:<HIGH|LOW>`, `EDGE:<TRIG|CLR>`, `COUNT:<number>`
+- Impact:
+  - Improves scan speed and line-fit reliability for dense live-card layouts.
+  - Provides a reusable naming template for DO/SIO/AI/MATH/RTC badges.
+  - Reduces wording churn during family-by-family rollout.
+- References: `data/index.html`, `docs/portal-v3-plan.md`, `docs/portal-execution-board-v3.md`, `docs/worklog.md`.
+
 
 

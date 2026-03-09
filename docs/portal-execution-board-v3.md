@@ -123,7 +123,7 @@ Execution policy:
 - Enforce strict 4-zone card layout in all family slices:
 - Zone 1 header, Zone 2 primary runtime, Zone 3 logic strip, Zone 4 debug actions.
 - Zone 4 rendered only when `debugModeEnabled=true`.
-- Use logical terminal identity labels (`DI0/DO1/...`) as primary visible card reference.
+- Keep logical terminal identity in header title only; avoid redundant technical identity badges in body.
 
 ### Slice C1: DI First (Start Here)
 
@@ -132,15 +132,28 @@ Goal:
 
 Scope:
 - Add DI card icon and DI-specific static parameter badges:
-- `channel`, `invert`, `edgeMode`, `debounceMs`
+- `invert`, `edgeMode`, `debounceMs`
+- DI compact parameter badge notation (frozen style):
+- `SIG:NORM|INV`
+- `TRG:RISE|FALL|CHG`
+- `DEB:<seconds>s` (example `DEB:0.05s`)
 - Apply strict 4-zone DI layout:
 - Zone 1 uses `DIx` terminal identity and dominant state indicator.
 - Zone 2 shows DI runtime row (`CMD`, `PHYS`, `EDGE`, `COUNT`).
+- Zone 2 runtime badge notation (frozen style):
+- `CMD:<ON|OFF>`
+- `PHYS:<HIGH|LOW>`
+- `EDGE:<TRIG|CLR>`
+- `COUNT:<number>`
 - Zone 3 shows `SET`/`RST` expression strip.
-- Zone 4 reserved for debug controls only and hidden when debug mode is disabled.
+- Zone 4 reserved for debug controls only and hidden when debug mode is disabled:
+- left-aligned force button group: `LOW | REAL | HIGH` (active mode color-highlighted)
+- right-aligned card edit action labeled `Edit`
+- no debug indicator badge and no command status/result badge
 - Render DI set/reset expression badges using configured condition blocks:
 - expression format `A`, `A & B`, `A | B`
 - token vocabulary `ON/OFF`, `HIGH/LOW`, `TRIG/CLR`, `IDLE/RUN/DONE`, `TRUE/FALSE`
+- all runtime and parameter badges use compact `KEY:VALUE` form with no space after `:`.
 - Use runtime fields for dynamic DI badges:
 - `commandState`, `actualState`, `edgePulse`, `liveValue`
 - Use `turnOnConditionMet` and `turnOffConditionMet` only for SET/RST badge color state.
@@ -156,8 +169,14 @@ Current implementation status (2026-03-08):
 - delivered:
   - compact DI card rendering baseline,
   - debug-gated Zone 4 behavior,
-  - DI wizard shell with `Back/Next/Cancel`,
+  - DI card edit modal shell with `Back/Next/Cancel`,
   - DI force controls (`REAL/HIGH/LOW`) wired to command API.
+- finalized UX decisions (2026-03-09):
+  - hide DI technical identity badges from Zone 1 (`DIx`, `ID`, `CH`) to reduce operator noise,
+  - keep `DIx` identity in header title,
+  - force controls rendered as left-aligned `LOW | REAL | HIGH` group with active mode highlight,
+  - action button renamed from `Wizard` to `Edit` and right-aligned in Zone 4,
+  - live cards use 3-column desktop layout (`2-column` tablet, `1-column` mobile).
 - known limitation:
   - runtime-reflected DI force mode is not yet sourced from firmware payload due DRAM budget guardrail (snapshot struct expansion rollback).
 

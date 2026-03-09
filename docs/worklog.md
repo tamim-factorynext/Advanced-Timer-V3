@@ -4,6 +4,40 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-09
+
+### DI Live Card UX Decision Finalization (Operator-Focused Pass)
+
+### Completed
+
+- Finalized DI Live card Zone-4 debug controls:
+  - removed debug indicator badge,
+  - removed command status/result badge,
+  - force controls now rendered as left-aligned button group: `LOW | REAL | HIGH`,
+  - active force mode shown by theme-aware button highlight,
+  - card action renamed from `Wizard` to `Edit` and right-aligned.
+- Reduced DI body badge noise for end users:
+  - removed Zone-1 technical identity badges from DI card body:
+    - `DIx`
+    - `ID`
+    - `CH`
+  - retained logical identity in header title only.
+- Updated Live card grid density policy in implementation:
+  - desktop: 3 columns,
+  - tablet: 2 columns,
+  - mobile: 1 column.
+- Locked compact badge notation for rollout reuse across all families:
+  - badge text style: `KEY:VALUE` (no space after `:`)
+  - DI parameter badges: `SIG:NORM|INV`, `TRG:RISE|FALL|CHG`, `DEB:<seconds>s`
+  - DI runtime badges: `CMD:<...>`, `PHYS:<...>`, `EDGE:<...>`, `COUNT:<...>`
+
+### Documentation Alignment
+
+- Updated:
+  - `docs/portal-execution-board-v3.md`
+  - `docs/portal-v3-plan.md`
+  - `docs/decisions.md` (`DEC-0068`, `DEC-0069`)
+
 ## 2026-03-08
 
 ### End-Of-Day Recap (Live DI + Debug Controls)

@@ -63,14 +63,21 @@
       .ok { color: var(--ok); }
       .warn { color: var(--warn); }
       .bad { color: var(--bad); }
-      .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+      .cards { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .node { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--node-bg); padding: 10px; }
+      .node.di-card { border-color: color-mix(in srgb, var(--accent-2) 28%, var(--line-strong)); }
+      .node.is-disabled { opacity: 0.82; }
       .node h4 { margin: 0 0 7px; font-size: 14px; display: flex; justify-content: space-between; color: var(--accent-2); }
       .node .meta { font-size: 12px; color: var(--text-2); display: grid; gap: 4px; }
       .node-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
       .node-title { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; color: var(--accent-2); }
+      .node-title-main { font-weight: 800; letter-spacing: 0.2px; }
+      .node-subtitle { color: var(--text-2); font-size: 11px; }
       .node-icon { width: 18px; text-align: center; color: var(--accent); }
       .node-state { font-weight: 800; letter-spacing: 0.2px; }
+      .node-zone { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 7px; }
+      .node-zone:first-of-type { margin-top: 2px; }
+      .zone-label { display: inline-block; margin-bottom: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.45px; color: var(--text-2); text-transform: uppercase; }
       .node-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
       .node-row.muted { opacity: 0.62; }
       .node-divider { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 7px; }
@@ -85,6 +92,14 @@
       .badge-formula { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .icon-btn { border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--text-0); padding: 5px 8px; font-size: 12px; cursor: pointer; }
       .icon-btn:hover { background: var(--bg-2); }
+      .icon-btn.is-active { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.28); }
+      .debug-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .force-group { display: inline-flex; align-items: center; flex-wrap: nowrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--chip); }
+      .force-group .icon-btn { border: 0; border-right: 1px solid var(--line); border-radius: 0; min-width: 58px; padding: 6px 10px; }
+      .force-group .icon-btn:last-child { border-right: 0; }
+      .force-group .icon-btn:hover { background: var(--bg-2); }
+      .force-group .icon-btn.is-active { background: rgba(125, 211, 252, 0.16); color: var(--accent-2); box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.28); }
+      .edit-btn { margin-left: auto; }
       .footer { margin-top: 10px; color: var(--text-2); font-size: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); padding: 8px 10px; }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--text-2); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
@@ -118,11 +133,17 @@
       .btn:hover { background: var(--bg-2); }
       .btn-primary { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
       .btn-danger { border-color: var(--bad); color: var(--bad); }
+      @media (max-width: 1080px) {
+        .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
       @media (max-width: 760px) {
         .status { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
         .clock-time { font-size: 24px; }
         .clock-date { font-size: 12px; }
         .wizard-grid { grid-template-columns: 1fr; }
+        .cards { grid-template-columns: 1fr; }
+        .debug-row { flex-direction: column; align-items: flex-start; }
+        .edit-btn { margin-left: 0; }
       }
     </style>
   </head>
@@ -190,7 +211,7 @@
       <div class="wizard-panel">
         <div class="wizard-head">
           <div>
-            <div id="wizardTitle" class="wizard-title">DI Card Wizard</div>
+            <div id="wizardTitle" class="wizard-title">DI Card Edit</div>
             <div id="wizardStep" class="wizard-step">Step 1 of 3</div>
           </div>
         </div>
@@ -380,6 +401,21 @@
         return String(v ?? "?");
       }
 
+      function shortTriggerLabel(v) {
+        const mode = shortEdgeMode(v);
+        if (mode === "RISING") return "RISE";
+        if (mode === "FALLING") return "FALL";
+        if (mode === "CHANGE") return "CHG";
+        return mode;
+      }
+
+      function debounceSecondsLabel(msValue) {
+        const ms = Number(msValue ?? 0);
+        if (!Number.isFinite(ms) || ms <= 0) return "0s";
+        const sec = ms / 1000;
+        return `${sec.toFixed(3).replace(/\.?0+$/, "")}s`;
+      }
+
       function formatClause(clause) {
         if (!clause || typeof clause !== "object") return "NA";
         const source = sourceRef(clause.sourceCardId);
@@ -427,7 +463,8 @@
         const setExpr = formatConditionBlock(params.turnOnCondition);
         const resetExpr = formatConditionBlock(params.turnOffCondition);
         const cardRef = state.cardRefById.get(Number(c.id)) || `DI${Number(c.index || 0)}`;
-        const displayIndex = Number(c.index || 0);
+        const logicalIndexMatch = cardRef.match(/^DI(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
         const headerTruth = isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "DISABLED";
         const headerClass = isEnabled ? (c.actualState ? "ok" : "warn") : "warn";
         const zoneMutedClass = isEnabled ? "" : " muted";
@@ -443,49 +480,55 @@
         const countToken = isEnabled ? String(Number(c.liveValue ?? 0)) : "--";
         const runtimeMode = String(c.inputSource || "");
         const debugState = state.diDebugByCard.get(Number(c.id)) || {};
-        const debugMsg = String(debugState.message || "No command sent");
         const effectiveMode = runtimeMode || String(debugState.mode || "REAL");
         const isReal = effectiveMode === "REAL";
         const isHigh = effectiveMode === "FORCED_HIGH";
         const isLow = effectiveMode === "FORCED_LOW";
-        const debugMsgClass = debugState.ok === true
-          ? "text-bg-success"
-          : (debugState.ok === false ? "text-bg-danger" : "text-bg-secondary");
         const zone4Html = state.debugModeEnabled ? `
-          <div class="node-row node-divider">
-            <button type="button" class="icon-btn" title="Open Card Wizard" data-action="open-di-wizard" data-card-id="${c.id}">&#9881; Wizard</button>
-            <span class="badge text-bg-secondary">Debug</span>
-            <button type="button" class="icon-btn ${isReal ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="REAL">REAL</button>
-            <button type="button" class="icon-btn ${isHigh ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_HIGH">HIGH</button>
-            <button type="button" class="icon-btn ${isLow ? "btn-primary" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_LOW">LOW</button>
-            <span class="badge ${debugMsgClass}">${debugMsg}</span>
+          <div class="node-zone">
+            <div class="debug-row">
+              <div class="btn-group force-group" role="group" aria-label="DI force mode">
+                <button type="button" class="icon-btn ${isLow ? "is-active" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_LOW">LOW</button>
+                <button type="button" class="icon-btn ${isReal ? "is-active" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="REAL">REAL</button>
+                <button type="button" class="icon-btn ${isHigh ? "is-active" : ""}" data-action="set-di-force" data-card-id="${c.id}" data-force-mode="FORCED_HIGH">HIGH</button>
+              </div>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-di-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
           </div>
         ` : "";
 
         return `
-          <article class="node">
+          <article class="node di-card ${isEnabled ? "" : "is-disabled"}">
             <div class="node-head">
-              <div class="node-title"><span class="node-icon">&#x21E9;</span><span>Digital Input ${displayIndex}</span></div>
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x21E9;</span>
+                  <span class="node-title-main">Digital Input ${logicalIndex}</span>
+                </div>
+              </div>
               <span class="node-state ${headerClass}">${headerTruth}</span>
             </div>
-            <div class="node-row">
-              <span class="badge text-bg-secondary">${cardRef}</span>
-              <span class="badge text-bg-secondary">ID ${c.id}</span>
-              <span class="badge text-bg-secondary">CH ${Number(params.channel ?? 0)}</span>
-              <span class="badge text-bg-secondary">INV ${params.invert ? "ON" : "OFF"}</span>
-              <span class="badge text-bg-secondary">EDGE ${shortEdgeMode(params.edgeMode)}</span>
-              <span class="badge text-bg-secondary">DB ${Number(params.debounceMs ?? 0)}ms</span>
+            <div class="node-zone">
+              <div class="node-row">
+              <span class="badge text-bg-secondary">SIG:${params.invert ? "INV" : "NORM"}</span>
+              <span class="badge text-bg-secondary">TRG:${shortTriggerLabel(params.edgeMode)}</span>
+              <span class="badge text-bg-secondary">DEB:${debounceSecondsLabel(params.debounceMs)}</span>
+              </div>
             </div>
-            <div class="node-row node-divider${zoneMutedClass}">
-              <span class="badge text-bg-info">CMD ${cmdToken}</span>
-              <span class="badge text-bg-info">PHYS ${physToken}</span>
-              <span class="badge text-bg-info">EDGE ${edgeToken}</span>
-              <span class="badge text-bg-warning">COUNT ${countToken}</span>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+              <span class="badge text-bg-info">CMD:${cmdToken}</span>
+              <span class="badge text-bg-info">PHYS:${physToken}</span>
+              <span class="badge text-bg-info">EDGE:${edgeToken}</span>
+              <span class="badge text-bg-warning">COUNT:${countToken}</span>
+              </div>
             </div>
-            <div class="node-row node-divider${zoneMutedClass}">
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
               ${isEnabled ? "" : '<span class="badge text-bg-dark">Disabled</span>'}
               <span class="badge badge-formula ${setBadgeClass}">SET: ${setExpr}</span>
               <span class="badge badge-formula ${resetBadgeClass}">RST: ${resetExpr}</span>
+              </div>
             </div>
             ${zone4Html}
           </article>
@@ -546,7 +589,7 @@
         const w = state.wizard;
         if (!w.open || !w.draft) return;
         const cardRef = state.cardRefById.get(Number(w.cardId)) || `DI ${Number(w.draft.index || 0)}`;
-        wizardTitleEl.textContent = `DI Card Wizard - ${cardRef}`;
+        wizardTitleEl.textContent = `DI Card Edit - ${cardRef}`;
         wizardStepEl.textContent = `Step ${w.step + 1} of 3`;
         wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
         wizNextEl.textContent = w.step === 2 ? "Finish" : "Next";
@@ -628,9 +671,7 @@
       async function submitDiForce(cardId, mode) {
         const id = Number(cardId);
         if (!Number.isFinite(id)) return;
-        const entry = { mode, ok: null, message: "Sending..." };
-        state.diDebugByCard.set(id, entry);
-        renderCards(sortedCardsFromStore());
+        const previous = state.diDebugByCard.get(id);
         try {
           const resp = await fetch("/api/v3/command", {
             method: "POST",
@@ -644,17 +685,15 @@
           });
           const data = await resp.json();
           const accepted = !!(data && data.accepted);
-          state.diDebugByCard.set(id, {
-            mode,
-            ok: accepted,
-            message: accepted ? `Force ${mode}` : String(data?.message || data?.errorCode || "Rejected"),
-          });
+          if (accepted) {
+            state.diDebugByCard.set(id, { mode });
+          } else if (previous) {
+            state.diDebugByCard.set(id, previous);
+          }
         } catch (err) {
-          state.diDebugByCard.set(id, {
-            mode,
-            ok: false,
-            message: String(err && err.message ? err.message : err),
-          });
+          if (previous) {
+            state.diDebugByCard.set(id, previous);
+          }
         }
         renderCards(sortedCardsFromStore());
       }

@@ -240,7 +240,7 @@ Build:
 - Simulation/force controls are hidden by default and become visible only when enabled from Settings.
 - Telemetry and diagnostics correlation for incident replay.
 - Live Runtime Card Wizard:
-- per-card settings icon opens guided card editor popup.
+- per-card `Edit` action opens guided card editor popup.
 - wizard supports full per-card parameter surface including set/reset condition rules.
 - wizard visibility is gated by `debugModeEnabled=true` only.
 - finish action performs explicit save + reboot flow to apply changes.
@@ -251,14 +251,25 @@ Build:
 - expression token vocabulary is fixed:
 - `commandState=ON/OFF`, `actualState=HIGH/LOW`, `edgePulse=TRIG/CLR`, `missionState=IDLE/RUN/DONE`, constant clauses as `CardRef:TRUE/FALSE`.
 - badge color (not text) indicates runtime evaluation result.
+- compact badge text style is fixed for operator readability:
+- use `KEY:VALUE` with no space after `:`.
+- prefer short keys on live cards (for example `SIG`, `TRG`, `DEB`, `CMD`, `PHYS`, `EDGE`, `COUNT`).
+- DI reference notation:
+- `SIG:NORM|INV`, `TRG:RISE|FALL|CHG`, `DEB:<seconds>s`, runtime row `CMD:<...>`, `PHYS:<...>`, `EDGE:<...>`, `COUNT:<...>`.
 - Live card layout contract (strict 4-zone):
 - Zone 1: header with icon + family title + logical terminal identity (`DI0/DO1/...`) + dominant live-state indicator.
+- Zone 1 body badges should avoid redundant technical identity fields (`DIx`, `ID`, `CH`) for operator-facing Live view.
 - Zone 2: primary runtime signals (family-specific compact row).
 - Zone 3: set/reset logic strip (families with set/reset support only).
-- Zone 4: debug actions area (settings icon/card wizard and debug-only controls).
+- Zone 4: debug actions area with left-aligned force-group controls (`LOW | REAL | HIGH`) and right-aligned `Edit` action.
+- Zone 4 should not include extra debug indicator or command-status/result badges.
 - Zone 4 is debug-gated:
 - `debugModeEnabled=false` -> Zone 4 is not rendered and consumes no card space.
 - `debugModeEnabled=true` -> Zone 4 is visible.
+- Live card grid baseline:
+- desktop: 3 columns
+- tablet: 2 columns
+- mobile: 1 column
 - Disabled-card display policy:
 - keep Zones 2 and 3 visible in muted inactive style for context stability.
 - show configured set/reset expressions but suppress active evaluation coloring.
