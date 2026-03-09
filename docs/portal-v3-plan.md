@@ -285,6 +285,65 @@ Exit gate:
 - Mobile smoke tests pass for core workflows.
 - At least one disconnect/reconnect incident can be explained end-to-end through telemetry traces.
 
+### 6.2 DI Wizard UX Blueprint (Operator + Learning)
+
+Goal:
+- Make Live `Edit` wizard a guided commissioning flow for average users, not a compact clone of Config Studio.
+- Teach runtime behavior while user configures the card.
+
+Wizard information model (must be explicit in UI):
+- `Editable`: controls users can change.
+- `Informational`: plain read-only facts (never disabled form inputs).
+- `Educational`: concise “what this means” helper text + example.
+
+Non-editable field rule:
+- Render as info rows/chips only.
+- Do not render read-only card identity/channel facts as disabled inputs.
+
+DI step flow target:
+1. Context:
+- card identity, current runtime state, enabled/disabled.
+- one-line mental model: DI converts electrical input into logical events.
+2. Signal behavior:
+- `SIG`, `TRG`, `DEB` controls.
+- include live behavior sentence preview (example: “Input must remain stable for 0.05s before rising edge counts.”).
+3. SET condition:
+- title language: “Turn ON when...”
+- full clause editor + plain-language examples.
+4. RST condition:
+- title language: “Turn OFF when...”
+- same editor pattern; explicitly explain reset-priority impact.
+5. Review + Save:
+- before/after summary,
+- warning panel,
+- explicit `Save & Reboot`.
+
+Learning content (must align with user guide):
+- processing order:
+- source select -> invert -> actualState -> set/reset -> gating -> edge/debounce -> counter/pulse.
+- debounce behavior:
+- `debounceMs=0` immediate, `>0` requires full stable window.
+- force behavior:
+- force applies before invert.
+- gating behavior:
+- `reset=true` can block qualification in that scan.
+
+Badge language parity rule:
+- Wizard explanation text must match Live badges.
+- Keep compact badge style `KEY:VALUE` (no space after `:`), including DI baseline:
+- `SIG:NORM|INV`, `TRG:RISE|FALL|CHG`, `DEB:<seconds>s`, `CMD:<...>`, `PHYS:<...>`, `EDGE:<...>`, `COUNT:<...>`.
+
+Responsive contract:
+- Desktop: two-pane step layout (edit left, explanation/preview right).
+- Mobile: single-column stacked flow (edit first, explanation under it), no horizontal scroll.
+- Keep action buttons stable and reachable on both form factors.
+
+Safety UX:
+- prefer prevention over post-submit errors.
+- show inline validation for local field issues.
+- show step-level warnings for risky logic combinations.
+- block save on contract-invalid condition shapes.
+
 ## 7. Frontend Stack Adoption Plan (Incremental)
 
 Adopt one stack at a time in this order:
