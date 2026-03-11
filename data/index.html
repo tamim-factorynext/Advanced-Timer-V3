@@ -1407,6 +1407,7 @@
       }
 
       function renderAiPipeline(stepKey) {
+        const showIcons = stepKey !== "intro";
         const nodes = [
           { key: "input", label: "Input", icon: "signal" },
           { key: "clamp", label: "Clamp", icon: "gate" },
@@ -1424,7 +1425,7 @@
           <div class="diwiz-flow" aria-label="AI behavior pipeline">
             ${nodes.map((node, idx) => `
               <span class="diwiz-flow-node ${node.key === active ? "active" : ""}">
-                ${lucideIcon(node.icon)}
+                ${showIcons ? lucideIcon(node.icon) : ""}
                 <span>${node.label}</span>
               </span>
               ${idx < nodes.length - 1 ? '<span class="diwiz-flow-arrow">&rarr;</span>' : ""}
@@ -2034,6 +2035,11 @@
         return document.visibilityState === "visible";
       }
 
+      function isAiForceInputActive() {
+        const active = document.activeElement;
+        return !!(active && typeof active.matches === "function" && active.matches("[data-ai-force-input]"));
+      }
+
       async function tickMetrics() {
         if (metricsInFlight || !canPollLive()) return;
         metricsInFlight = true;
@@ -2081,6 +2087,9 @@
             }
           }
           state.cardsSeq = Number(payload.snapshotSeq || state.cardsSeq || 0);
+          // Keep typed AI force value stable on touch keyboards by skipping
+          // full card re-render while the raw input field is actively focused.
+          if (isAiForceInputActive()) return;
           renderCards(sortedCardsFromStore());
         } catch (err) {
           state.lastError = String(err && err.message ? err.message : err);
