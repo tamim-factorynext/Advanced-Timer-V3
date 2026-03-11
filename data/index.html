@@ -120,18 +120,24 @@
       .wizard-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.66); z-index: 10000; padding: 16px; }
       .wizard-overlay.show { display: flex; }
       .wizard-panel { width: min(920px, 96vw); border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); box-shadow: var(--shadow); }
-      .wizard-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-      .wizard-title { font-weight: 700; color: var(--accent-2); }
-      .wizard-step { font-size: 12px; color: var(--text-2); }
-      .wizard-body { padding: 12px 14px; display: grid; gap: 10px; }
+      .wizard-head { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .wizard-title { font-weight: 800; color: var(--accent-2); font-size: 20px; }
+      .wizard-step { font-size: 13px; color: var(--text-2); font-weight: 600; }
+      .wizard-subtitle { font-size: 13px; color: var(--text-2); }
+      .wizard-stepper { display: flex; gap: 6px; flex-wrap: wrap; }
+      .wiz-pill { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 4px 8px; }
+      .wiz-pill.active { border-color: var(--accent-2); color: var(--accent-2); background: rgba(125, 211, 252, 0.12); }
+      .wiz-pill.done { border-color: rgba(74, 222, 128, 0.35); color: var(--ok); background: rgba(74, 222, 128, 0.12); }
+      .wizard-body { padding: 14px; display: grid; gap: 10px; }
       .wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .wizard-field { display: grid; gap: 4px; }
       .wizard-field label { font-size: 12px; color: var(--text-2); }
       .wizard-field input, .wizard-field select { width: 100%; border: 1px solid var(--line); background: var(--chip); color: var(--text-0); border-radius: 8px; padding: 7px 8px; }
-      .wizard-block { border: 1px solid var(--line); border-radius: 10px; background: var(--node-bg); padding: 8px; display: grid; gap: 8px; }
+      .wizard-surface { border: 1px solid var(--line); border-radius: 10px; background: var(--node-bg); padding: 10px; display: grid; gap: 10px; }
+      .wizard-block { display: grid; gap: 8px; }
       .wizard-block-title { font-size: 12px; font-weight: 700; color: var(--accent-2); }
       .wizard-divider { border-top: 1px dashed var(--line); margin: 2px 0; }
-      .wizard-info { border: 1px solid var(--line); border-radius: 10px; background: var(--node-bg); padding: 8px; display: grid; gap: 6px; }
+      .wizard-info { display: grid; gap: 6px; }
       .wizard-info-title { font-size: 12px; font-weight: 700; color: var(--accent-2); }
       .wizard-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px; font-size: 12px; color: var(--text-2); }
       .wizard-kv strong { color: var(--text-0); font-weight: 700; }
@@ -139,7 +145,14 @@
       .wizard-help strong { color: var(--accent-2); }
       .wizard-help ul { margin: 0; padding-left: 16px; display: grid; gap: 4px; }
       .wizard-preview { border: 1px dashed var(--line); border-radius: 10px; background: rgba(125, 211, 252, 0.08); padding: 8px; font-size: 12px; color: var(--text-0); line-height: 1.35; }
-      .wizard-footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+      .wizard-field-note { font-size: 12px; color: var(--text-2); }
+      .wizard-field-note strong { color: var(--accent-2); }
+      .wizard-hidden { display: none !important; }
+      .wizard-flow { display: grid; grid-template-columns: repeat(7, auto); gap: 6px; align-items: center; justify-content: start; }
+      .wizard-flow-node { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 5px 8px; white-space: nowrap; }
+      .wizard-flow-arrow { color: var(--accent-2); font-size: 12px; font-weight: 700; }
+      .wizard-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--panel-bg) 88%, transparent); }
+      .wizard-footer-actions { display: flex; gap: 8px; }
       .btn { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; background: var(--chip); color: var(--text-0); }
       .btn:hover { background: var(--bg-2); }
       .btn-primary { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
@@ -152,6 +165,9 @@
         .clock-time { font-size: 24px; }
         .clock-date { font-size: 12px; }
         .wizard-grid { grid-template-columns: 1fr; }
+        .wizard-flow { grid-template-columns: 1fr; justify-items: start; }
+        .wizard-flow-arrow { display: none; }
+        .wizard-footer { position: sticky; bottom: 0; z-index: 2; border-top: 1px solid var(--line); }
         .cards { grid-template-columns: 1fr; }
         .debug-row { flex-direction: row; align-items: center; }
         .edit-btn { margin-left: auto; }
@@ -225,12 +241,14 @@
           <div>
             <div id="wizardTitle" class="wizard-title">DI Card Edit</div>
             <div id="wizardStep" class="wizard-step">Step 1 of 3</div>
+            <div id="wizardSubtitle" class="wizard-subtitle">Adjust this card with guided steps.</div>
           </div>
+          <div id="wizardStepper" class="wizard-stepper" aria-hidden="true"></div>
         </div>
         <div id="wizardBody" class="wizard-body"></div>
         <div class="wizard-footer">
           <button id="wizCancel" type="button" class="btn btn-danger">Cancel</button>
-          <div>
+          <div class="wizard-footer-actions">
             <button id="wizBack" type="button" class="btn">Back</button>
             <button id="wizNext" type="button" class="btn btn-primary">Next</button>
           </div>
@@ -254,6 +272,7 @@
           step: 0,
           cardId: null,
           draft: null,
+          original: null,
         },
         diDebugByCard: new Map(),
       };
@@ -279,6 +298,8 @@
       const wizardOverlayEl = document.getElementById("wizardOverlay");
       const wizardTitleEl = document.getElementById("wizardTitle");
       const wizardStepEl = document.getElementById("wizardStep");
+      const wizardSubtitleEl = document.getElementById("wizardSubtitle");
+      const wizardStepperEl = document.getElementById("wizardStepper");
       const wizardBodyEl = document.getElementById("wizardBody");
       const wizCancelEl = document.getElementById("wizCancel");
       const wizBackEl = document.getElementById("wizBack");
@@ -530,7 +551,10 @@
 
       function wizardCombinerOptions(selectedCombiner) {
         const selected = String(selectedCombiner || "NONE");
-        return WIZ_COMBINERS.map((c) => `<option value="${c}" ${c === selected ? "selected" : ""}>${c}</option>`).join("");
+        return WIZ_COMBINERS.map((c) => {
+          const label = c === "NONE" ? "Primary only" : c;
+          return `<option value="${c}" ${c === selected ? "selected" : ""}>${label}</option>`;
+        }).join("");
       }
 
       function wizardReadClause(prefix) {
@@ -553,6 +577,8 @@
         const modeEl = document.getElementById(`${prefix}_thr_mode`);
         const valEl = document.getElementById(`${prefix}_thr_val`);
         const cardEl = document.getElementById(`${prefix}_thr_card`);
+        const valWrap = document.getElementById(`${prefix}_thr_val_wrap`);
+        const cardWrap = document.getElementById(`${prefix}_thr_card_wrap`);
         if (!opEl || !modeEl || !valEl || !cardEl) return;
         const numeric = isNumericOperatorToken(opEl.value);
         if (!numeric) {
@@ -560,12 +586,16 @@
           modeEl.disabled = true;
           valEl.disabled = true;
           cardEl.disabled = true;
+          if (valWrap) valWrap.classList.add("wizard-hidden");
+          if (cardWrap) cardWrap.classList.add("wizard-hidden");
           return;
         }
         modeEl.disabled = false;
         const useCard = modeEl.value === "CARD";
         valEl.disabled = useCard;
         cardEl.disabled = !useCard;
+        if (valWrap) valWrap.classList.toggle("wizard-hidden", useCard);
+        if (cardWrap) cardWrap.classList.toggle("wizard-hidden", !useCard);
       }
 
       function formatClause(clause) {
@@ -733,14 +763,59 @@
         state.wizard.open = false;
         state.wizard.cardId = null;
         state.wizard.draft = null;
+        state.wizard.original = null;
         state.wizard.step = 0;
         wizardOverlayEl.classList.remove("show");
+      }
+
+      const WIZ_STEP_META = {
+        intro: { short: "1", name: "Intro", subtitle: "Understand DI purpose and set enabled state." },
+        invert: { short: "2", name: "Signal", subtitle: "Choose how signal is interpreted before logic checks." },
+        edge: { short: "3", name: "Trigger", subtitle: "Choose which edge increments the built-in DI counter." },
+        debounce: { short: "4", name: "Debounce", subtitle: "Set stability window before edge qualification." },
+        set_primary: { short: "5", name: "SET Primary", subtitle: "Define when this DI turns ON." },
+        set_secondary: { short: "6", name: "SET Secondary", subtitle: "Optional extra SET clause for AND/OR." },
+        rst_primary: { short: "7", name: "RST Primary", subtitle: "Define when this DI turns OFF." },
+        rst_secondary: { short: "8", name: "RST Secondary", subtitle: "Optional extra RST clause for AND/OR." },
+        review: { short: "9", name: "Review", subtitle: "Confirm changes before save and reboot." },
+      };
+
+      function renderWizardStepper(flow, activeIdx) {
+        wizardStepperEl.innerHTML = flow.map((stepKey, idx) => {
+          const meta = WIZ_STEP_META[stepKey] || { short: `${idx + 1}`, name: stepKey };
+          const cls = idx === activeIdx ? "wiz-pill active" : (idx < activeIdx ? "wiz-pill done" : "wiz-pill");
+          return `<span class="${cls}" title="${meta.name}">${meta.short}</span>`;
+        }).join("");
+      }
+
+      function summarizeWizardChanges(draft, original) {
+        if (!draft || !original) return [];
+        const changes = [];
+        if (!!draft.enabled !== !!original.enabled) {
+          changes.push(`Enabled:${draft.enabled ? "YES" : "NO"}`);
+        }
+        if (!!draft.params.invert !== !!original.params.invert) {
+          changes.push(`SIG:${draft.params.invert ? "INV" : "NORM"}`);
+        }
+        if (Number(draft.params.edgeMode || 0) !== Number(original.params.edgeMode || 0)) {
+          changes.push(`TRG:${shortTriggerLabel(draft.params.edgeMode)}`);
+        }
+        if (Number(draft.params.debounceMs || 0) !== Number(original.params.debounceMs || 0)) {
+          changes.push(`DEB:${debounceSecondsLabel(draft.params.debounceMs)}`);
+        }
+        const setNow = formatConditionBlock(draft.params.turnOnCondition);
+        const setOld = formatConditionBlock(original.params.turnOnCondition);
+        if (setNow !== setOld) changes.push(`SET:${setNow}`);
+        const rstNow = formatConditionBlock(draft.params.turnOffCondition);
+        const rstOld = formatConditionBlock(original.params.turnOffCondition);
+        if (rstNow !== rstOld) changes.push(`RST:${rstNow}`);
+        return changes;
       }
 
       function wizardFlowForDraft(draft) {
         const setComb = String(draft?.params?.turnOnCondition?.combiner || "NONE");
         const rstComb = String(draft?.params?.turnOffCondition?.combiner || "NONE");
-        const flow = ["context", "signal", "set_primary"];
+        const flow = ["intro", "invert", "edge", "debounce", "set_primary"];
         if (setComb !== "NONE") flow.push("set_secondary");
         flow.push("rst_primary");
         if (rstComb !== "NONE") flow.push("rst_secondary");
@@ -748,38 +823,31 @@
         return flow;
       }
 
-      function renderWizardPrimaryCondition(title, rootPrefix, block, fallbackCardId, combinerPicked) {
+      function renderWizardPrimaryCondition(title, rootPrefix, block, fallbackCardId) {
         const safe = normalizeConditionBlock(block, fallbackCardId);
         const a = safe.clauseA;
         const sourceOptionsA = wizardCardSelectOptions(a.sourceCardId, fallbackCardId);
         const thresholdCardA = wizardCardSelectOptions(a.thresholdCardId, fallbackCardId);
         const modeAConst = a.useThresholdCard ? "" : "selected";
         const modeACard = a.useThresholdCard ? "selected" : "";
-        const combinerValue = combinerPicked ? safe.combiner : "";
+        const secondaryNeeded = safe.combiner !== "NONE";
         return `
-          <div class="wizard-block">
+          <div class="wizard-surface">
             <div class="wizard-block-title">${title}</div>
             <div class="wizard-field">
               <label>Combiner</label>
-              <select id="${rootPrefix}_comb">
-                <option value="" ${combinerValue === "" ? "selected" : ""}>Choose first...</option>
-                <option value="NONE" ${combinerValue === "NONE" ? "selected" : ""}>Primary only</option>
-                <option value="AND" ${combinerValue === "AND" ? "selected" : ""}>AND (use secondary)</option>
-                <option value="OR" ${combinerValue === "OR" ? "selected" : ""}>OR (use secondary)</option>
-              </select>
-              <div class="hint">Choose combiner first. If AND/OR is selected, a secondary-clause step appears next.</div>
+              <select id="${rootPrefix}_comb">${wizardCombinerOptions(safe.combiner)}</select>
+              <div class="wizard-field-note"><strong>Hint:</strong> Use <strong>Primary only</strong> for a single rule. Choose <strong>AND/OR</strong> to unlock a secondary clause step.</div>
             </div>
             <div class="wizard-grid">
               <div class="wizard-field"><label>Primary Source</label><select id="${rootPrefix}_a_src">${sourceOptionsA}</select></div>
               <div class="wizard-field"><label>Primary Operator</label><select id="${rootPrefix}_a_op">${wizardOperatorOptions(a.operator)}</select></div>
               <div class="wizard-field"><label>Primary Threshold Source</label><select id="${rootPrefix}_a_thr_mode"><option value="CONST" ${modeAConst}>Constant</option><option value="CARD" ${modeACard}>Card</option></select></div>
-              <div class="wizard-field"><label>Primary Threshold Value</label><input id="${rootPrefix}_a_thr_val" type="number" value="${Number(a.thresholdValue || 0)}" /></div>
-              <div class="wizard-field"><label>Primary Threshold Card</label><select id="${rootPrefix}_a_thr_card">${thresholdCardA}</select></div>
+              <div id="${rootPrefix}_a_thr_val_wrap" class="wizard-field"><label>Primary Threshold Value</label><input id="${rootPrefix}_a_thr_val" type="number" value="${Number(a.thresholdValue || 0)}" /></div>
+              <div id="${rootPrefix}_a_thr_card_wrap" class="wizard-field"><label>Primary Threshold Card</label><select id="${rootPrefix}_a_thr_card">${thresholdCardA}</select></div>
             </div>
-            <div class="wizard-help">
-              <strong>Coach</strong>
-              <div>Define the main condition first. Keep it simple; only use secondary clause when one rule is not enough.</div>
-            </div>
+            <div class="wizard-field-note">Secondary clause status: <strong>${secondaryNeeded ? "Enabled by combiner" : "Skipped (Primary only)"}</strong>.</div>
+            <div class="wizard-field-note"><strong>Coach:</strong> Define the main condition first. Keep it simple, then add secondary only when one rule is not enough.</div>
           </div>
         `;
       }
@@ -792,20 +860,17 @@
         const modeBConst = b.useThresholdCard ? "" : "selected";
         const modeBCard = b.useThresholdCard ? "selected" : "";
         return `
-          <div class="wizard-block">
+          <div class="wizard-surface">
             <div class="wizard-block-title">${title}</div>
-            <div class="wizard-preview">Combiner: ${safe.combiner}</div>
+            <div class="wizard-field-note"><strong>Combiner:</strong> ${safe.combiner}. This clause is evaluated together with primary.</div>
             <div class="wizard-grid">
               <div class="wizard-field"><label>Secondary Source</label><select id="${rootPrefix}_b_src">${sourceOptionsB}</select></div>
               <div class="wizard-field"><label>Secondary Operator</label><select id="${rootPrefix}_b_op">${wizardOperatorOptions(b.operator)}</select></div>
               <div class="wizard-field"><label>Secondary Threshold Source</label><select id="${rootPrefix}_b_thr_mode"><option value="CONST" ${modeBConst}>Constant</option><option value="CARD" ${modeBCard}>Card</option></select></div>
-              <div class="wizard-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
-              <div class="wizard-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
+              <div id="${rootPrefix}_b_thr_val_wrap" class="wizard-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
+              <div id="${rootPrefix}_b_thr_card_wrap" class="wizard-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
             </div>
-            <div class="wizard-help">
-              <strong>Coach</strong>
-              <div>This is the extra clause used with combiner <strong>${safe.combiner}</strong>. Keep it focused and avoid duplicating primary logic.</div>
-            </div>
+            <div class="wizard-field-note"><strong>Coach:</strong> Keep this clause focused and avoid duplicating primary logic.</div>
           </div>
         `;
       }
@@ -823,35 +888,6 @@
         }
       }
 
-      function setWizardPrimaryFieldsEnabled(rootPrefix, enabled) {
-        const ids = [
-          `${rootPrefix}_a_src`,
-          `${rootPrefix}_a_op`,
-          `${rootPrefix}_a_thr_mode`,
-          `${rootPrefix}_a_thr_val`,
-          `${rootPrefix}_a_thr_card`,
-        ];
-        ids.forEach((id) => {
-          const el = document.getElementById(id);
-          if (el) el.disabled = !enabled;
-        });
-      }
-
-      function bindWizardPrimaryCombinerGate(rootPrefix) {
-        const combEl = document.getElementById(`${rootPrefix}_comb`);
-        if (!combEl) return;
-        const applyState = () => {
-          const chosen = combEl.value !== "";
-          setWizardPrimaryFieldsEnabled(rootPrefix, chosen);
-          wizNextEl.disabled = !chosen;
-          if (chosen) {
-            wizardRefreshThresholdUi(`${rootPrefix}_a`);
-          }
-        };
-        combEl.addEventListener("change", applyState);
-        applyState();
-      }
-
       function renderDiWizardStep() {
         const w = state.wizard;
         if (!w.open || !w.draft) return;
@@ -863,67 +899,97 @@
         const cardRef = state.cardRefById.get(Number(w.cardId)) || `DI ${Number(w.draft.index || 0)}`;
         wizardTitleEl.textContent = `DI Card Edit - ${cardRef}`;
         wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length}`;
+        wizardSubtitleEl.textContent = (WIZ_STEP_META[stepKey] && WIZ_STEP_META[stepKey].subtitle) || "Guided configuration step.";
+        renderWizardStepper(flow, w.step);
         wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
         wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
         wizNextEl.disabled = false;
 
-        if (stepKey === "context") {
+        if (stepKey === "intro") {
           const channel = Number(w.draft.params.channel ?? 0);
           wizardBodyEl.innerHTML = `
-            <div class="wizard-block">
-              <div class="wizard-block-title">Card Context</div>
-              <div class="wizard-field"><label>Status</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            <div class="wizard-surface">
+              <div class="wizard-block-title">What this DI card does</div>
+              <div class="wizard-field-note">Digital Input reads a physical signal, qualifies edges, evaluates SET/RST logic, then exposes runtime badges for verification.</div>
+              <div class="wizard-flow" aria-label="DI behavior flow">
+                <span class="wizard-flow-node">Input Signal</span>
+                <span class="wizard-flow-arrow">&rarr;</span>
+                <span class="wizard-flow-node">TRG + DEB</span>
+                <span class="wizard-flow-arrow">&rarr;</span>
+                <span class="wizard-flow-node">SET / RST Logic</span>
+                <span class="wizard-flow-arrow">&rarr;</span>
+                <span class="wizard-flow-node">CMD PHYS EDGE COUNT</span>
+              </div>
+              <div class="wizard-field"><label>Enabled</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
               <div class="wizard-info">
-                <div class="wizard-info-title">Card Information</div>
+                <div class="wizard-info-title">Card Information (read-only)</div>
                 <div class="wizard-kv"><span>Card</span><strong>${cardRef}</strong></div>
                 <div class="wizard-kv"><span>Family</span><strong>Digital Input</strong></div>
                 <div class="wizard-kv"><span>Hardware Channel</span><strong>GPIO ${channel}</strong></div>
                 <div class="wizard-kv"><span>Card ID</span><strong>${Number(w.draft.id)}</strong></div>
               </div>
-              <div class="wizard-help">
-                <strong>Coach</strong>
-                <div>This step confirms identity and active status only. Use <strong>Enabled</strong> to include/exclude this DI in runtime logic.</div>
-              </div>
+              <div class="wizard-field-note"><strong>Coach:</strong> Keep enabled if this DI participates in logic. Disable only when this input should be ignored at runtime.</div>
             </div>
           `;
           return;
         }
 
-        if (stepKey === "signal") {
+        if (stepKey === "invert") {
+          wizardBodyEl.innerHTML = `
+            <div class="wizard-surface">
+              <div class="wizard-block-title">Signal Interpretation (SIG)</div>
+              <div class="wizard-field">
+                <label>Signal (SIG)</label>
+                <select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select>
+              </div>
+              <div class="wizard-field-note"><strong>Coach:</strong> <strong>NORM</strong> uses physical signal as-is. <strong>INV</strong> flips the signal before SET/RST checks and edge detection.</div>
+              <div class="wizard-preview">${w.draft.params.invert ? "Current mode: signal is inverted (1 becomes 0, 0 becomes 1)." : "Current mode: signal is used directly without inversion."}</div>
+            </div>
+          `;
+          return;
+        }
+
+        if (stepKey === "edge") {
+          const edgeMode = Number(w.draft.params.edgeMode || 0);
+          wizardBodyEl.innerHTML = `
+            <div class="wizard-surface">
+              <div class="wizard-block-title">Edge Qualification (TRG)</div>
+              <div class="wizard-field">
+                <label>Trigger (TRG)</label>
+                <select id="wiz_edge"><option value="0" ${edgeMode === 0 ? "selected" : ""}>RISE</option><option value="1" ${edgeMode === 1 ? "selected" : ""}>FALL</option><option value="2" ${edgeMode === 2 ? "selected" : ""}>CHG</option></select>
+              </div>
+              <div class="wizard-field-note"><strong>Coach:</strong> DI has a built-in qualified edge counter (<strong>COUNT</strong>) that can be used by other cards and conditions.</div>
+              <div class="wizard-preview">${edgeModeLongLabel(edgeMode)} is currently selected. Only qualified edges increment COUNT.</div>
+            </div>
+          `;
+          return;
+        }
+
+        if (stepKey === "debounce") {
           const preview = signalBehaviorPreview(w.draft.params || {});
           wizardBodyEl.innerHTML = `
-            <div class="wizard-block">
-              <div class="wizard-block-title">Signal Behavior</div>
-              <div class="wizard-grid">
-                <div class="wizard-field"><label>Signal (SIG)</label><select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select></div>
-                <div class="wizard-field"><label>Trigger (TRG)</label><select id="wiz_edge"><option value="0" ${Number(w.draft.params.edgeMode || 0) === 0 ? "selected" : ""}>RISE</option><option value="1" ${Number(w.draft.params.edgeMode || 0) === 1 ? "selected" : ""}>FALL</option><option value="2" ${Number(w.draft.params.edgeMode || 0) === 2 ? "selected" : ""}>CHG</option></select></div>
-                <div class="wizard-field"><label>Debounce (DEB)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
-              </div>
-              <div class="wizard-help">
-                <strong>Coach</strong>
-                <div><strong>SIG</strong> controls inversion before logic checks. <strong>TRG</strong> selects edge type. <strong>DEB</strong> is stable window before qualification.</div>
-              </div>
+            <div class="wizard-surface">
+              <div class="wizard-block-title">Debounce Window (DEB)</div>
+              <div class="wizard-field"><label>Debounce (DEB, ms)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
+              <div class="wizard-field-note"><strong>Coach:</strong> Debounce requires a stable signal window before an edge is accepted as qualified.</div>
               <div id="wiz_signal_preview" class="wizard-preview">${preview}</div>
             </div>
           `;
-          const onSignalEdit = () => {
-            const invertEl = document.getElementById("wiz_invert");
-            const edgeEl = document.getElementById("wiz_edge");
+          const onDebounceEdit = () => {
             const dbEl = document.getElementById("wiz_db");
             const p = {
-              invert: invertEl ? invertEl.value === "true" : !!w.draft.params.invert,
-              edgeMode: edgeEl ? Number(edgeEl.value || 0) : Number(w.draft.params.edgeMode || 0),
+              invert: !!w.draft.params.invert,
+              edgeMode: Number(w.draft.params.edgeMode || 0),
               debounceMs: dbEl ? Number(dbEl.value || 0) : Number(w.draft.params.debounceMs || 0),
             };
             const previewEl = document.getElementById("wiz_signal_preview");
             if (previewEl) previewEl.textContent = signalBehaviorPreview(p);
           };
-          ["wiz_invert", "wiz_edge", "wiz_db"].forEach((id) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.addEventListener("input", onSignalEdit);
-            el.addEventListener("change", onSignalEdit);
-          });
+          const dbEl = document.getElementById("wiz_db");
+          if (dbEl) {
+            dbEl.addEventListener("input", onDebounceEdit);
+            dbEl.addEventListener("change", onDebounceEdit);
+          }
           return;
         }
 
@@ -934,10 +1000,8 @@
               "wiz_set",
               w.draft.params.turnOnCondition,
               w.draft.id,
-              !!w.draft._setCombinerPicked,
             )}
           `;
-          bindWizardPrimaryCombinerGate("wiz_set");
           attachWizardClauseHandlers("wiz_set_a");
           return;
         }
@@ -957,10 +1021,8 @@
               "wiz_rst",
               w.draft.params.turnOffCondition,
               w.draft.id,
-              !!w.draft._rstCombinerPicked,
             )}
           `;
-          bindWizardPrimaryCombinerGate("wiz_rst");
           attachWizardClauseHandlers("wiz_rst_a");
           return;
         }
@@ -974,20 +1036,18 @@
         }
 
         wizardBodyEl.innerHTML = `
-          <div class="wizard-block">
+          <div class="wizard-surface">
             <div class="wizard-block-title">Review</div>
             <div class="node-badges">
-              <span class="badge text-bg-secondary">Enabled ${w.draft.enabled ? "YES" : "NO"}</span>
+              <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
               <span class="badge text-bg-secondary">SIG:${w.draft.params.invert ? "INV" : "NORM"}</span>
               <span class="badge text-bg-secondary">TRG:${shortTriggerLabel(w.draft.params.edgeMode)}</span>
               <span class="badge text-bg-secondary">DEB:${debounceSecondsLabel(w.draft.params.debounceMs)}</span>
               <span class="badge badge-formula text-bg-secondary">SET:${formatConditionBlock(w.draft.params.turnOnCondition)}</span>
               <span class="badge badge-formula text-bg-secondary">RST:${formatConditionBlock(w.draft.params.turnOffCondition)}</span>
             </div>
-            <div class="wizard-help">
-              <strong>Coach</strong>
-              <div>After save/reboot, verify these runtime badges on Live page: <strong>CMD</strong>, <strong>PHYS</strong>, <strong>EDGE</strong>, <strong>COUNT</strong>.</div>
-            </div>
+            <div class="wizard-field-note"><strong>Changed from previous:</strong> ${summarizeWizardChanges(w.draft, w.original).join(" | ") || "No change detected"}</div>
+            <div class="wizard-field-note"><strong>Verify on Live:</strong> CMD, PHYS, EDGE, COUNT.</div>
           </div>
         `;
       }
@@ -997,17 +1057,23 @@
         if (!w.open || !w.draft) return;
         const flow = wizardFlowForDraft(w.draft);
         const stepKey = flow[w.step] || "review";
-        if (stepKey === "context") {
+        if (stepKey === "intro") {
           const enabledEl = document.getElementById("wiz_enabled");
           if (enabledEl) w.draft.enabled = enabledEl.value === "true";
           return true;
         }
-        if (stepKey === "signal") {
+        if (stepKey === "invert") {
           const invertEl = document.getElementById("wiz_invert");
-          const edgeEl = document.getElementById("wiz_edge");
-          const dbEl = document.getElementById("wiz_db");
           if (invertEl) w.draft.params.invert = invertEl.value === "true";
+          return true;
+        }
+        if (stepKey === "edge") {
+          const edgeEl = document.getElementById("wiz_edge");
           if (edgeEl) w.draft.params.edgeMode = Number(edgeEl.value || 0);
+          return true;
+        }
+        if (stepKey === "debounce") {
+          const dbEl = document.getElementById("wiz_db");
           if (dbEl) {
             const n = Number(dbEl.value || 0);
             w.draft.params.debounceMs = Number.isFinite(n) && n >= 0 ? n : 0;
@@ -1015,9 +1081,7 @@
           return true;
         }
         if (stepKey === "set_primary") {
-          const setComb = String(document.getElementById("wiz_set_comb")?.value || "");
-          if (setComb === "") return false;
-          w.draft._setCombinerPicked = true;
+          const setComb = String(document.getElementById("wiz_set_comb")?.value || "NONE");
           w.draft.params.turnOnCondition = {
             combiner: WIZ_COMBINERS.includes(setComb) ? setComb : "NONE",
             clauseA: wizardReadClause("wiz_set_a"),
@@ -1033,9 +1097,7 @@
           return true;
         }
         if (stepKey === "rst_primary") {
-          const rstComb = String(document.getElementById("wiz_rst_comb")?.value || "");
-          if (rstComb === "") return false;
-          w.draft._rstCombinerPicked = true;
+          const rstComb = String(document.getElementById("wiz_rst_comb")?.value || "NONE");
           w.draft.params.turnOffCondition = {
             combiner: WIZ_COMBINERS.includes(rstComb) ? rstComb : "NONE",
             clauseA: wizardReadClause("wiz_rst_a"),
@@ -1075,8 +1137,7 @@
           state.wizard.draft.params.turnOffCondition,
           state.wizard.draft.id,
         );
-        state.wizard.draft._setCombinerPicked = false;
-        state.wizard.draft._rstCombinerPicked = false;
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
         wizardOverlayEl.classList.add("show");
         renderDiWizardStep();
       }
