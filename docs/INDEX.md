@@ -30,6 +30,7 @@ Purpose: Canonical map of documentation for clean V3 transition.
 - `docs/naming-glossary-v3.md` - Canonical user-facing naming vocabulary and staged key-migration plan.
 - `docs/doxygen-comment-style.md` - Standard Doxygen comment templates and rollout guidance for symbol-level documentation.
 - `docs/portal-execution-board-v3.md` - Focused short-horizon portal delivery board (next slices, done criteria, and WIP limits).
+- `docs/portal-card-wizard-pattern-v1.md` - DI live card + wizard baseline and replication blueprint for other card families (AI/DO/SIO/MATH/RTC).
 
 ## 2.1 Market/Strategy Research
 

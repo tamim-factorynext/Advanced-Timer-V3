@@ -163,6 +163,15 @@ Identity rule:
 
 ## 3. DI Card (Digital Input)
 
+### 3.0 DI Wizard Onboarding Model
+
+For DI setup, the wizard uses two learning-first intro steps before parameter editing:
+
+- `Intro A`: DI signal path, qualification gate behavior, and reset-dominant logic.
+- `Intro B`: meaning and intended use of `CMD`, `PHYS`, `EDGE`, and `COUNT` in cross-card logic.
+
+This two-intro structure is intentional and is the recommended baseline for future card-family wizards.
+
 ## 3.1 What DI Provides
 
 A DI card exposes:

@@ -100,6 +100,8 @@
       .force-group .icon-btn:hover { background: var(--bg-2); }
       .force-group .icon-btn.is-active { background: rgba(125, 211, 252, 0.16); color: var(--accent-2); box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.28); }
       .edit-btn { margin-left: auto; }
+      .ai-debug-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .ai-force-input { width: 120px; border: 1px solid var(--line); border-radius: 8px; background: var(--chip); color: var(--text-0); padding: 6px 8px; font-size: 12px; }
       .footer { margin-top: 10px; color: var(--text-2); font-size: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); padding: 8px 10px; }
       .site-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; color: var(--text-2); font-size: 12px; }
       .site-footer .name { margin-top: 2px; color: var(--accent-2); }
@@ -303,11 +305,13 @@
         wizard: {
           open: false,
           step: 0,
+          family: null,
           cardId: null,
           draft: null,
           original: null,
         },
         diDebugByCard: new Map(),
+        aiDebugByCard: new Map(),
       };
 
       const el = {
@@ -424,6 +428,7 @@
         el.cards.innerHTML = cards.map((c) => {
           const family = runtimeTypeToFamily(c.type);
           if (family === "DI") return renderDiCard(c);
+          if (family === "AI") return renderAiCard(c);
           const truth = c.actualState ? "ON" : "OFF";
           const truthClass = c.actualState ? "ok" : "warn";
           const typeLabel = runtimeTypeLabelMap[c.type] || c.type || "Card";
@@ -457,6 +462,12 @@
 
       function truthToken(value, highToken, lowToken) {
         return value ? highToken : lowToken;
+      }
+
+      function formatCentiValue(v) {
+        const n = Number(v ?? 0);
+        if (!Number.isFinite(n)) return "--";
+        return (n / 100).toFixed(2).replace(/\.?0+$/, "");
       }
 
       function shortEdgeMode(v) {
@@ -750,6 +761,68 @@
         `;
       }
 
+      function renderAiCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
+        const cardRef = state.cardRefById.get(Number(c.id)) || `AI${Number(c.index || 0)}`;
+        const logicalIndexMatch = cardRef.match(/^AI(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
+        const headerValue = isEnabled ? formatCentiValue(c.liveValue) : "DISABLED";
+        const headerClass = isEnabled ? "ok" : "warn";
+        const inMin = Number(params.inputMin ?? 0);
+        const inMax = Number(params.inputMax ?? 0);
+        const outMin = formatCentiValue(params.outputMin ?? 0);
+        const outMax = formatCentiValue(params.outputMax ?? 0);
+        const smooth = Number(params.smoothingFactorPct ?? 0);
+        const debugState = state.aiDebugByCard.get(Number(c.id)) || {};
+        const forceActive = !!debugState.forceActive;
+        const forcedValue = Number(debugState.forcedValue ?? 0);
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-zone">
+            <div class="debug-row">
+              <div class="ai-debug-controls">
+                <button type="button" class="icon-btn ${forceActive ? "" : "is-active"}" data-action="clear-ai-force" data-card-id="${c.id}">REAL</button>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="ai-force-input"
+                  data-ai-force-input
+                  data-card-id="${c.id}"
+                  value="${forcedValue}"
+                  aria-label="AI forced raw value"
+                />
+                <button type="button" class="icon-btn ${forceActive ? "is-active" : ""}" data-action="set-ai-force" data-card-id="${c.id}">Apply Raw</button>
+              </div>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-ai-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
+          </div>
+        ` : "";
+
+        return `
+          <article class="node ${isEnabled ? "" : "is-disabled"}">
+            <div class="node-head">
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x223F;</span>
+                  <span class="node-title-main">Analog Input ${logicalIndex}</span>
+                </div>
+              </div>
+              <span class="node-state ${headerClass}">${headerValue}</span>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-secondary">IN:${inMin}-${inMax}</span>
+                <span class="badge text-bg-secondary">OUT:${outMin}-${outMax}</span>
+                <span class="badge text-bg-secondary">SMOOTH:${smooth}%</span>
+              </div>
+            </div>
+            ${zone4Html}
+          </article>
+        `;
+      }
+
       function sortedCardsFromStore() {
         return Array.from(state.cardsById.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
       }
@@ -794,6 +867,7 @@
 
       function closeDiWizard() {
         state.wizard.open = false;
+        state.wizard.family = null;
         state.wizard.cardId = null;
         state.wizard.draft = null;
         state.wizard.original = null;
@@ -801,7 +875,7 @@
         wizardOverlayEl.classList.remove("show");
       }
 
-            const WIZ_STEP_META = {
+      const WIZ_STEP_META_DI = {
         intro: { short: "1", name: "Intro A", subtitle: "Understand DI signal flow and core gating behavior." },
         intro_outputs: { short: "2", name: "Intro B", subtitle: "Learn DI outputs used by other card logic." },
         invert: { short: "3", name: "Signal", subtitle: "Choose how the incoming signal is interpreted." },
@@ -810,6 +884,15 @@
         set_primary: { short: "6", name: "SET", subtitle: "Define when this DI is allowed to turn ON." },
         rst_primary: { short: "7", name: "RST", subtitle: "Define when this DI turns OFF and resets counting." },
         review: { short: "8", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
+      };
+      const WIZ_STEP_META_AI = {
+        intro: { short: "1", name: "Intro A", subtitle: "Understand AI sampling, scaling, and smoothing flow." },
+        intro_outputs: { short: "2", name: "Intro B", subtitle: "Learn how AI liveValue is used by other card logic." },
+        channel: { short: "3", name: "Channel", subtitle: "Choose the hardware analog channel for this card." },
+        in_range: { short: "4", name: "Input Range", subtitle: "Define raw input range used before scaling." },
+        out_range: { short: "5", name: "Output Range", subtitle: "Define scaled output range exposed as liveValue." },
+        smoothing: { short: "6", name: "Smoothing", subtitle: "Set response speed for value stabilization." },
+        review: { short: "7", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
       };
 
       const DI_TERM_DICTIONARY = {
@@ -842,9 +925,14 @@
         return `<svg class="lucide ${extraClass}" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || ""}</svg>`;
       }
 
+      function activeWizardStepMeta() {
+        return state.wizard.family === "AI" ? WIZ_STEP_META_AI : WIZ_STEP_META_DI;
+      }
+
       function renderWizardStepper(flow, activeIdx) {
+        const stepMetaMap = activeWizardStepMeta();
         wizardStepperEl.innerHTML = flow.map((stepKey, idx) => {
-          const meta = WIZ_STEP_META[stepKey] || { short: `${idx + 1}`, name: stepKey };
+          const meta = stepMetaMap[stepKey] || { short: `${idx + 1}`, name: stepKey };
           const cls = idx === activeIdx ? "wiz-pill active" : (idx < activeIdx ? "wiz-pill done" : "wiz-pill");
           return `<span class="${cls}" title="${meta.name}">${meta.short}</span>`;
         }).join("");
@@ -871,6 +959,9 @@
       }
 
       function wizardFlowForDraft() {
+        if (state.wizard.family === "AI") {
+          return ["intro", "intro_outputs", "channel", "in_range", "out_range", "smoothing", "review"];
+        }
         return ["intro", "intro_outputs", "invert", "edge", "debounce", "set_primary", "rst_primary", "review"];
       }
 
@@ -1138,10 +1229,11 @@
         const stepKey = flow[w.step];
         const cardRef = state.cardRefById.get(Number(w.cardId)) || `DI ${Number(w.draft.index || 0)}`;
         const outcome = diSetupOutcomeModel(stepKey, w.draft);
-        const stepMeta = WIZ_STEP_META[stepKey] || { name: "Step" };
+        const stepMetaMap = activeWizardStepMeta();
+        const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
         wizardTitleEl.textContent = `DI Card Edit - ${cardRef}`;
         wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
-        wizardSubtitleEl.textContent = (WIZ_STEP_META[stepKey] && WIZ_STEP_META[stepKey].subtitle) || "Guided configuration step.";
+        wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
         renderWizardStepper(flow, w.step);
         wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
         wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
@@ -1314,12 +1406,305 @@
         return true;
       }
 
+      function renderAiPipeline(stepKey) {
+        const nodes = [
+          { key: "input", label: "Input", icon: "signal" },
+          { key: "clamp", label: "Clamp", icon: "gate" },
+          { key: "scale", label: "Scale", icon: "output" },
+          { key: "smooth", label: "Smooth", icon: "debounce" },
+          { key: "publish", label: "liveValue", icon: "save" },
+        ];
+        let active = "input";
+        if (stepKey === "channel") active = "input";
+        else if (stepKey === "in_range") active = "clamp";
+        else if (stepKey === "out_range") active = "scale";
+        else if (stepKey === "smoothing") active = "smooth";
+        else if (stepKey === "review" || stepKey === "intro_outputs") active = "publish";
+        return `
+          <div class="diwiz-flow" aria-label="AI behavior pipeline">
+            ${nodes.map((node, idx) => `
+              <span class="diwiz-flow-node ${node.key === active ? "active" : ""}">
+                ${lucideIcon(node.icon)}
+                <span>${node.label}</span>
+              </span>
+              ${idx < nodes.length - 1 ? '<span class="diwiz-flow-arrow">&rarr;</span>' : ""}
+            `).join("")}
+          </div>
+        `;
+      }
+
+      function renderAiScaleVisual(params) {
+        const inMin = Number(params.inputMin || 0);
+        const inMax = Number(params.inputMax || 0);
+        const outMin = formatCentiValue(params.outputMin || 0);
+        const outMax = formatCentiValue(params.outputMax || 0);
+        return `
+          <svg viewBox="0 0 260 96" role="img" aria-label="AI clamp and scale behavior">
+            <line x1="16" y1="72" x2="244" y2="72" stroke="var(--line)" stroke-width="2" />
+            <line x1="16" y1="72" x2="16" y2="16" stroke="var(--line)" stroke-width="2" />
+            <path d="M20 68 L84 68 L132 52 L188 36 L238 20" stroke="var(--accent-2)" stroke-width="3" fill="none" />
+            <text x="18" y="86" fill="var(--text-2)" font-size="10">raw ${inMin}</text>
+            <text x="188" y="86" fill="var(--text-2)" font-size="10">raw ${inMax}</text>
+            <text x="18" y="14" fill="var(--text-2)" font-size="10">out ${outMax}</text>
+            <text x="192" y="28" fill="var(--text-2)" font-size="10">out ${outMin}</text>
+          </svg>
+        `;
+      }
+
+      function renderAiSmoothingVisual(smoothingPct) {
+        const pct = Math.max(0, Math.min(100, Number(smoothingPct || 0)));
+        const slowColor = pct < 50 ? "var(--accent-2)" : "var(--text-2)";
+        const fastColor = pct >= 50 ? "var(--accent-2)" : "var(--text-2)";
+        return `
+          <svg viewBox="0 0 260 96" role="img" aria-label="AI smoothing response">
+            <path d="M16 70 L70 70 L70 30 L244 30" stroke="var(--line)" stroke-width="2.5" fill="none" />
+            <path d="M16 70 C70 70, 86 ${pct >= 50 ? "44" : "58"}, 132 48 C170 42, 210 34, 244 30" stroke="${fastColor}" stroke-width="3" fill="none" />
+            <path d="M16 70 C78 70, 96 66, 132 58 C172 50, 212 40, 244 30" stroke="${slowColor}" stroke-width="2.2" fill="none" />
+            <text x="18" y="14" fill="var(--text-2)" font-size="10">Response speed: ${pct}%</text>
+          </svg>
+        `;
+      }
+
+      function aiSetupOutcomeModel(stepKey, draft) {
+        const p = draft.params || {};
+        if (stepKey === "intro") {
+          return {
+            what: "What this field does: enable/disable whether this AI participates in runtime sampling.",
+            withConfig: draft.enabled
+              ? "With this config, AI card samples input, scales value, applies smoothing, and publishes liveValue."
+              : "With this config, AI card is disabled at runtime until re-enabled.",
+          };
+        }
+        if (stepKey === "intro_outputs") {
+          return {
+            what: "What this section does: explains where AI liveValue is used in cross-card numeric comparisons.",
+            withConfig: "With this understanding, you can use AI liveValue as threshold source in compare-based rules.",
+          };
+        }
+        if (stepKey === "channel") {
+          return {
+            what: "What this field does: selects which analog hardware channel is sampled.",
+            withConfig: `With this config, AI reads channel ${Number(p.channel || 0)} each scan cycle.`,
+          };
+        }
+        if (stepKey === "in_range") {
+          return {
+            what: "What this field does: defines raw input bounds before scaling.",
+            withConfig: `With this config, raw samples are clamped to ${Number(p.inputMin || 0)}..${Number(p.inputMax || 0)}.`,
+          };
+        }
+        if (stepKey === "out_range") {
+          return {
+            what: "What this field does: defines output bounds after scaling.",
+            withConfig: `With this config, scaled output maps to ${formatCentiValue(p.outputMin || 0)}..${formatCentiValue(p.outputMax || 0)}.`,
+          };
+        }
+        if (stepKey === "smoothing") {
+          return {
+            what: "What this field does: controls response speed of output stabilization.",
+            withConfig: `With this config, smoothing uses ${Number(p.smoothingFactorPct || 0)}% response speed.`,
+          };
+        }
+        return {
+          what: "What this section does: summarizes deterministic AI behavior after save and reboot.",
+          withConfig: "With this config, AI behavior changes apply only after reboot. This wizard intentionally does not consume live runtime data.",
+        };
+      }
+
+      function renderAiConceptInline(stepKey, draft) {
+        const p = draft.params || {};
+        if (stepKey === "intro") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">AI Core Concepts</div>
+              <div class="diwiz-sub">AI flow: sample raw input -> clamp -> scale -> smooth -> publish liveValue.</div>
+              ${renderAiPipeline(stepKey)}
+            </div>
+          `;
+        }
+        if (stepKey === "intro_outputs") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">AI Output Usage</div>
+              <div class="diwiz-sub">AI publishes numeric <strong>liveValue</strong> for compare-driven logic in other cards.</div>
+              <div class="diwiz-matrix">
+                <div class="diwiz-matrix-row"><span>Need numeric threshold from sensor</span><strong>Use AI liveValue</strong></div>
+                <div class="diwiz-matrix-row"><span>Need fixed limit</span><strong>Use constant threshold</strong></div>
+              </div>
+            </div>
+          `;
+        }
+        if (stepKey === "smoothing") return `<div class="diwiz-concept-pane">${renderAiSmoothingVisual(p.smoothingFactorPct)}</div>`;
+        if (stepKey === "in_range" || stepKey === "out_range") return `<div class="diwiz-concept-pane">${renderAiScaleVisual(p)}</div>`;
+        return "";
+      }
+
+      function renderAiWizardStep() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        const flow = wizardFlowForDraft();
+        if (w.step >= flow.length) w.step = flow.length - 1;
+        const stepKey = flow[w.step];
+        const cardRef = state.cardRefById.get(Number(w.cardId)) || `AI ${Number(w.draft.index || 0)}`;
+        const outcome = aiSetupOutcomeModel(stepKey, w.draft);
+        const stepMetaMap = activeWizardStepMeta();
+        const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
+        wizardTitleEl.textContent = `AI Card Edit - ${cardRef}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
+        wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
+        renderWizardStepper(flow, w.step);
+        wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
+        wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
+        wizNextEl.disabled = false;
+
+        let editHtml = "";
+        if (stepKey === "intro") {
+          editHtml = `
+            <div class="diwiz-title">AI Onboarding</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-field"><label>Enabled</label><select id="ai_wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            <ul class="diwiz-list">
+              <li><strong>Sampling:</strong> reads configured analog channel every scan.</li>
+              <li><strong>Scaling:</strong> clamps raw input to input range, then maps to output range.</li>
+              <li><strong>Smoothing:</strong> response speed controls stabilization of published liveValue.</li>
+            </ul>
+          `;
+        } else if (stepKey === "intro_outputs") {
+          editHtml = `
+            <div class="diwiz-title">AI Output for Cross-Card Logic</div>
+            ${renderAiPipeline(stepKey)}
+            <ul class="diwiz-list">
+              <li>AI provides numeric <strong>liveValue</strong> for compare operators.</li>
+              <li>Use AI liveValue as threshold source when you need dynamic limits.</li>
+            </ul>
+          `;
+        } else if (stepKey === "channel") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("signal")} Input Channel</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-field"><label>Analog Channel</label><input id="ai_wiz_channel" type="number" min="0" step="1" value="${Number(w.draft.params.channel || 0)}" /></div>
+          `;
+        } else if (stepKey === "in_range") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("gate")} Input Range (Raw)</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Input Min</label><input id="ai_wiz_in_min" type="number" min="0" step="1" value="${Number(w.draft.params.inputMin || 0)}" /></div>
+              <div class="diwiz-field"><label>Input Max</label><input id="ai_wiz_in_max" type="number" min="0" step="1" value="${Number(w.draft.params.inputMax || 0)}" /></div>
+            </div>
+          `;
+        } else if (stepKey === "out_range") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("output")} Output Range (Scaled)</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Output Min</label><input id="ai_wiz_out_min" type="number" min="0" step="0.01" value="${formatCentiValue(w.draft.params.outputMin || 0)}" /></div>
+              <div class="diwiz-field"><label>Output Max</label><input id="ai_wiz_out_max" type="number" min="0" step="0.01" value="${formatCentiValue(w.draft.params.outputMax || 0)}" /></div>
+            </div>
+          `;
+        } else if (stepKey === "smoothing") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("debounce")} Response Speed</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-field"><label>Smoothing Factor (%)</label><input id="ai_wiz_smooth" type="number" min="0" max="100" step="1" value="${Number(w.draft.params.smoothingFactorPct || 0)}" /></div>
+          `;
+        } else {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Review</div>
+            ${renderAiPipeline(stepKey)}
+            <div class="diwiz-chipbar">
+              <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
+              <span class="badge text-bg-secondary">CH:${Number(w.draft.params.channel || 0)}</span>
+              <span class="badge text-bg-secondary">IN:${Number(w.draft.params.inputMin || 0)}-${Number(w.draft.params.inputMax || 0)}</span>
+              <span class="badge text-bg-secondary">OUT:${formatCentiValue(w.draft.params.outputMin || 0)}-${formatCentiValue(w.draft.params.outputMax || 0)}</span>
+              <span class="badge text-bg-secondary">SMOOTH:${Number(w.draft.params.smoothingFactorPct || 0)}%</span>
+            </div>
+            <div class="diwiz-note"><strong>Reboot required:</strong> saved AI configuration takes effect only after reboot.</div>
+          `;
+        }
+
+        wizardBodyEl.innerHTML = `
+          <div class="diwiz">
+            <section class="diwiz-edit">
+              ${editHtml}
+              ${renderAiConceptInline(stepKey, w.draft)}
+              <div class="diwiz-note"><strong>${outcome.what}</strong></div>
+              <div class="diwiz-outcome">${outcome.withConfig}</div>
+            </section>
+          </div>
+        `;
+      }
+
+      function parseUnitToCenti(value) {
+        const n = Number(value || 0);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.round(n * 100));
+      }
+
+      function syncAiWizardDraftFromStepFields() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return true;
+        const flow = wizardFlowForDraft();
+        const stepKey = flow[w.step] || "review";
+        if (stepKey === "intro") {
+          const enabledEl = document.getElementById("ai_wiz_enabled");
+          if (enabledEl) w.draft.enabled = enabledEl.value === "true";
+          return true;
+        }
+        if (stepKey === "channel") {
+          const chEl = document.getElementById("ai_wiz_channel");
+          if (chEl) {
+            const n = Number(chEl.value || 0);
+            w.draft.params.channel = Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+          }
+          return true;
+        }
+        if (stepKey === "in_range") {
+          const minEl = document.getElementById("ai_wiz_in_min");
+          const maxEl = document.getElementById("ai_wiz_in_max");
+          if (minEl) w.draft.params.inputMin = Math.max(0, Math.round(Number(minEl.value || 0)));
+          if (maxEl) w.draft.params.inputMax = Math.max(0, Math.round(Number(maxEl.value || 0)));
+          return true;
+        }
+        if (stepKey === "out_range") {
+          const minEl = document.getElementById("ai_wiz_out_min");
+          const maxEl = document.getElementById("ai_wiz_out_max");
+          if (minEl) w.draft.params.outputMin = parseUnitToCenti(minEl.value);
+          if (maxEl) w.draft.params.outputMax = parseUnitToCenti(maxEl.value);
+          return true;
+        }
+        if (stepKey === "smoothing") {
+          const smEl = document.getElementById("ai_wiz_smooth");
+          if (smEl) {
+            const n = Number(smEl.value || 0);
+            const clamped = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+            w.draft.params.smoothingFactorPct = clamped;
+          }
+          return true;
+        }
+        return true;
+      }
+
+      function renderActiveWizardStep() {
+        if (state.wizard.family === "AI") {
+          renderAiWizardStep();
+          return;
+        }
+        renderDiWizardStep();
+      }
+
+      function syncWizardDraftFromStepFields() {
+        if (state.wizard.family === "AI") return syncAiWizardDraftFromStepFields();
+        return syncDiWizardDraftFromStepFields();
+      }
+
       function openDiWizard(cardId) {
         const staticCard = state.staticCardsById.get(Number(cardId));
         const runtimeCard = state.cardsById.get(Number(cardId));
         if (!staticCard || String(staticCard.family || "") !== "DI") return;
         state.wizard.open = true;
         state.wizard.step = 0;
+        state.wizard.family = "DI";
         state.wizard.cardId = Number(cardId);
         state.wizard.draft = {
           id: staticCard.id,
@@ -1338,7 +1723,27 @@
         );
         state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
         wizardOverlayEl.classList.add("show");
-        renderDiWizardStep();
+        renderActiveWizardStep();
+      }
+
+      function openAiWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "AI") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.family = "AI";
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
+        wizardOverlayEl.classList.add("show");
+        renderActiveWizardStep();
       }
 
       async function saveDiWizardDraftAndReboot() {
@@ -1386,6 +1791,51 @@
         }
       }
 
+      async function saveAiWizardDraftAndReboot() {
+        const w = state.wizard;
+        if (!w.open || !w.draft || !Number.isFinite(Number(w.cardId))) return;
+        if (!confirm("Save AI card changes and reboot now?")) return;
+
+        const requestId = `live-ai-edit-${Date.now()}`;
+        showActivity("Saving AI card...", "Validating and committing card changes.");
+        try {
+          const payload = {
+            requestId,
+            card: {
+              id: Number(w.draft.id),
+              family: "AI",
+              enabled: !!w.draft.enabled,
+              params: w.draft.params,
+            },
+          };
+          const resp = await fetch(`/api/v3/cards/${Number(w.cardId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify(payload),
+          });
+          let body = {};
+          try { body = await resp.json(); } catch (_) { body = {}; }
+          if (!resp.ok || body?.ok === false) {
+            const msg = String(body?.error?.message || body?.message || body?.reason || `HTTP ${resp.status}`);
+            throw new Error(msg);
+          }
+          state.staticCardsById.set(Number(w.cardId), {
+            ...state.staticCardsById.get(Number(w.cardId)),
+            id: Number(w.draft.id),
+            family: "AI",
+            enabled: !!w.draft.enabled,
+            params: JSON.parse(JSON.stringify(w.draft.params)),
+          });
+          hideActivity();
+          closeDiWizard();
+          await requestRebootAndReconnect(true);
+        } catch (err) {
+          hideActivity();
+          alert(`Save failed: ${String(err && err.message ? err.message : err)}`);
+        }
+      }
+
       async function submitDiForce(cardId, mode) {
         const id = Number(cardId);
         if (!Number.isFinite(id)) return;
@@ -1414,6 +1864,77 @@
           }
         }
         renderCards(sortedCardsFromStore());
+      }
+
+      async function submitAiForce(cardId, rawValue) {
+        const id = Number(cardId);
+        const safeValue = Math.max(0, Math.round(Number(rawValue || 0)));
+        if (!Number.isFinite(id) || !Number.isFinite(safeValue)) return;
+        const previous = state.aiDebugByCard.get(id);
+        try {
+          const resp = await fetch("/api/v3/command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify({
+              command: "setAiForce",
+              cardId: id,
+              value: safeValue,
+            }),
+          });
+          const data = await resp.json();
+          const accepted = !!(data && data.accepted);
+          if (accepted) {
+            state.aiDebugByCard.set(id, { forceActive: true, forcedValue: safeValue });
+          } else if (previous) {
+            state.aiDebugByCard.set(id, previous);
+          }
+        } catch (_) {
+          if (previous) {
+            state.aiDebugByCard.set(id, previous);
+          }
+        }
+        renderCards(sortedCardsFromStore());
+      }
+
+      async function clearAiForce(cardId) {
+        const id = Number(cardId);
+        if (!Number.isFinite(id)) return;
+        const previous = state.aiDebugByCard.get(id);
+        try {
+          const resp = await fetch("/api/v3/command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify({
+              command: "clearAiForce",
+              cardId: id,
+            }),
+          });
+          const data = await resp.json();
+          const accepted = !!(data && data.accepted);
+          if (accepted) {
+            state.aiDebugByCard.set(id, {
+              forceActive: false,
+              forcedValue: Number(previous?.forcedValue ?? 0),
+            });
+          } else if (previous) {
+            state.aiDebugByCard.set(id, previous);
+          }
+        } catch (_) {
+          if (previous) {
+            state.aiDebugByCard.set(id, previous);
+          }
+        }
+        renderCards(sortedCardsFromStore());
+      }
+
+      async function saveWizardDraftAndReboot() {
+        if (state.wizard.family === "AI") {
+          await saveAiWizardDraftAndReboot();
+          return;
+        }
+        await saveDiWizardDraftAndReboot();
       }
 
       function sleep(ms) {
@@ -1612,26 +2133,54 @@
           const id = Number(target.getAttribute("data-card-id"));
           const mode = String(target.getAttribute("data-force-mode") || "REAL");
           if (Number.isFinite(id)) submitDiForce(id, mode);
+          return;
         }
+        if (action === "set-ai-force") {
+          const id = Number(target.getAttribute("data-card-id"));
+          const input = el.cards.querySelector(`[data-ai-force-input][data-card-id="${id}"]`);
+          const value = Number(input ? input.value : 0);
+          if (Number.isFinite(id)) submitAiForce(id, value);
+          return;
+        }
+        if (action === "clear-ai-force") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) clearAiForce(id);
+          return;
+        }
+        if (action === "open-ai-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openAiWizard(id);
+          return;
+        }
+      });
+      el.cards.addEventListener("keydown", (ev) => {
+        const target = ev.target;
+        if (!target || typeof target.matches !== "function") return;
+        if (!target.matches("[data-ai-force-input]")) return;
+        if (ev.key !== "Enter") return;
+        ev.preventDefault();
+        const id = Number(target.getAttribute("data-card-id"));
+        const value = Number(target.value || 0);
+        if (Number.isFinite(id)) submitAiForce(id, value);
       });
       wizCancelEl.addEventListener("click", closeDiWizard);
       wizBackEl.addEventListener("click", () => {
         if (!state.wizard.open) return;
-        syncDiWizardDraftFromStepFields();
+        syncWizardDraftFromStepFields();
         state.wizard.step = Math.max(0, state.wizard.step - 1);
-        renderDiWizardStep();
+        renderActiveWizardStep();
       });
       wizNextEl.addEventListener("click", async () => {
         if (!state.wizard.open) return;
-        const ok = syncDiWizardDraftFromStepFields();
+        const ok = syncWizardDraftFromStepFields();
         if (!ok) return;
         const flow = wizardFlowForDraft();
         if (state.wizard.step >= (flow.length - 1)) {
-          await saveDiWizardDraftAndReboot();
+          await saveWizardDraftAndReboot();
           return;
         }
         state.wizard.step += 1;
-        renderDiWizardStep();
+        renderActiveWizardStep();
       });
 
       async function initLivePage() {
