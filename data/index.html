@@ -119,8 +119,8 @@
       .reboot-detail { color: var(--text-2); font-size: 13px; }
       .wizard-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.66); z-index: 10000; padding: 16px; }
       .wizard-overlay.show { display: flex; }
-      .wizard-panel { width: min(920px, 96vw); border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); box-shadow: var(--shadow); }
-      .wizard-head { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .wizard-panel { width: min(860px, 96vw); max-height: 92vh; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); box-shadow: var(--shadow); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+      .wizard-head { display: grid; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
       .wizard-title { font-weight: 800; color: var(--accent-2); font-size: 20px; }
       .wizard-step { font-size: 13px; color: var(--text-2); font-weight: 600; }
       .wizard-subtitle { font-size: 13px; color: var(--text-2); }
@@ -128,7 +128,7 @@
       .wiz-pill { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 4px 8px; }
       .wiz-pill.active { border-color: var(--accent-2); color: var(--accent-2); background: rgba(125, 211, 252, 0.12); }
       .wiz-pill.done { border-color: rgba(74, 222, 128, 0.35); color: var(--ok); background: rgba(74, 222, 128, 0.12); }
-      .wizard-body { padding: 14px; display: grid; gap: 10px; }
+      .wizard-body { padding: 8px 12px; display: grid; gap: 8px; overflow: auto; min-height: 0; }
       .wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .wizard-field { display: grid; gap: 4px; }
       .wizard-field label { font-size: 12px; color: var(--text-2); }
@@ -151,8 +151,39 @@
       .wizard-flow { display: grid; grid-template-columns: repeat(7, auto); gap: 6px; align-items: center; justify-content: start; }
       .wizard-flow-node { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 5px 8px; white-space: nowrap; }
       .wizard-flow-arrow { color: var(--accent-2); font-size: 12px; font-weight: 700; }
-      .wizard-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--panel-bg) 88%, transparent); }
+      .wizard-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--panel-bg) 88%, transparent); }
       .wizard-footer-actions { display: flex; gap: 8px; }
+      .lucide { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+      .lucide.lg { width: 16px; height: 16px; }
+      .diwiz { display: grid; gap: 10px; grid-template-columns: 1fr; }
+      .diwiz-edit, .diwiz-concept { border: 0; border-radius: 0; background: transparent; padding: 0; display: grid; gap: 8px; }
+      .diwiz-title { font-size: 12px; font-weight: 700; color: var(--accent-2); display: flex; align-items: center; gap: 5px; }
+      .diwiz-sub { font-size: 12px; color: var(--text-2); line-height: 1.35; }
+      .diwiz-flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .diwiz-flow-node { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 0; background: transparent; color: var(--text-2); font-size: 10px; font-weight: 700; padding: 1px 2px; }
+      .diwiz-flow-node.active { color: var(--accent-2); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+      .diwiz-flow-node.blocked { color: var(--warn); }
+      .diwiz-flow-arrow { color: var(--accent-2); font-size: 12px; }
+      .diwiz-row { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .diwiz-field { display: grid; gap: 4px; }
+      .diwiz-field label { font-size: 12px; color: var(--text-2); }
+      .diwiz-field input, .diwiz-field select { width: 100%; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--node-bg) 86%, var(--chip)); color: var(--text-0); border-radius: 8px; padding: 7px 8px; }
+      .diwiz-note { font-size: 12px; color: var(--text-2); }
+      .diwiz-note strong { color: var(--accent-2); }
+      .diwiz-outcome { border: 0; border-top: 1px dashed var(--line); border-radius: 0; background: transparent; font-size: 12px; color: var(--text-0); padding: 8px 0 0; line-height: 1.35; }
+      .diwiz-concept-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+      .diwiz-tab { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 4px 8px; cursor: pointer; }
+      .diwiz-tab.active { border-color: var(--accent-2); color: var(--accent-2); background: rgba(125, 211, 252, 0.12); }
+      .diwiz-concept-pane { border: 0; border-top: 1px dashed var(--line); background: transparent; padding: 8px 0 0; display: grid; gap: 8px; }
+      .diwiz-concept-pane svg { width: 100%; height: auto; max-height: 86px; }
+      .diwiz-matrix { display: grid; gap: 4px; }
+      .diwiz-matrix-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 11px; color: var(--text-2); border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 5px 2px; background: transparent; }
+      .diwiz-matrix-row strong { color: var(--text-0); font-size: 11px; }
+      .diwiz-chipbar { display: flex; flex-wrap: wrap; gap: 6px; }
+      .diwiz-term { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 0; background: transparent; color: var(--text-2); font-size: 11px; font-weight: 700; padding: 0; }
+      .diwiz-term strong { color: var(--accent-2); }
+      .diwiz-list { margin: 0; padding-left: 16px; color: var(--text-2); font-size: 12px; display: grid; gap: 4px; }
+      .diwiz-list strong { color: var(--text-0); }
       .btn { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; background: var(--chip); color: var(--text-0); }
       .btn:hover { background: var(--bg-2); }
       .btn-primary { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
@@ -167,7 +198,9 @@
         .wizard-grid { grid-template-columns: 1fr; }
         .wizard-flow { grid-template-columns: 1fr; justify-items: start; }
         .wizard-flow-arrow { display: none; }
+        .wizard-panel { width: min(96vw, 720px); max-height: 94vh; }
         .wizard-footer { position: sticky; bottom: 0; z-index: 2; border-top: 1px solid var(--line); }
+        .diwiz-row { grid-template-columns: 1fr; }
         .cards { grid-template-columns: 1fr; }
         .debug-row { flex-direction: row; align-items: center; }
         .edit-btn { margin-left: auto; }
@@ -768,17 +801,46 @@
         wizardOverlayEl.classList.remove("show");
       }
 
-      const WIZ_STEP_META = {
-        intro: { short: "1", name: "Intro", subtitle: "Understand DI purpose and set enabled state." },
-        invert: { short: "2", name: "Signal", subtitle: "Choose how signal is interpreted before logic checks." },
-        edge: { short: "3", name: "Trigger", subtitle: "Choose which edge increments the built-in DI counter." },
-        debounce: { short: "4", name: "Debounce", subtitle: "Set stability window before edge qualification." },
-        set_primary: { short: "5", name: "SET Primary", subtitle: "Define when this DI turns ON." },
-        set_secondary: { short: "6", name: "SET Secondary", subtitle: "Optional extra SET clause for AND/OR." },
-        rst_primary: { short: "7", name: "RST Primary", subtitle: "Define when this DI turns OFF." },
-        rst_secondary: { short: "8", name: "RST Secondary", subtitle: "Optional extra RST clause for AND/OR." },
-        review: { short: "9", name: "Review", subtitle: "Confirm changes before save and reboot." },
+            const WIZ_STEP_META = {
+        intro: { short: "1", name: "Intro A", subtitle: "Understand DI signal flow and core gating behavior." },
+        intro_outputs: { short: "2", name: "Intro B", subtitle: "Learn DI outputs used by other card logic." },
+        invert: { short: "3", name: "Signal", subtitle: "Choose how the incoming signal is interpreted." },
+        edge: { short: "4", name: "Edge", subtitle: "Choose which transition can qualify the DI counter." },
+        debounce: { short: "5", name: "Debounce", subtitle: "Set the stability window required before qualification." },
+        set_primary: { short: "6", name: "SET", subtitle: "Define when this DI is allowed to turn ON." },
+        rst_primary: { short: "7", name: "RST", subtitle: "Define when this DI turns OFF and resets counting." },
+        review: { short: "8", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
       };
+
+      const DI_TERM_DICTIONARY = {
+        CMD: "Qualified logical state after DI processing.",
+        PHYS: "Effective physical state after source selection and invert.",
+        EDGE: "One-scan pulse when a qualified edge is accepted.",
+        COUNT: "Counter incremented on each qualified edge.",
+      };
+
+      const DI_CONCEPT_VISUAL_MODEL = {
+        invert: { title: "Invert", description: "NORM keeps signal as-is; INV flips it before all logic checks." },
+        edge: { title: "Edge Mode", description: "RISE/FALL/CHG selects which transition can qualify COUNT." },
+        debounce: { title: "Debounce", description: "Input must remain stable for DEB ms before the edge is accepted." },
+        gate: { title: "SET/RST Gate", description: "Reset is dominant. set/reset decide whether qualification is allowed." },
+        outputs: { title: "DI Outputs", description: "Runtime outputs are reusable logic sources for other cards." },
+      };
+
+      function lucideIcon(name, extraClass = "") {
+        const paths = {
+          signal: '<path d="M2 12h3l2-6 4 12 3-8h8"></path>',
+          invert: '<path d="M4 7h16"></path><path d="M4 17h16"></path><path d="m8 3 4 4-4 4"></path><path d="m16 13-4 4 4 4"></path>',
+          edge: '<path d="M3 17h8V7h10"></path><path d="m17 3 4 4-4 4"></path>',
+          debounce: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v6l4 2"></path>',
+          gate: '<path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"></path>',
+          reset: '<path d="M3 2v6h6"></path><path d="M3 8a9 9 0 1 0 2.6-4.6"></path>',
+          output: '<path d="M3 12h6"></path><path d="M15 6h6"></path><path d="M15 18h6"></path><path d="M9 4v16"></path>',
+          warning: '<path d="m10.3 3.9-8 14A1 1 0 0 0 3.2 19h17.6a1 1 0 0 0 .9-1.5l-8-14a1 1 0 0 0-1.8 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>',
+          save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path>',
+        };
+        return `<svg class="lucide ${extraClass}" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || ""}</svg>`;
+      }
 
       function renderWizardStepper(flow, activeIdx) {
         wizardStepperEl.innerHTML = flow.map((stepKey, idx) => {
@@ -791,12 +853,8 @@
       function summarizeWizardChanges(draft, original) {
         if (!draft || !original) return [];
         const changes = [];
-        if (!!draft.enabled !== !!original.enabled) {
-          changes.push(`Enabled:${draft.enabled ? "YES" : "NO"}`);
-        }
-        if (!!draft.params.invert !== !!original.params.invert) {
-          changes.push(`SIG:${draft.params.invert ? "INV" : "NORM"}`);
-        }
+        if (!!draft.enabled !== !!original.enabled) changes.push(`Enabled:${draft.enabled ? "YES" : "NO"}`);
+        if (!!draft.params.invert !== !!original.params.invert) changes.push(`SIG:${draft.params.invert ? "INV" : "NORM"}`);
         if (Number(draft.params.edgeMode || 0) !== Number(original.params.edgeMode || 0)) {
           changes.push(`TRG:${shortTriggerLabel(draft.params.edgeMode)}`);
         }
@@ -812,67 +870,251 @@
         return changes;
       }
 
-      function wizardFlowForDraft(draft) {
-        const setComb = String(draft?.params?.turnOnCondition?.combiner || "NONE");
-        const rstComb = String(draft?.params?.turnOffCondition?.combiner || "NONE");
-        const flow = ["intro", "invert", "edge", "debounce", "set_primary"];
-        if (setComb !== "NONE") flow.push("set_secondary");
-        flow.push("rst_primary");
-        if (rstComb !== "NONE") flow.push("rst_secondary");
-        flow.push("review");
-        return flow;
+      function wizardFlowForDraft() {
+        return ["intro", "intro_outputs", "invert", "edge", "debounce", "set_primary", "rst_primary", "review"];
       }
 
-      function renderWizardPrimaryCondition(title, rootPrefix, block, fallbackCardId) {
+      function diPipelineActiveNode(stepKey) {
+        if (stepKey === "intro_outputs") return "output";
+        if (stepKey === "invert") return "invert";
+        if (stepKey === "edge") return "edge";
+        if (stepKey === "debounce") return "debounce";
+        if (stepKey === "set_primary" || stepKey === "rst_primary") return "gate";
+        if (stepKey === "review") return "output";
+        return "signal";
+      }
+
+      function renderDiPipeline(stepKey, params) {
+        const active = diPipelineActiveNode(stepKey);
+        const gateBlocked = stepKey === "set_primary" && String(params?.turnOnCondition?.combiner || "NONE") === "NONE"
+          && String(params?.turnOnCondition?.clauseA?.operator || "ALWAYS_FALSE") === "ALWAYS_FALSE";
+        const nodes = [
+          { key: "signal", label: "Input", icon: "signal" },
+          { key: "invert", label: params?.invert ? "INV" : "NORM", icon: "invert" },
+          { key: "edge", label: shortTriggerLabel(params?.edgeMode), icon: "edge" },
+          { key: "debounce", label: `DEB ${debounceSecondsLabel(params?.debounceMs)}`, icon: "debounce" },
+          { key: "gate", label: "SET/RST Gate", icon: "gate", blocked: gateBlocked },
+          { key: "output", label: "CMD PHYS EDGE COUNT", icon: "output" },
+        ];
+        return `
+          <div class="diwiz-flow" aria-label="DI behavior pipeline">
+            ${nodes.map((node, idx) => `
+              <span class="diwiz-flow-node ${node.key === active ? "active" : ""} ${node.blocked ? "blocked" : ""}">
+                ${lucideIcon(node.icon)}
+                <span>${node.label}</span>
+              </span>
+              ${idx < nodes.length - 1 ? '<span class="diwiz-flow-arrow">&rarr;</span>' : ""}
+            `).join("")}
+          </div>
+        `;
+      }
+
+      function renderInvertVisual(invert) {
+        const topClass = invert ? "var(--text-2)" : "var(--accent-2)";
+        const bottomClass = invert ? "var(--accent-2)" : "var(--text-2)";
+        return `
+          <svg viewBox="0 0 240 90" role="img" aria-label="Invert behavior">
+            <text x="8" y="14" fill="var(--text-2)" font-size="11">Input</text>
+            <path d="M8 32 L60 32 L60 18 L112 18 L112 32 L165 32 L165 18 L220 18" stroke="${topClass}" stroke-width="3" fill="none" />
+            <text x="8" y="56" fill="var(--text-2)" font-size="11">After SIG</text>
+            <path d="M8 74 L60 74 L60 ${invert ? "60" : "74"} L112 ${invert ? "60" : "74"} L112 ${invert ? "74" : "60"} L165 ${invert ? "74" : "60"} L165 ${invert ? "60" : "74"} L220 ${invert ? "60" : "74"}" stroke="${bottomClass}" stroke-width="3" fill="none" />
+          </svg>
+        `;
+      }
+
+      function renderEdgeVisual(edgeMode) {
+        const mode = Number(edgeMode || 0);
+        const riseOn = mode === 0 || mode === 2;
+        const fallOn = mode === 1 || mode === 2;
+        return `
+          <svg viewBox="0 0 240 90" role="img" aria-label="Edge mode behavior">
+            <path d="M8 68 L70 68 L70 28 L142 28 L142 68 L220 68" stroke="var(--accent-2)" stroke-width="3" fill="none" />
+            <line x1="70" y1="16" x2="70" y2="78" stroke="${riseOn ? "var(--ok)" : "var(--line)"}" stroke-dasharray="4 3" />
+            <line x1="142" y1="16" x2="142" y2="78" stroke="${fallOn ? "var(--ok)" : "var(--line)"}" stroke-dasharray="4 3" />
+            <text x="58" y="12" fill="${riseOn ? "var(--ok)" : "var(--text-2)"}" font-size="10">Rise</text>
+            <text x="128" y="12" fill="${fallOn ? "var(--ok)" : "var(--text-2)"}" font-size="10">Fall</text>
+          </svg>
+        `;
+      }
+
+      function renderDebounceVisual(ms) {
+        const hasDebounce = Number(ms || 0) > 0;
+        const x2 = hasDebounce ? 170 : 126;
+        return `
+          <svg viewBox="0 0 240 90" role="img" aria-label="Debounce behavior">
+            <path d="M8 68 L44 68 L44 24 L66 68 L84 24 L102 68 L126 24 L220 24" stroke="var(--text-2)" stroke-width="2.5" fill="none" />
+            <rect x="126" y="12" width="${x2 - 126}" height="64" fill="rgba(94, 234, 212, 0.16)" stroke="var(--line)" stroke-dasharray="4 3" />
+            <text x="130" y="23" fill="var(--accent)" font-size="10">${hasDebounce ? `Stable ${debounceSecondsLabel(ms)}` : "No debounce"}</text>
+          </svg>
+        `;
+      }
+
+      function renderGateVisual() {
+        return `
+          <div class="diwiz-matrix">
+            <div class="diwiz-matrix-row"><span>set=true, reset=false</span><strong>Qualification allowed</strong></div>
+            <div class="diwiz-matrix-row"><span>set=false, reset=false</span><strong>No qualification, no increment</strong></div>
+            <div class="diwiz-matrix-row"><span>reset=true (any set)</span><strong>Reset dominant, counter -&gt; 0</strong></div>
+          </div>
+        `;
+      }
+
+      function renderOutputsVisual() {
+        return `
+          <div class="diwiz-concept-pane">
+            <div class="diwiz-title">${DI_CONCEPT_VISUAL_MODEL.outputs.title}</div>
+            <div class="diwiz-sub">Choose output by intent: state, physical level, one-shot pulse, or accumulated count.</div>
+            <div class="diwiz-matrix">
+              <div class="diwiz-matrix-row"><span><strong>CMD</strong>: logical ON/OFF state</span><strong>Use for state rules</strong></div>
+              <div class="diwiz-matrix-row"><span><strong>PHYS</strong>: effective HIGH/LOW level</span><strong>Use for pin-level behavior</strong></div>
+              <div class="diwiz-matrix-row"><span><strong>EDGE</strong>: one-scan trigger pulse</span><strong>Use for one-shot actions</strong></div>
+              <div class="diwiz-matrix-row"><span><strong>COUNT</strong>: qualified edge counter</span><strong>Use for pulse totals</strong></div>
+            </div>
+          </div>
+        `;
+      }
+
+      function diSetupOutcomeModel(stepKey, draft) {
+        const p = draft.params || {};
+        if (stepKey === "intro") {
+          return {
+            what: "What this field does: enable/disable whether this DI participates in runtime logic.",
+            withConfig: draft.enabled
+              ? "With this config, DI is active and can evaluate conditions and count qualified edges."
+              : "With this config, DI is ignored at runtime until re-enabled.",
+          };
+        }
+        if (stepKey === "intro_outputs") {
+          return {
+            what: "What this section does: explains which DI outputs are used as logic sources by other cards.",
+            withConfig: "With this understanding, you can select CMD/PHYS/EDGE/COUNT correctly when building SET/RST rules in other cards.",
+          };
+        }
+        if (stepKey === "invert") {
+          return {
+            what: "What this field does: chooses whether signal polarity is preserved or inverted before all logic checks.",
+            withConfig: p.invert
+              ? "With this config, a physical HIGH is treated as LOW (and LOW as HIGH) for SET/RST and edge qualification."
+              : "With this config, physical signal is used directly before SET/RST and edge qualification.",
+          };
+        }
+        if (stepKey === "edge") {
+          return {
+            what: "What this field does: selects which transition is accepted as a qualifying edge.",
+            withConfig: `With this config, only ${edgeModeLongLabel(p.edgeMode)} can produce EDGE pulse and increment COUNT (after gate + debounce).`,
+          };
+        }
+        if (stepKey === "debounce") {
+          const ms = Number(p.debounceMs || 0);
+          return {
+            what: "What this field does: defines how long the signal must stay stable before edge acceptance.",
+            withConfig: ms > 0
+              ? `With this config, signal must remain stable for ${ms} ms before the selected edge qualifies.`
+              : "With this config, selected edge qualifies immediately with no debounce delay.",
+          };
+        }
+        if (stepKey === "set_primary") {
+          return {
+            what: "What this field does: defines when DI is allowed to turn ON and process edge qualification.",
+            withConfig: `With this config, SET evaluates as: ${formatConditionBlock(p.turnOnCondition)}.`,
+          };
+        }
+        if (stepKey === "rst_primary") {
+          return {
+            what: "What this field does: defines when DI is forced OFF and counting is reset.",
+            withConfig: `With this config, RST evaluates as: ${formatConditionBlock(p.turnOffCondition)}. Reset remains dominant when true.`,
+          };
+        }
+        return {
+          what: "What this section does: summarizes deterministic DI behavior after save and reboot.",
+          withConfig: "With this config, behavior changes apply only after reboot. This wizard intentionally does not consume live runtime data.",
+        };
+      }
+
+      function renderConceptPane(conceptKey, draft) {
+        const c = DI_CONCEPT_VISUAL_MODEL[conceptKey] || DI_CONCEPT_VISUAL_MODEL.invert;
+        let visualHtml = "";
+        if (conceptKey === "invert") visualHtml = renderInvertVisual(!!draft.params.invert);
+        else if (conceptKey === "edge") visualHtml = renderEdgeVisual(draft.params.edgeMode);
+        else if (conceptKey === "debounce") visualHtml = renderDebounceVisual(draft.params.debounceMs);
+        else visualHtml = renderGateVisual();
+        return `
+          <div class="diwiz-concept-pane">
+            <div class="diwiz-title">${c.title}</div>
+            <div class="diwiz-sub">${c.description}</div>
+            ${visualHtml}
+          </div>
+        `;
+      }
+
+      function renderStepConceptInline(stepKey, draft) {
+        if (stepKey === "intro") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">DI Core Concepts</div>
+              <div class="diwiz-sub">DI flow: interpret signal -> qualify edge -> apply gate -> publish outputs.</div>
+              ${renderGateVisual()}
+              <div class="diwiz-chipbar">
+                <span class="diwiz-term"><strong>CMD</strong> ${DI_TERM_DICTIONARY.CMD}</span>
+                <span class="diwiz-term"><strong>PHYS</strong> ${DI_TERM_DICTIONARY.PHYS}</span>
+                <span class="diwiz-term"><strong>EDGE</strong> ${DI_TERM_DICTIONARY.EDGE}</span>
+                <span class="diwiz-term"><strong>COUNT</strong> ${DI_TERM_DICTIONARY.COUNT}</span>
+              </div>
+            </div>
+          `;
+        }
+        if (stepKey === "intro_outputs") return renderOutputsVisual();
+        if (stepKey === "invert") return renderConceptPane("invert", draft);
+        if (stepKey === "edge") return renderConceptPane("edge", draft);
+        if (stepKey === "debounce") return renderConceptPane("debounce", draft);
+        if (stepKey === "set_primary" || stepKey === "rst_primary") return renderConceptPane("gate", draft);
+        return "";
+      }
+
+      function renderWizardConditionComposer(title, rootPrefix, block, fallbackCardId) {
         const safe = normalizeConditionBlock(block, fallbackCardId);
         const a = safe.clauseA;
+        const b = safe.clauseB;
         const sourceOptionsA = wizardCardSelectOptions(a.sourceCardId, fallbackCardId);
         const thresholdCardA = wizardCardSelectOptions(a.thresholdCardId, fallbackCardId);
+        const sourceOptionsB = wizardCardSelectOptions(b.sourceCardId, fallbackCardId);
+        const thresholdCardB = wizardCardSelectOptions(b.thresholdCardId, fallbackCardId);
         const modeAConst = a.useThresholdCard ? "" : "selected";
         const modeACard = a.useThresholdCard ? "selected" : "";
-        const secondaryNeeded = safe.combiner !== "NONE";
+        const modeBConst = b.useThresholdCard ? "" : "selected";
+        const modeBCard = b.useThresholdCard ? "selected" : "";
+        const secondaryVisible = safe.combiner !== "NONE";
         return `
-          <div class="wizard-surface">
-            <div class="wizard-block-title">${title}</div>
-            <div class="wizard-field">
-              <label>Combiner</label>
-              <select id="${rootPrefix}_comb">${wizardCombinerOptions(safe.combiner)}</select>
-              <div class="wizard-field-note"><strong>Hint:</strong> Use <strong>Primary only</strong> for a single rule. Choose <strong>AND/OR</strong> to unlock a secondary clause step.</div>
+          <div class="diwiz-title">${lucideIcon("gate")} ${title}</div>
+          <div class="diwiz-note"><span class="badge text-bg-warning">${lucideIcon("warning")} Reset is dominant</span></div>
+          <div class="diwiz-field">
+            <label>Combiner</label>
+            <select id="${rootPrefix}_comb">${wizardCombinerOptions(safe.combiner)}</select>
+          </div>
+          <div class="diwiz-note"><strong>What this field does:</strong> choose primary-only logic or combine two clauses with AND/OR.</div>
+          <div class="diwiz-row">
+            <div class="diwiz-field"><label>Primary Source</label><select id="${rootPrefix}_a_src">${sourceOptionsA}</select></div>
+            <div class="diwiz-field"><label>Primary Operator</label><select id="${rootPrefix}_a_op">${wizardOperatorOptions(a.operator)}</select></div>
+            <div class="diwiz-field"><label>Primary Threshold Source</label><select id="${rootPrefix}_a_thr_mode"><option value="CONST" ${modeAConst}>Constant</option><option value="CARD" ${modeACard}>Card</option></select></div>
+            <div id="${rootPrefix}_a_thr_val_wrap" class="diwiz-field"><label>Primary Threshold Value</label><input id="${rootPrefix}_a_thr_val" type="number" value="${Number(a.thresholdValue || 0)}" /></div>
+            <div id="${rootPrefix}_a_thr_card_wrap" class="diwiz-field"><label>Primary Threshold Card</label><select id="${rootPrefix}_a_thr_card">${thresholdCardA}</select></div>
+          </div>
+          <div id="${rootPrefix}_secondary_wrap" class="${secondaryVisible ? "" : "wizard-hidden"}">
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Secondary Source</label><select id="${rootPrefix}_b_src">${sourceOptionsB}</select></div>
+              <div class="diwiz-field"><label>Secondary Operator</label><select id="${rootPrefix}_b_op">${wizardOperatorOptions(b.operator)}</select></div>
+              <div class="diwiz-field"><label>Secondary Threshold Source</label><select id="${rootPrefix}_b_thr_mode"><option value="CONST" ${modeBConst}>Constant</option><option value="CARD" ${modeBCard}>Card</option></select></div>
+              <div id="${rootPrefix}_b_thr_val_wrap" class="diwiz-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
+              <div id="${rootPrefix}_b_thr_card_wrap" class="diwiz-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
             </div>
-            <div class="wizard-grid">
-              <div class="wizard-field"><label>Primary Source</label><select id="${rootPrefix}_a_src">${sourceOptionsA}</select></div>
-              <div class="wizard-field"><label>Primary Operator</label><select id="${rootPrefix}_a_op">${wizardOperatorOptions(a.operator)}</select></div>
-              <div class="wizard-field"><label>Primary Threshold Source</label><select id="${rootPrefix}_a_thr_mode"><option value="CONST" ${modeAConst}>Constant</option><option value="CARD" ${modeACard}>Card</option></select></div>
-              <div id="${rootPrefix}_a_thr_val_wrap" class="wizard-field"><label>Primary Threshold Value</label><input id="${rootPrefix}_a_thr_val" type="number" value="${Number(a.thresholdValue || 0)}" /></div>
-              <div id="${rootPrefix}_a_thr_card_wrap" class="wizard-field"><label>Primary Threshold Card</label><select id="${rootPrefix}_a_thr_card">${thresholdCardA}</select></div>
-            </div>
-            <div class="wizard-field-note">Secondary clause status: <strong>${secondaryNeeded ? "Enabled by combiner" : "Skipped (Primary only)"}</strong>.</div>
-            <div class="wizard-field-note"><strong>Coach:</strong> Define the main condition first. Keep it simple, then add secondary only when one rule is not enough.</div>
           </div>
         `;
       }
 
-      function renderWizardSecondaryCondition(title, rootPrefix, block, fallbackCardId) {
-        const safe = normalizeConditionBlock(block, fallbackCardId);
-        const b = safe.clauseB;
-        const sourceOptionsB = wizardCardSelectOptions(b.sourceCardId, fallbackCardId);
-        const thresholdCardB = wizardCardSelectOptions(b.thresholdCardId, fallbackCardId);
-        const modeBConst = b.useThresholdCard ? "" : "selected";
-        const modeBCard = b.useThresholdCard ? "selected" : "";
-        return `
-          <div class="wizard-surface">
-            <div class="wizard-block-title">${title}</div>
-            <div class="wizard-field-note"><strong>Combiner:</strong> ${safe.combiner}. This clause is evaluated together with primary.</div>
-            <div class="wizard-grid">
-              <div class="wizard-field"><label>Secondary Source</label><select id="${rootPrefix}_b_src">${sourceOptionsB}</select></div>
-              <div class="wizard-field"><label>Secondary Operator</label><select id="${rootPrefix}_b_op">${wizardOperatorOptions(b.operator)}</select></div>
-              <div class="wizard-field"><label>Secondary Threshold Source</label><select id="${rootPrefix}_b_thr_mode"><option value="CONST" ${modeBConst}>Constant</option><option value="CARD" ${modeBCard}>Card</option></select></div>
-              <div id="${rootPrefix}_b_thr_val_wrap" class="wizard-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
-              <div id="${rootPrefix}_b_thr_card_wrap" class="wizard-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
-            </div>
-            <div class="wizard-field-note"><strong>Coach:</strong> Keep this clause focused and avoid duplicating primary logic.</div>
-          </div>
-        `;
+      function toggleSecondaryClause(rootPrefix) {
+        const wrap = document.getElementById(`${rootPrefix}_secondary_wrap`);
+        const combiner = String(document.getElementById(`${rootPrefix}_comb`)?.value || "NONE");
+        if (wrap) wrap.classList.toggle("wizard-hidden", combiner === "NONE");
       }
 
       function attachWizardClauseHandlers(prefix) {
@@ -891,154 +1133,81 @@
       function renderDiWizardStep() {
         const w = state.wizard;
         if (!w.open || !w.draft) return;
-        const flow = wizardFlowForDraft(w.draft);
-        if (w.step >= flow.length) {
-          w.step = flow.length - 1;
-        }
+        const flow = wizardFlowForDraft();
+        if (w.step >= flow.length) w.step = flow.length - 1;
         const stepKey = flow[w.step];
         const cardRef = state.cardRefById.get(Number(w.cardId)) || `DI ${Number(w.draft.index || 0)}`;
+        const outcome = diSetupOutcomeModel(stepKey, w.draft);
+        const stepMeta = WIZ_STEP_META[stepKey] || { name: "Step" };
         wizardTitleEl.textContent = `DI Card Edit - ${cardRef}`;
-        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
         wizardSubtitleEl.textContent = (WIZ_STEP_META[stepKey] && WIZ_STEP_META[stepKey].subtitle) || "Guided configuration step.";
         renderWizardStepper(flow, w.step);
         wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
         wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
         wizNextEl.disabled = false;
 
+        let editHtml = "";
         if (stepKey === "intro") {
           const channel = Number(w.draft.params.channel ?? 0);
-          wizardBodyEl.innerHTML = `
-            <div class="wizard-surface">
-              <div class="wizard-block-title">What this DI card does</div>
-              <div class="wizard-field-note">Digital Input reads a physical signal, qualifies edges, evaluates SET/RST logic, then exposes runtime badges for verification.</div>
-              <div class="wizard-flow" aria-label="DI behavior flow">
-                <span class="wizard-flow-node">Input Signal</span>
-                <span class="wizard-flow-arrow">&rarr;</span>
-                <span class="wizard-flow-node">TRG + DEB</span>
-                <span class="wizard-flow-arrow">&rarr;</span>
-                <span class="wizard-flow-node">SET / RST Logic</span>
-                <span class="wizard-flow-arrow">&rarr;</span>
-                <span class="wizard-flow-node">CMD PHYS EDGE COUNT</span>
-              </div>
-              <div class="wizard-field"><label>Enabled</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
-              <div class="wizard-info">
-                <div class="wizard-info-title">Card Information (read-only)</div>
-                <div class="wizard-kv"><span>Card</span><strong>${cardRef}</strong></div>
-                <div class="wizard-kv"><span>Family</span><strong>Digital Input</strong></div>
-                <div class="wizard-kv"><span>Hardware Channel</span><strong>GPIO ${channel}</strong></div>
-                <div class="wizard-kv"><span>Card ID</span><strong>${Number(w.draft.id)}</strong></div>
-              </div>
-              <div class="wizard-field-note"><strong>Coach:</strong> Keep enabled if this DI participates in logic. Disable only when this input should be ignored at runtime.</div>
+          editHtml = `
+            <div class="diwiz-title">DI Onboarding</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <div class="diwiz-field"><label>Enabled</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            <div class="diwiz-row">
+              <div class="diwiz-note"><strong>Card</strong>: ${cardRef}</div>
+              <div class="diwiz-note"><strong>Hardware Channel</strong>: GPIO ${channel}</div>
             </div>
+            <ul class="diwiz-list">
+              <li><strong>Gating:</strong> SET controls whether qualification is allowed.</li>
+              <li><strong>Reset logic:</strong> reset=true is dominant and clears COUNT to zero.</li>
+            </ul>
           `;
-          return;
-        }
-
-        if (stepKey === "invert") {
-          wizardBodyEl.innerHTML = `
-            <div class="wizard-surface">
-              <div class="wizard-block-title">Signal Interpretation (SIG)</div>
-              <div class="wizard-field">
-                <label>Signal (SIG)</label>
-                <select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select>
-              </div>
-              <div class="wizard-field-note"><strong>Coach:</strong> <strong>NORM</strong> uses physical signal as-is. <strong>INV</strong> flips the signal before SET/RST checks and edge detection.</div>
-              <div class="wizard-preview">${w.draft.params.invert ? "Current mode: signal is inverted (1 becomes 0, 0 becomes 1)." : "Current mode: signal is used directly without inversion."}</div>
-            </div>
+        } else if (stepKey === "intro_outputs") {
+          editHtml = `
+            <div class="diwiz-title">DI Outputs for Cross-Card Logic</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <ul class="diwiz-list">
+              <li>If you need <strong>state logic</strong> (ON/OFF), choose <strong>CMD</strong>.</li>
+              <li>If you need <strong>effective pin level</strong> (HIGH/LOW), choose <strong>PHYS</strong>.</li>
+              <li>If you need a <strong>single trigger pulse</strong>, choose <strong>EDGE</strong>.</li>
+              <li>If you need <strong>pulse totals</strong> for compare rules, choose <strong>COUNT</strong>.</li>
+            </ul>
           `;
-          return;
-        }
-
-        if (stepKey === "edge") {
+        } else if (stepKey === "invert") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("invert")} Signal Interpretation (SIG)</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <div class="diwiz-field"><label>Signal (SIG)</label><select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select></div>
+          `;
+        } else if (stepKey === "edge") {
           const edgeMode = Number(w.draft.params.edgeMode || 0);
-          wizardBodyEl.innerHTML = `
-            <div class="wizard-surface">
-              <div class="wizard-block-title">Edge Qualification (TRG)</div>
-              <div class="wizard-field">
-                <label>Trigger (TRG)</label>
-                <select id="wiz_edge"><option value="0" ${edgeMode === 0 ? "selected" : ""}>RISE</option><option value="1" ${edgeMode === 1 ? "selected" : ""}>FALL</option><option value="2" ${edgeMode === 2 ? "selected" : ""}>CHG</option></select>
-              </div>
-              <div class="wizard-field-note"><strong>Coach:</strong> DI has a built-in qualified edge counter (<strong>COUNT</strong>) that can be used by other cards and conditions.</div>
-              <div class="wizard-preview">${edgeModeLongLabel(edgeMode)} is currently selected. Only qualified edges increment COUNT.</div>
-            </div>
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("edge")} Edge Qualification (TRG)</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <div class="diwiz-field"><label>Trigger (TRG)</label><select id="wiz_edge"><option value="0" ${edgeMode === 0 ? "selected" : ""}>RISE</option><option value="1" ${edgeMode === 1 ? "selected" : ""}>FALL</option><option value="2" ${edgeMode === 2 ? "selected" : ""}>CHG</option></select></div>
           `;
-          return;
-        }
-
-        if (stepKey === "debounce") {
-          const preview = signalBehaviorPreview(w.draft.params || {});
-          wizardBodyEl.innerHTML = `
-            <div class="wizard-surface">
-              <div class="wizard-block-title">Debounce Window (DEB)</div>
-              <div class="wizard-field"><label>Debounce (DEB, ms)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
-              <div class="wizard-field-note"><strong>Coach:</strong> Debounce requires a stable signal window before an edge is accepted as qualified.</div>
-              <div id="wiz_signal_preview" class="wizard-preview">${preview}</div>
-            </div>
+        } else if (stepKey === "debounce") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("debounce")} Debounce Window (DEB)</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <div class="diwiz-field"><label>Debounce (ms)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
           `;
-          const onDebounceEdit = () => {
-            const dbEl = document.getElementById("wiz_db");
-            const p = {
-              invert: !!w.draft.params.invert,
-              edgeMode: Number(w.draft.params.edgeMode || 0),
-              debounceMs: dbEl ? Number(dbEl.value || 0) : Number(w.draft.params.debounceMs || 0),
-            };
-            const previewEl = document.getElementById("wiz_signal_preview");
-            if (previewEl) previewEl.textContent = signalBehaviorPreview(p);
-          };
-          const dbEl = document.getElementById("wiz_db");
-          if (dbEl) {
-            dbEl.addEventListener("input", onDebounceEdit);
-            dbEl.addEventListener("change", onDebounceEdit);
-          }
-          return;
-        }
-
-        if (stepKey === "set_primary") {
-          wizardBodyEl.innerHTML = `
-            ${renderWizardPrimaryCondition(
-              "SET Condition",
-              "wiz_set",
-              w.draft.params.turnOnCondition,
-              w.draft.id,
-            )}
+        } else if (stepKey === "set_primary") {
+          editHtml = `
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            ${renderWizardConditionComposer("SET Condition", "wiz_set", w.draft.params.turnOnCondition, w.draft.id)}
           `;
-          attachWizardClauseHandlers("wiz_set_a");
-          return;
-        }
-
-        if (stepKey === "set_secondary") {
-          wizardBodyEl.innerHTML = `
-            ${renderWizardSecondaryCondition("SET Secondary Clause", "wiz_set", w.draft.params.turnOnCondition, w.draft.id)}
+        } else if (stepKey === "rst_primary") {
+          editHtml = `
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            ${renderWizardConditionComposer("RST Condition", "wiz_rst", w.draft.params.turnOffCondition, w.draft.id)}
           `;
-          attachWizardClauseHandlers("wiz_set_b");
-          return;
-        }
-
-        if (stepKey === "rst_primary") {
-          wizardBodyEl.innerHTML = `
-            ${renderWizardPrimaryCondition(
-              "RST Condition",
-              "wiz_rst",
-              w.draft.params.turnOffCondition,
-              w.draft.id,
-            )}
-          `;
-          attachWizardClauseHandlers("wiz_rst_a");
-          return;
-        }
-
-        if (stepKey === "rst_secondary") {
-          wizardBodyEl.innerHTML = `
-            ${renderWizardSecondaryCondition("RST Secondary Clause", "wiz_rst", w.draft.params.turnOffCondition, w.draft.id)}
-          `;
-          attachWizardClauseHandlers("wiz_rst_b");
-          return;
-        }
-
-        wizardBodyEl.innerHTML = `
-          <div class="wizard-surface">
-            <div class="wizard-block-title">Review</div>
-            <div class="node-badges">
+        } else {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Review</div>
+            ${renderDiPipeline(stepKey, w.draft.params)}
+            <div class="diwiz-chipbar">
               <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
               <span class="badge text-bg-secondary">SIG:${w.draft.params.invert ? "INV" : "NORM"}</span>
               <span class="badge text-bg-secondary">TRG:${shortTriggerLabel(w.draft.params.edgeMode)}</span>
@@ -1046,16 +1215,56 @@
               <span class="badge badge-formula text-bg-secondary">SET:${formatConditionBlock(w.draft.params.turnOnCondition)}</span>
               <span class="badge badge-formula text-bg-secondary">RST:${formatConditionBlock(w.draft.params.turnOffCondition)}</span>
             </div>
-            <div class="wizard-field-note"><strong>Changed from previous:</strong> ${summarizeWizardChanges(w.draft, w.original).join(" | ") || "No change detected"}</div>
-            <div class="wizard-field-note"><strong>Verify on Live:</strong> CMD, PHYS, EDGE, COUNT.</div>
+            <div class="diwiz-matrix">
+              <div class="diwiz-matrix-row"><span>Counts on transition</span><strong>${shortTriggerLabel(w.draft.params.edgeMode)}</strong></div>
+              <div class="diwiz-matrix-row"><span>Debounce window</span><strong>${Number(w.draft.params.debounceMs || 0)} ms</strong></div>
+              <div class="diwiz-matrix-row"><span>SET combiner</span><strong>${String(w.draft.params.turnOnCondition?.combiner || "NONE")}</strong></div>
+              <div class="diwiz-matrix-row"><span>RST combiner</span><strong>${String(w.draft.params.turnOffCondition?.combiner || "NONE")}</strong></div>
+            </div>
+            <div class="diwiz-note"><strong>Changed from previous:</strong> ${summarizeWizardChanges(w.draft, w.original).join(" | ") || "No change detected"}</div>
+            <div class="diwiz-note"><strong>Reboot required:</strong> saved DI configuration takes effect only after reboot.</div>
+          `;
+        }
+
+        wizardBodyEl.innerHTML = `
+          <div class="diwiz">
+            <section class="diwiz-edit">
+              ${editHtml}
+              ${renderStepConceptInline(stepKey, w.draft)}
+              <div class="diwiz-note"><strong>${outcome.what}</strong></div>
+              <div class="diwiz-outcome">${outcome.withConfig}</div>
+            </section>
           </div>
         `;
-      }
 
+        if (stepKey === "set_primary") {
+          const combinerEl = document.getElementById("wiz_set_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_set"));
+          toggleSecondaryClause("wiz_set");
+          attachWizardClauseHandlers("wiz_set_a");
+          attachWizardClauseHandlers("wiz_set_b");
+        } else if (stepKey === "rst_primary") {
+          const combinerEl = document.getElementById("wiz_rst_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_rst"));
+          toggleSecondaryClause("wiz_rst");
+          attachWizardClauseHandlers("wiz_rst_a");
+          attachWizardClauseHandlers("wiz_rst_b");
+        } else if (stepKey === "debounce") {
+          const dbEl = document.getElementById("wiz_db");
+          if (dbEl) {
+            const refresh = () => {
+              const ms = Number(dbEl.value || 0);
+              w.draft.params.debounceMs = Number.isFinite(ms) && ms >= 0 ? ms : 0;
+              renderDiWizardStep();
+            };
+            dbEl.addEventListener("change", refresh);
+          }
+        }
+      }
       function syncDiWizardDraftFromStepFields() {
         const w = state.wizard;
         if (!w.open || !w.draft) return;
-        const flow = wizardFlowForDraft(w.draft);
+        const flow = wizardFlowForDraft();
         const stepKey = flow[w.step] || "review";
         if (stepKey === "intro") {
           const enabledEl = document.getElementById("wiz_enabled");
@@ -1085,14 +1294,9 @@
           w.draft.params.turnOnCondition = {
             combiner: WIZ_COMBINERS.includes(setComb) ? setComb : "NONE",
             clauseA: wizardReadClause("wiz_set_a"),
-            clauseB: normalizeConditionClause(w.draft.params.turnOnCondition?.clauseB, w.draft.id),
-          };
-          return true;
-        }
-        if (stepKey === "set_secondary") {
-          w.draft.params.turnOnCondition = {
-            ...w.draft.params.turnOnCondition,
-            clauseB: wizardReadClause("wiz_set_b"),
+            clauseB: setComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOnCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_set_b"),
           };
           return true;
         }
@@ -1101,14 +1305,9 @@
           w.draft.params.turnOffCondition = {
             combiner: WIZ_COMBINERS.includes(rstComb) ? rstComb : "NONE",
             clauseA: wizardReadClause("wiz_rst_a"),
-            clauseB: normalizeConditionClause(w.draft.params.turnOffCondition?.clauseB, w.draft.id),
-          };
-          return true;
-        }
-        if (stepKey === "rst_secondary") {
-          w.draft.params.turnOffCondition = {
-            ...w.draft.params.turnOffCondition,
-            clauseB: wizardReadClause("wiz_rst_b"),
+            clauseB: rstComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOffCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_rst_b"),
           };
           return true;
         }
@@ -1426,7 +1625,7 @@
         if (!state.wizard.open) return;
         const ok = syncDiWizardDraftFromStepFields();
         if (!ok) return;
-        const flow = wizardFlowForDraft(state.wizard.draft);
+        const flow = wizardFlowForDraft();
         if (state.wizard.step >= (flow.length - 1)) {
           await saveDiWizardDraftAndReboot();
           return;
@@ -1457,3 +1656,4 @@
     </script>
   </body>
 </html>
+
