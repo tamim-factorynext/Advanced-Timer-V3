@@ -434,6 +434,8 @@
           const family = runtimeTypeToFamily(c.type);
           if (family === "DI") return renderDiCard(c);
           if (family === "AI") return renderAiCard(c);
+          if (family === "DO") return renderDoCard(c);
+          if (family === "SIO") return renderSioCard(c);
           const truth = c.actualState ? "ON" : "OFF";
           const truthClass = c.actualState ? "ok" : "warn";
           const typeLabel = runtimeTypeLabelMap[c.type] || c.type || "Card";
@@ -828,6 +830,182 @@
         `;
       }
 
+      function missionStateToken(value) {
+        const raw = String(value || "").toUpperCase();
+        if (raw.includes("IDLE")) return { text: "IDLE", cls: "warn" };
+        if (raw.includes("RUN") || raw.includes("ACTIVE")) return { text: "RUN", cls: "ok" };
+        if (raw.includes("FINISH") || raw.includes("DONE")) return { text: "DONE", cls: "ok" };
+        return { text: raw || "--", cls: "warn" };
+      }
+
+      function missionModeShort(modeValue) {
+        const mode = Number(modeValue || 5);
+        if (mode === 6) return "IMM";
+        if (mode === 7) return "GATED";
+        return "NORM";
+      }
+
+      function missionModeLong(modeValue, familyPrefix) {
+        const mode = Number(modeValue || 5);
+        if (mode === 6) return `${familyPrefix} Immediate`;
+        if (mode === 7) return `${familyPrefix} Gated`;
+        return `${familyPrefix} Normal`;
+      }
+
+      function renderDoCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
+        const setExpr = formatConditionBlock(params.turnOnCondition);
+        const resetExpr = formatConditionBlock(params.turnOffCondition);
+        const cardRef = state.cardRefById.get(Number(c.id)) || `DO${Number(c.index || 0)}`;
+        const logicalIndexMatch = cardRef.match(/^DO(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
+        const mission = missionStateToken(c.state);
+        const headerText = isEnabled ? mission.text : "DISABLED";
+        const headerClass = isEnabled ? mission.cls : "warn";
+        const zoneMutedClass = isEnabled ? "" : " muted";
+        const setBadgeClass = isEnabled
+          ? (c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const resetBadgeClass = isEnabled
+          ? (c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const cmdToken = isEnabled ? truthToken(!!c.commandState, "ON", "OFF") : "--";
+        const physToken = isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "--";
+        const edgeToken = isEnabled ? truthToken(!!c.edgePulse, "TRIG", "CLR") : "--";
+        const countToken = isEnabled ? String(Number(c.liveValue ?? 0)) : "--";
+        const delayToken = debounceSecondsLabel(params.delayBeforeOnMs);
+        const onToken = debounceSecondsLabel(params.activeDurationMs);
+        const rep = Number(params.repeatCount ?? 1);
+        const repToken = rep === 0 ? "INF" : String(rep);
+        const modeToken = missionModeShort(params.mode);
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-zone">
+            <div class="debug-row">
+              <span class="badge text-bg-dark">Mission:${mission.text}</span>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-do-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
+          </div>
+        ` : "";
+
+        return `
+          <article class="node ${isEnabled ? "" : "is-disabled"}">
+            <div class="node-head">
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x23FB;</span>
+                  <span class="node-title-main">Digital Output ${logicalIndex}</span>
+                </div>
+              </div>
+              <span class="node-state ${headerClass}">${headerText}</span>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-secondary">SIG:${params.invert ? "INV" : "NORM"}</span>
+                <span class="badge text-bg-secondary">MODE:${modeToken}</span>
+                <span class="badge text-bg-secondary">DLY:${delayToken}</span>
+                <span class="badge text-bg-secondary">ON:${onToken}</span>
+                <span class="badge text-bg-secondary">REP:${repToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                <span class="badge text-bg-info">CMD:${cmdToken}</span>
+                <span class="badge text-bg-info">PHYS:${physToken}</span>
+                <span class="badge text-bg-info">EDGE:${edgeToken}</span>
+                <span class="badge text-bg-warning">COUNT:${countToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                ${isEnabled ? "" : '<span class="badge text-bg-dark">Disabled</span>'}
+                <span class="badge badge-formula ${setBadgeClass}">SET: ${setExpr}</span>
+                <span class="badge badge-formula ${resetBadgeClass}">RST: ${resetExpr}</span>
+              </div>
+            </div>
+            ${zone4Html}
+          </article>
+        `;
+      }
+
+      function renderSioCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
+        const setExpr = formatConditionBlock(params.turnOnCondition);
+        const resetExpr = formatConditionBlock(params.turnOffCondition);
+        const cardRef = state.cardRefById.get(Number(c.id)) || `SIO${Number(c.index || 0)}`;
+        const logicalIndexMatch = cardRef.match(/^SIO(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
+        const mission = missionStateToken(c.state);
+        const headerText = isEnabled ? mission.text : "DISABLED";
+        const headerClass = isEnabled ? mission.cls : "warn";
+        const zoneMutedClass = isEnabled ? "" : " muted";
+        const setBadgeClass = isEnabled
+          ? (c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const resetBadgeClass = isEnabled
+          ? (c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const cmdToken = isEnabled ? truthToken(!!c.commandState, "ON", "OFF") : "--";
+        const physToken = isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "--";
+        const edgeToken = isEnabled ? truthToken(!!c.edgePulse, "TRIG", "CLR") : "--";
+        const countToken = isEnabled ? String(Number(c.liveValue ?? 0)) : "--";
+        const delayToken = debounceSecondsLabel(params.delayBeforeOnMs);
+        const onToken = debounceSecondsLabel(params.activeDurationMs);
+        const rep = Number(params.repeatCount ?? 1);
+        const repToken = rep === 0 ? "INF" : String(rep);
+        const modeToken = missionModeShort(params.mode);
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-zone">
+            <div class="debug-row">
+              <span class="badge text-bg-dark">Mission:${mission.text}</span>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-sio-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
+          </div>
+        ` : "";
+
+        return `
+          <article class="node ${isEnabled ? "" : "is-disabled"}">
+            <div class="node-head">
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x269B;</span>
+                  <span class="node-title-main">Soft IO ${logicalIndex}</span>
+                </div>
+              </div>
+              <span class="node-state ${headerClass}">${headerText}</span>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-secondary">SIG:${params.invert ? "INV" : "NORM"}</span>
+                <span class="badge text-bg-secondary">MODE:${modeToken}</span>
+                <span class="badge text-bg-secondary">DLY:${delayToken}</span>
+                <span class="badge text-bg-secondary">ON:${onToken}</span>
+                <span class="badge text-bg-secondary">REP:${repToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                <span class="badge text-bg-info">CMD:${cmdToken}</span>
+                <span class="badge text-bg-info">PHYS:${physToken}</span>
+                <span class="badge text-bg-info">EDGE:${edgeToken}</span>
+                <span class="badge text-bg-warning">COUNT:${countToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                ${isEnabled ? "" : '<span class="badge text-bg-dark">Disabled</span>'}
+                <span class="badge badge-formula ${setBadgeClass}">SET: ${setExpr}</span>
+                <span class="badge badge-formula ${resetBadgeClass}">RST: ${resetExpr}</span>
+              </div>
+            </div>
+            ${zone4Html}
+          </article>
+        `;
+      }
+
       function sortedCardsFromStore() {
         return Array.from(state.cardsById.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
       }
@@ -899,6 +1077,18 @@
         smoothing: { short: "6", name: "Smoothing", subtitle: "Set response speed for value stabilization." },
         review: { short: "7", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
       };
+      const WIZ_STEP_META_DO_SIO = {
+        intro: { short: "1", name: "Intro A", subtitle: "Understand mission flow, timing, and reset dominance." },
+        intro_outputs: { short: "2", name: "Intro B", subtitle: "Learn CMD/PHYS/EDGE/COUNT and mission state outputs." },
+        invert: { short: "3", name: "Signal", subtitle: "Choose whether mission output stays normal or inverted." },
+        mode: { short: "4", name: "Mode", subtitle: "Choose Normal, Immediate, or Gated mission behavior." },
+        delay: { short: "5", name: "Delay", subtitle: "Set pre-ON wait time before mission output turns ON." },
+        duration: { short: "6", name: "ON Window", subtitle: "Set ON duration for each mission cycle." },
+        repeat: { short: "7", name: "Repeat", subtitle: "Set cycle count (0 means infinite repeat)." },
+        set_primary: { short: "8", name: "SET", subtitle: "Define when mission can start." },
+        rst_primary: { short: "9", name: "RST", subtitle: "Define when mission is aborted and reset." },
+        review: { short: "10", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
+      };
 
       const DI_TERM_DICTIONARY = {
         CMD: "Qualified logical state after DI processing.",
@@ -931,7 +1121,9 @@
       }
 
       function activeWizardStepMeta() {
-        return state.wizard.family === "AI" ? WIZ_STEP_META_AI : WIZ_STEP_META_DI;
+        if (state.wizard.family === "AI") return WIZ_STEP_META_AI;
+        if (state.wizard.family === "DO" || state.wizard.family === "SIO") return WIZ_STEP_META_DO_SIO;
+        return WIZ_STEP_META_DI;
       }
 
       function formatWizardCardLabel(family, cardRef, fallbackIndex) {
@@ -940,11 +1132,21 @@
         if (family === "DI" && diMatch) return `Digital Input ${Number(diMatch[1])}`;
         const aiMatch = ref.match(/^AI(\d+)$/i);
         if (family === "AI" && aiMatch) return `Analog Input ${Number(aiMatch[1])}`;
+        const doMatch = ref.match(/^DO(\d+)$/i);
+        if (family === "DO" && doMatch) return `Digital Output ${Number(doMatch[1])}`;
+        const sioMatch = ref.match(/^SIO(\d+)$/i);
+        if (family === "SIO" && sioMatch) return `Soft IO ${Number(sioMatch[1])}`;
         if (family === "DI" && Number.isFinite(Number(fallbackIndex))) {
           return `Digital Input ${Number(fallbackIndex)}`;
         }
         if (family === "AI" && Number.isFinite(Number(fallbackIndex))) {
           return `Analog Input ${Number(fallbackIndex)}`;
+        }
+        if (family === "DO" && Number.isFinite(Number(fallbackIndex))) {
+          return `Digital Output ${Number(fallbackIndex)}`;
+        }
+        if (family === "SIO" && Number.isFinite(Number(fallbackIndex))) {
+          return `Soft IO ${Number(fallbackIndex)}`;
         }
         return ref || `${family} Card`;
       }
@@ -993,6 +1195,9 @@
       function wizardFlowForDraft() {
         if (state.wizard.family === "AI") {
           return ["intro", "intro_outputs", "channel", "in_range", "out_range", "smoothing", "review"];
+        }
+        if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
+          return ["intro", "intro_outputs", "invert", "mode", "delay", "duration", "repeat", "set_primary", "rst_primary", "review"];
         }
         return ["intro", "intro_outputs", "invert", "edge", "debounce", "set_primary", "rst_primary", "review"];
       }
@@ -1736,9 +1941,356 @@
         return true;
       }
 
+      function renderMissionPipeline(stepKey, draft, family) {
+        const params = draft?.params || {};
+        const mode = missionModeShort(params.mode);
+        const nodes = [
+          { key: "gate", label: "SET/RST Gate", icon: "gate" },
+          { key: "mode", label: mode, icon: "output" },
+          { key: "delay", label: `DLY ${debounceSecondsLabel(params.delayBeforeOnMs)}`, icon: "debounce" },
+          { key: "duration", label: `ON ${debounceSecondsLabel(params.activeDurationMs)}`, icon: "edge" },
+          { key: "repeat", label: `REP ${Number(params.repeatCount || 0) === 0 ? "INF" : Number(params.repeatCount || 0)}`, icon: "save" },
+          { key: "publish", label: "CMD PHYS EDGE COUNT", icon: "output" },
+        ];
+        let active = "gate";
+        if (stepKey === "mode") active = "mode";
+        else if (stepKey === "delay") active = "delay";
+        else if (stepKey === "duration") active = "duration";
+        else if (stepKey === "repeat") active = "repeat";
+        else if (stepKey === "review" || stepKey === "intro_outputs") active = "publish";
+        return `
+          <div class="diwiz-flow" aria-label="${family} behavior pipeline">
+            ${nodes.map((node, idx) => `
+              <span class="diwiz-flow-node ${node.key === active ? "active" : ""}">
+                ${lucideIcon(node.icon)}
+                <span>${node.label}</span>
+              </span>
+              ${idx < nodes.length - 1 ? '<span class="diwiz-flow-arrow">&rarr;</span>' : ""}
+            `).join("")}
+          </div>
+        `;
+      }
+
+      function doSioSetupOutcomeModel(stepKey, draft, family) {
+        const p = draft.params || {};
+        const familyWord = family === "DO" ? "DO" : "SIO";
+        if (stepKey === "intro") {
+          return {
+            what: `What this field does: turns this ${familyWord} card ON or OFF for mission execution.`,
+            withConfig: draft.enabled
+              ? `With this config, ${familyWord} can run missions when SET is true and RST is false.`
+              : `With this config, ${familyWord} is skipped at runtime until you enable it again.`,
+          };
+        }
+        if (stepKey === "intro_outputs") {
+          return {
+            what: `What this section does: shows ${familyWord} mission outputs used by other cards.`,
+            withConfig: "Use CMD for mission command state, PHYS for final level after invert, EDGE for one-scan pulse, and COUNT for mission-edge totals.",
+          };
+        }
+        if (stepKey === "invert") {
+          return {
+            what: `What this field does: chooses whether ${familyWord} mission output stays normal (NORM) or inverted (INV).`,
+            withConfig: p.invert
+              ? "With this config, INV is active. Mission ON becomes physical LOW, and mission OFF becomes physical HIGH."
+              : "With this config, NORM is active. Mission output and physical output stay aligned.",
+          };
+        }
+        if (stepKey === "mode") {
+          return {
+            what: "What this field does: picks mission trigger behavior.",
+            withConfig: `With this config, mode is ${missionModeLong(p.mode, familyWord)}.`,
+          };
+        }
+        if (stepKey === "delay") {
+          return {
+            what: "What this field does: sets wait time before each ON window starts.",
+            withConfig: `With this config, mission waits ${Number(p.delayBeforeOnMs || 0)} ms before turning ON.`,
+          };
+        }
+        if (stepKey === "duration") {
+          return {
+            what: "What this field does: sets ON duration for each mission cycle.",
+            withConfig: Number(p.activeDurationMs || 0) === 0
+              ? "With this config, ON duration is unlimited and stays ON until reset/gate stop."
+              : `With this config, each ON cycle lasts ${Number(p.activeDurationMs || 0)} ms.`,
+          };
+        }
+        if (stepKey === "repeat") {
+          return {
+            what: "What this field does: sets how many mission cycles run after trigger.",
+            withConfig: Number(p.repeatCount || 0) === 0
+              ? "With this config, repeat is infinite (0 = INF)."
+              : `With this config, mission repeats ${Number(p.repeatCount || 0)} cycle(s).`,
+          };
+        }
+        if (stepKey === "set_primary") {
+          return {
+            what: "What this field does: defines when mission is allowed to start.",
+            withConfig: `With this config, SET logic is: ${formatConditionBlock(p.turnOnCondition)}.`,
+          };
+        }
+        if (stepKey === "rst_primary") {
+          return {
+            what: "What this field does: defines when mission is aborted/reset.",
+            withConfig: `With this config, RST logic is: ${formatConditionBlock(p.turnOffCondition)}. If RST is true, it overrides SET in that scan.`,
+          };
+        }
+        return {
+          what: `What this section does: gives you a final ${familyWord} behavior summary.`,
+          withConfig: "Save writes config now, but runtime behavior changes only after reboot.",
+        };
+      }
+
+      function renderDoSioConceptInline(stepKey, draft, family) {
+        const familyWord = family === "DO" ? "DO" : "SIO";
+        const p = draft.params || {};
+        if (stepKey === "intro") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">${familyWord} Core Concepts</div>
+              <div class="diwiz-sub">${familyWord} flow: evaluate gate -> run mission timing -> apply invert -> publish outputs.</div>
+              ${renderMissionPipeline(stepKey, draft, familyWord)}
+            </div>
+          `;
+        }
+        if (stepKey === "intro_outputs") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">${familyWord} Output Usage</div>
+              <div class="diwiz-matrix">
+                <div class="diwiz-matrix-row"><span><strong>CMD</strong>: mission command ON/OFF</span><strong>Use for mission logic</strong></div>
+                <div class="diwiz-matrix-row"><span><strong>PHYS</strong>: final HIGH/LOW after invert</span><strong>Use for final output level logic</strong></div>
+                <div class="diwiz-matrix-row"><span><strong>EDGE</strong>: one-scan pulse on rising physical edge</span><strong>Use for one-shot triggers</strong></div>
+                <div class="diwiz-matrix-row"><span><strong>COUNT</strong>: rising physical edge counter</span><strong>Use for cycle totals</strong></div>
+              </div>
+            </div>
+          `;
+        }
+        if (stepKey === "mode") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">Mode Behavior</div>
+              <div class="diwiz-matrix">
+                <div class="diwiz-matrix-row"><span>Normal</span><strong>Mission starts when SET is true</strong></div>
+                <div class="diwiz-matrix-row"><span>Immediate</span><strong>Starts immediately when triggered</strong></div>
+                <div class="diwiz-matrix-row"><span>Gated</span><strong>Stops if SET drops while running</strong></div>
+              </div>
+            </div>
+          `;
+        }
+        if (stepKey === "delay" || stepKey === "duration" || stepKey === "repeat") {
+          return `
+            <div class="diwiz-concept-pane">
+              <div class="diwiz-title">Mission Timing</div>
+              <div class="diwiz-sub">DLY waits before ON, ON defines active window, REP repeats cycles (0 means infinite).</div>
+              <div class="diwiz-matrix">
+                <div class="diwiz-matrix-row"><span>DLY</span><strong>${Number(p.delayBeforeOnMs || 0)} ms</strong></div>
+                <div class="diwiz-matrix-row"><span>ON</span><strong>${Number(p.activeDurationMs || 0)} ms</strong></div>
+                <div class="diwiz-matrix-row"><span>REP</span><strong>${Number(p.repeatCount || 0) === 0 ? "INF" : Number(p.repeatCount || 0)}</strong></div>
+              </div>
+            </div>
+          `;
+        }
+        if (stepKey === "set_primary" || stepKey === "rst_primary" || stepKey === "review") {
+          return `<div class="diwiz-concept-pane">${renderMissionPipeline(stepKey, draft, familyWord)}</div>`;
+        }
+        return "";
+      }
+
+      function renderDoSioWizardStep() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        const flow = wizardFlowForDraft();
+        if (w.step >= flow.length) w.step = flow.length - 1;
+        const stepKey = flow[w.step];
+        const family = String(w.family || "DO");
+        const familyWord = family === "DO" ? "DO" : "SIO";
+        const cardRef = state.cardRefById.get(Number(w.cardId)) || `${familyWord} ${Number(w.draft.index || 0)}`;
+        const outcome = doSioSetupOutcomeModel(stepKey, w.draft, familyWord);
+        const stepMetaMap = activeWizardStepMeta();
+        const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
+        wizardTitleEl.textContent = `Configure ${formatWizardCardLabel(family, cardRef, w.draft.index)}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
+        wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
+        renderWizardStepper(flow, w.step);
+        wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
+        wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
+        wizNextEl.disabled = false;
+
+        let editHtml = "";
+        if (stepKey === "intro") {
+          const channel = Number(w.draft.params.channel ?? 0);
+          editHtml = `
+            <div class="diwiz-title">${familyWord} Onboarding</div>
+            ${renderMissionPipeline(stepKey, w.draft, familyWord)}
+            <div class="diwiz-field"><label>Enabled</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            __WIZ_GUIDANCE__
+            ${family === "DO" ? `<div class="diwiz-note"><strong>Hardware Channel:</strong> GPIO ${channel}</div>` : ""}
+          `;
+        } else if (stepKey === "intro_outputs") {
+          editHtml = `
+            <div class="diwiz-title">${familyWord} Outputs for Cross-Card Logic</div>
+            <ul class="diwiz-list">
+              <li>Need mission command state? Use <strong>CMD</strong>.</li>
+              <li>Need final physical level after invert? Use <strong>PHYS</strong>.</li>
+              <li>Need one-scan trigger pulse? Use <strong>EDGE</strong>.</li>
+              <li>Need total mission-edge count? Use <strong>COUNT</strong>.</li>
+            </ul>
+          `;
+        } else if (stepKey === "invert") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("invert")} Signal Interpretation (SIG)</div>
+            <div class="diwiz-field"><select id="wiz_invert" aria-label="Signal interpretation (SIG)"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select></div>
+          `;
+        } else if (stepKey === "mode") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("gate")} Mission Mode</div>
+            <div class="diwiz-field"><select id="wiz_mode" aria-label="Mission mode"><option value="5" ${Number(w.draft.params.mode || 5) === 5 ? "selected" : ""}>${familyWord} Normal</option><option value="6" ${Number(w.draft.params.mode || 5) === 6 ? "selected" : ""}>${familyWord} Immediate</option><option value="7" ${Number(w.draft.params.mode || 5) === 7 ? "selected" : ""}>${familyWord} Gated</option></select></div>
+          `;
+        } else if (stepKey === "delay") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("debounce")} Delay Before ON</div>
+            <div class="diwiz-field"><input id="wiz_delay" type="number" min="0" step="10" value="${Number(w.draft.params.delayBeforeOnMs || 0)}" aria-label="Delay before ON in milliseconds" /></div>
+          `;
+        } else if (stepKey === "duration") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("output")} ON Duration</div>
+            <div class="diwiz-field"><input id="wiz_duration" type="number" min="0" step="10" value="${Number(w.draft.params.activeDurationMs || 0)}" aria-label="ON duration in milliseconds" /></div>
+          `;
+        } else if (stepKey === "repeat") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Repeat Count</div>
+            <div class="diwiz-field"><input id="wiz_repeat" type="number" min="0" step="1" value="${Number(w.draft.params.repeatCount || 0)}" aria-label="Repeat count (0 means infinite)" /></div>
+          `;
+        } else if (stepKey === "set_primary") {
+          editHtml = `${renderWizardConditionComposer("SET Condition", "wiz_set", w.draft.params.turnOnCondition, w.draft.id)}`;
+        } else if (stepKey === "rst_primary") {
+          editHtml = `${renderWizardConditionComposer("RST Condition", "wiz_rst", w.draft.params.turnOffCondition, w.draft.id)}`;
+        } else {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Review</div>
+            ${renderMissionPipeline(stepKey, w.draft, familyWord)}
+            <div class="diwiz-chipbar">
+              <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
+              <span class="badge text-bg-secondary">SIG:${w.draft.params.invert ? "INV" : "NORM"}</span>
+              <span class="badge text-bg-secondary">MODE:${missionModeShort(w.draft.params.mode)}</span>
+              <span class="badge text-bg-secondary">DLY:${debounceSecondsLabel(w.draft.params.delayBeforeOnMs)}</span>
+              <span class="badge text-bg-secondary">ON:${debounceSecondsLabel(w.draft.params.activeDurationMs)}</span>
+              <span class="badge text-bg-secondary">REP:${Number(w.draft.params.repeatCount || 0) === 0 ? "INF" : Number(w.draft.params.repeatCount || 0)}</span>
+              <span class="badge badge-formula text-bg-secondary">SET:${formatConditionBlock(w.draft.params.turnOnCondition)}</span>
+              <span class="badge badge-formula text-bg-secondary">RST:${formatConditionBlock(w.draft.params.turnOffCondition)}</span>
+            </div>
+            <div class="diwiz-note"><strong>Reboot required:</strong> saved ${familyWord} configuration takes effect only after reboot.</div>
+          `;
+        }
+
+        const conceptHtml = renderDoSioConceptInline(stepKey, w.draft, familyWord);
+        const guidanceText = guidanceParagraph(outcome);
+        const learningHtml = `<div class="diwiz-outcome">${guidanceText}</div>`;
+        const editBody = stepKey === "intro" ? editHtml.replace("__WIZ_GUIDANCE__", learningHtml) : editHtml;
+        const postEditGuidance = stepKey === "intro" ? "" : learningHtml;
+        wizardBodyEl.innerHTML = `
+          <div class="diwiz">
+            <section class="diwiz-edit">
+              ${editBody}
+              ${postEditGuidance}
+              ${conceptHtml}
+            </section>
+          </div>
+        `;
+
+        if (stepKey === "set_primary") {
+          const combinerEl = document.getElementById("wiz_set_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_set"));
+          toggleSecondaryClause("wiz_set");
+          attachWizardClauseHandlers("wiz_set_a");
+          attachWizardClauseHandlers("wiz_set_b");
+        } else if (stepKey === "rst_primary") {
+          const combinerEl = document.getElementById("wiz_rst_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_rst"));
+          toggleSecondaryClause("wiz_rst");
+          attachWizardClauseHandlers("wiz_rst_a");
+          attachWizardClauseHandlers("wiz_rst_b");
+        }
+      }
+
+      function syncDoSioWizardDraftFromStepFields() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return true;
+        const flow = wizardFlowForDraft();
+        const stepKey = flow[w.step] || "review";
+        if (stepKey === "intro") {
+          const enabledEl = document.getElementById("wiz_enabled");
+          if (enabledEl) w.draft.enabled = enabledEl.value === "true";
+          return true;
+        }
+        if (stepKey === "invert") {
+          const invertEl = document.getElementById("wiz_invert");
+          if (invertEl) w.draft.params.invert = invertEl.value === "true";
+          return true;
+        }
+        if (stepKey === "mode") {
+          const modeEl = document.getElementById("wiz_mode");
+          if (modeEl) w.draft.params.mode = Number(modeEl.value || 5);
+          return true;
+        }
+        if (stepKey === "delay") {
+          const delayEl = document.getElementById("wiz_delay");
+          if (delayEl) {
+            const n = Number(delayEl.value || 0);
+            w.draft.params.delayBeforeOnMs = Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+          }
+          return true;
+        }
+        if (stepKey === "duration") {
+          const durationEl = document.getElementById("wiz_duration");
+          if (durationEl) {
+            const n = Number(durationEl.value || 0);
+            w.draft.params.activeDurationMs = Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+          }
+          return true;
+        }
+        if (stepKey === "repeat") {
+          const repEl = document.getElementById("wiz_repeat");
+          if (repEl) {
+            const n = Number(repEl.value || 0);
+            w.draft.params.repeatCount = Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+          }
+          return true;
+        }
+        if (stepKey === "set_primary") {
+          const setComb = String(document.getElementById("wiz_set_comb")?.value || "NONE");
+          w.draft.params.turnOnCondition = {
+            combiner: WIZ_COMBINERS.includes(setComb) ? setComb : "NONE",
+            clauseA: wizardReadClause("wiz_set_a"),
+            clauseB: setComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOnCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_set_b"),
+          };
+          return true;
+        }
+        if (stepKey === "rst_primary") {
+          const rstComb = String(document.getElementById("wiz_rst_comb")?.value || "NONE");
+          w.draft.params.turnOffCondition = {
+            combiner: WIZ_COMBINERS.includes(rstComb) ? rstComb : "NONE",
+            clauseA: wizardReadClause("wiz_rst_a"),
+            clauseB: rstComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOffCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_rst_b"),
+          };
+          return true;
+        }
+        return true;
+      }
+
       function renderActiveWizardStep() {
         if (state.wizard.family === "AI") {
           renderAiWizardStep();
+          return;
+        }
+        if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
+          renderDoSioWizardStep();
           return;
         }
         renderDiWizardStep();
@@ -1746,6 +2298,9 @@
 
       function syncWizardDraftFromStepFields() {
         if (state.wizard.family === "AI") return syncAiWizardDraftFromStepFields();
+        if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
+          return syncDoSioWizardDraftFromStepFields();
+        }
         return syncDiWizardDraftFromStepFields();
       }
 
@@ -1792,6 +2347,62 @@
           index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
           params: JSON.parse(JSON.stringify(staticCard.params || {})),
         };
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
+        wizardOverlayEl.classList.add("show");
+        renderActiveWizardStep();
+      }
+
+      function openDoWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "DO") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.family = "DO";
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
+        state.wizard.draft.params.turnOnCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOnCondition,
+          state.wizard.draft.id,
+        );
+        state.wizard.draft.params.turnOffCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOffCondition,
+          state.wizard.draft.id,
+        );
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
+        wizardOverlayEl.classList.add("show");
+        renderActiveWizardStep();
+      }
+
+      function openSioWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "SIO") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.family = "SIO";
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
+        state.wizard.draft.params.turnOnCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOnCondition,
+          state.wizard.draft.id,
+        );
+        state.wizard.draft.params.turnOffCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOffCondition,
+          state.wizard.draft.id,
+        );
         state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
         wizardOverlayEl.classList.add("show");
         renderActiveWizardStep();
@@ -1875,6 +2486,52 @@
             ...state.staticCardsById.get(Number(w.cardId)),
             id: Number(w.draft.id),
             family: "AI",
+            enabled: !!w.draft.enabled,
+            params: JSON.parse(JSON.stringify(w.draft.params)),
+          });
+          hideActivity();
+          closeDiWizard();
+          await requestRebootAndReconnect(true);
+        } catch (err) {
+          hideActivity();
+          alert(`Save failed: ${String(err && err.message ? err.message : err)}`);
+        }
+      }
+
+      async function saveMissionWizardDraftAndReboot() {
+        const w = state.wizard;
+        const family = String(w?.family || "");
+        if (!w.open || !w.draft || !Number.isFinite(Number(w.cardId))) return;
+        if (family !== "DO" && family !== "SIO") return;
+        if (!confirm(`Save ${family} card changes and reboot now?`)) return;
+        const requestId = `live-${family.toLowerCase()}-edit-${Date.now()}`;
+        showActivity(`Saving ${family} card...`, "Validating and committing card changes.");
+        try {
+          const payload = {
+            requestId,
+            card: {
+              id: Number(w.draft.id),
+              family,
+              enabled: !!w.draft.enabled,
+              params: w.draft.params,
+            },
+          };
+          const resp = await fetch(`/api/v3/cards/${Number(w.cardId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify(payload),
+          });
+          let body = {};
+          try { body = await resp.json(); } catch (_) { body = {}; }
+          if (!resp.ok || body?.ok === false) {
+            const msg = String(body?.error?.message || body?.message || body?.reason || `HTTP ${resp.status}`);
+            throw new Error(msg);
+          }
+          state.staticCardsById.set(Number(w.cardId), {
+            ...state.staticCardsById.get(Number(w.cardId)),
+            id: Number(w.draft.id),
+            family,
             enabled: !!w.draft.enabled,
             params: JSON.parse(JSON.stringify(w.draft.params)),
           });
@@ -1983,6 +2640,10 @@
       async function saveWizardDraftAndReboot() {
         if (state.wizard.family === "AI") {
           await saveAiWizardDraftAndReboot();
+          return;
+        }
+        if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
+          await saveMissionWizardDraftAndReboot();
           return;
         }
         await saveDiWizardDraftAndReboot();
@@ -2209,6 +2870,16 @@
         if (action === "open-ai-wizard") {
           const id = Number(target.getAttribute("data-card-id"));
           if (Number.isFinite(id)) openAiWizard(id);
+          return;
+        }
+        if (action === "open-do-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openDoWizard(id);
+          return;
+        }
+        if (action === "open-sio-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openSioWizard(id);
           return;
         }
       });
