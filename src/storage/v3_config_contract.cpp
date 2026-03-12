@@ -142,8 +142,8 @@ void initRtcCard(CardConfig& card, uint8_t id, uint8_t minuteOffset) {
 void makeDefaultSystemConfig(SystemConfig& cfg) {
   cfg = {};
   cfg.schemaVersion = kConfigSchemaVersion;
-  cfg.scanPeriodMs = kMinScanIntervalMs;
-  cfg.debugModeEnabled = false;
+  cfg.scanPeriodMs = 500;
+  cfg.debugModeEnabled = true;
   strncpy(cfg.wifi.backupAccessNetwork.ssid, "advancedtimer",
           sizeof(cfg.wifi.backupAccessNetwork.ssid) - 1);
   strncpy(cfg.wifi.backupAccessNetwork.password, "12345678",

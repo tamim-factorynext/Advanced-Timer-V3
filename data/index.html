@@ -122,15 +122,17 @@
       .wizard-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2, 10, 14, 0.66); z-index: 10000; padding: 16px; }
       .wizard-overlay.show { display: flex; }
       .wizard-panel { width: min(860px, 96vw); max-height: 92vh; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-bg); color: var(--text-0); box-shadow: var(--shadow); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
-      .wizard-head { display: grid; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-      .wizard-title { font-weight: 800; color: var(--accent-2); font-size: 20px; }
-      .wizard-step { font-size: 13px; color: var(--text-2); font-weight: 600; }
-      .wizard-subtitle { font-size: 13px; color: var(--text-2); }
+      .wizard-head { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .wizard-title { font-weight: 700; color: var(--accent); font-size: 17px; }
+      .wizard-step { display: none; }
+      .wizard-subtitle { font-size: 14px; font-weight: 400; color: var(--accent-2); line-height: 1.3; }
       .wizard-stepper { display: flex; gap: 6px; flex-wrap: wrap; }
-      .wiz-pill { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 4px 8px; }
+      .wiz-pill { border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 5px 9px; display: inline-flex; align-items: center; gap: 5px; }
+      .wiz-pill small { font-size: 10px; color: var(--text-2); font-weight: 600; }
       .wiz-pill.active { border-color: var(--accent-2); color: var(--accent-2); background: rgba(125, 211, 252, 0.12); }
+      .wiz-pill.active small { color: var(--accent-2); }
       .wiz-pill.done { border-color: rgba(74, 222, 128, 0.35); color: var(--ok); background: rgba(74, 222, 128, 0.12); }
-      .wizard-body { padding: 8px 12px; display: grid; gap: 8px; overflow: auto; min-height: 0; }
+      .wizard-body { padding: 10px 14px; display: grid; gap: 10px; overflow: auto; min-height: 0; }
       .wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .wizard-field { display: grid; gap: 4px; }
       .wizard-field label { font-size: 12px; color: var(--text-2); }
@@ -158,7 +160,7 @@
       .lucide { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
       .lucide.lg { width: 16px; height: 16px; }
       .diwiz { display: grid; gap: 10px; grid-template-columns: 1fr; }
-      .diwiz-edit, .diwiz-concept { border: 0; border-radius: 0; background: transparent; padding: 0; display: grid; gap: 8px; }
+      .diwiz-edit, .diwiz-concept { border: 0; border-radius: 0; background: transparent; padding: 0; display: grid; gap: 5px; }
       .diwiz-title { font-size: 12px; font-weight: 700; color: var(--accent-2); display: flex; align-items: center; gap: 5px; }
       .diwiz-sub { font-size: 12px; color: var(--text-2); line-height: 1.35; }
       .diwiz-flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -172,7 +174,7 @@
       .diwiz-field input, .diwiz-field select { width: 100%; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--node-bg) 86%, var(--chip)); color: var(--text-0); border-radius: 8px; padding: 7px 8px; }
       .diwiz-note { font-size: 12px; color: var(--text-2); }
       .diwiz-note strong { color: var(--accent-2); }
-      .diwiz-outcome { border: 0; border-top: 1px dashed var(--line); border-radius: 0; background: transparent; font-size: 12px; color: var(--text-0); padding: 8px 0 0; line-height: 1.35; }
+      .diwiz-outcome { border: 0; border-radius: 0; background: transparent; font-size: 12px; color: var(--text-0); padding: 0; line-height: 1.35; }
       .diwiz-concept-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
       .diwiz-tab { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--text-2); font-size: 11px; font-weight: 700; padding: 4px 8px; cursor: pointer; }
       .diwiz-tab.active { border-color: var(--accent-2); color: var(--accent-2); background: rgba(125, 211, 252, 0.12); }
@@ -186,6 +188,9 @@
       .diwiz-term strong { color: var(--accent-2); }
       .diwiz-list { margin: 0; padding-left: 16px; color: var(--text-2); font-size: 12px; display: grid; gap: 4px; }
       .diwiz-list strong { color: var(--text-0); }
+      .wiz-advanced { border: 1px dashed var(--line); border-radius: 8px; padding: 0 8px 8px; }
+      .wiz-advanced > summary { list-style: none; cursor: pointer; padding: 7px 0; color: var(--text-2); font-size: 12px; font-weight: 700; }
+      .wiz-advanced > summary::-webkit-details-marker { display: none; }
       .btn { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; background: var(--chip); color: var(--text-0); }
       .btn:hover { background: var(--bg-2); }
       .btn-primary { border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
@@ -506,8 +511,8 @@
         const trig = edgeModeLongLabel(params?.edgeMode);
         const deb = debounceSecondsLabel(params?.debounceMs);
         const invText = inv
-          ? "Signal is inverted before condition and edge evaluation."
-          : "Signal is used as-is before condition and edge evaluation.";
+          ? "Normalized signal is flipped before SET/RST, edge, and count evaluation."
+          : "Normalized signal matches the input level before SET/RST, edge, and count evaluation.";
         const debText = Number(params?.debounceMs || 0) > 0
           ? `Input must stay stable for ${deb} before edge is qualified.`
           : "Edge qualification is immediate (no debounce delay).";
@@ -897,17 +902,17 @@
 
       const DI_TERM_DICTIONARY = {
         CMD: "Qualified logical state after DI processing.",
-        PHYS: "Effective physical state after source selection and invert.",
+        PHYS: "Final HIGH/LOW state derived after SIG normalization (NORM/INV).",
         EDGE: "One-scan pulse when a qualified edge is accepted.",
         COUNT: "Counter incremented on each qualified edge.",
       };
 
       const DI_CONCEPT_VISUAL_MODEL = {
-        invert: { title: "Invert", description: "NORM keeps signal as-is; INV flips it before all logic checks." },
-        edge: { title: "Edge Mode", description: "RISE/FALL/CHG selects which transition can qualify COUNT." },
-        debounce: { title: "Debounce", description: "Input must remain stable for DEB ms before the edge is accepted." },
-        gate: { title: "SET/RST Gate", description: "Reset is dominant. set/reset decide whether qualification is allowed." },
-        outputs: { title: "DI Outputs", description: "Runtime outputs are reusable logic sources for other cards." },
+        invert: { title: "Invert", description: "NORM keeps the normalized signal equal to input; INV flips it before downstream logic." },
+        edge: { title: "Edge Mode", description: "RISE/FALL/CHG decides which transition can increment COUNT." },
+        debounce: { title: "Debounce", description: "Signal must stay stable for DEB ms before the edge is accepted." },
+        gate: { title: "SET/RST Gate", description: "RST has priority. SET/RST decides whether edge qualification is allowed." },
+        outputs: { title: "DI Outputs", description: "These runtime outputs can be reused in other cards." },
       };
 
       function lucideIcon(name, extraClass = "") {
@@ -929,12 +934,27 @@
         return state.wizard.family === "AI" ? WIZ_STEP_META_AI : WIZ_STEP_META_DI;
       }
 
+      function formatWizardCardLabel(family, cardRef, fallbackIndex) {
+        const ref = String(cardRef || "").trim();
+        const diMatch = ref.match(/^DI(\d+)$/i);
+        if (family === "DI" && diMatch) return `Digital Input ${Number(diMatch[1])}`;
+        const aiMatch = ref.match(/^AI(\d+)$/i);
+        if (family === "AI" && aiMatch) return `Analog Input ${Number(aiMatch[1])}`;
+        if (family === "DI" && Number.isFinite(Number(fallbackIndex))) {
+          return `Digital Input ${Number(fallbackIndex)}`;
+        }
+        if (family === "AI" && Number.isFinite(Number(fallbackIndex))) {
+          return `Analog Input ${Number(fallbackIndex)}`;
+        }
+        return ref || `${family} Card`;
+      }
+
       function renderWizardStepper(flow, activeIdx) {
         const stepMetaMap = activeWizardStepMeta();
         wizardStepperEl.innerHTML = flow.map((stepKey, idx) => {
           const meta = stepMetaMap[stepKey] || { short: `${idx + 1}`, name: stepKey };
           const cls = idx === activeIdx ? "wiz-pill active" : (idx < activeIdx ? "wiz-pill done" : "wiz-pill");
-          return `<span class="${cls}" title="${meta.name}">${meta.short}</span>`;
+          return `<span class="${cls}" title="${meta.name}"><span>${meta.short}</span><small>${meta.name}</small></span>`;
         }).join("");
       }
 
@@ -957,6 +977,18 @@
         if (rstNow !== rstOld) changes.push(`RST:${rstNow}`);
         return changes;
       }
+
+          function guidanceParagraph(outcome) {
+            const leadRaw = String(outcome?.what || "")
+              .replace(/^What this field does:\s*/i, "")
+              .replace(/^What this section does:\s*/i, "")
+              .trim();
+            const detailRaw = String(outcome?.withConfig || "")
+              .replace(/^With this config,\s*/i, "")
+              .trim();
+            if (leadRaw && detailRaw) return `${leadRaw} ${detailRaw}`;
+            return leadRaw || detailRaw || "";
+          }
 
       function wizardFlowForDraft() {
         if (state.wizard.family === "AI") {
@@ -1054,10 +1086,10 @@
         return `
           <div class="diwiz-concept-pane">
             <div class="diwiz-title">${DI_CONCEPT_VISUAL_MODEL.outputs.title}</div>
-            <div class="diwiz-sub">Choose output by intent: state, physical level, one-shot pulse, or accumulated count.</div>
+            <div class="diwiz-sub">Choose output by intent: state logic, final PHYS level (after SIG), one-shot pulse, or accumulated count.</div>
             <div class="diwiz-matrix">
               <div class="diwiz-matrix-row"><span><strong>CMD</strong>: logical ON/OFF state</span><strong>Use for state rules</strong></div>
-              <div class="diwiz-matrix-row"><span><strong>PHYS</strong>: effective HIGH/LOW level</span><strong>Use for pin-level behavior</strong></div>
+              <div class="diwiz-matrix-row"><span><strong>PHYS</strong>: HIGH/LOW after SIG normalization</span><strong>Use for final pin-level behavior</strong></div>
               <div class="diwiz-matrix-row"><span><strong>EDGE</strong>: one-scan trigger pulse</span><strong>Use for one-shot actions</strong></div>
               <div class="diwiz-matrix-row"><span><strong>COUNT</strong>: qualified edge counter</span><strong>Use for pulse totals</strong></div>
             </div>
@@ -1069,56 +1101,56 @@
         const p = draft.params || {};
         if (stepKey === "intro") {
           return {
-            what: "What this field does: enable/disable whether this DI participates in runtime logic.",
+            what: "What this field does: turns this DI card ON or OFF for runtime processing.",
             withConfig: draft.enabled
-              ? "With this config, DI is active and can evaluate conditions and count qualified edges."
-              : "With this config, DI is ignored at runtime until re-enabled.",
+              ? "With this config, DI reads input, checks SET/RST, and can count qualified edges."
+              : "With this config, DI is skipped at runtime until you enable it again.",
           };
         }
         if (stepKey === "intro_outputs") {
           return {
-            what: "What this section does: explains which DI outputs are used as logic sources by other cards.",
-            withConfig: "With this understanding, you can select CMD/PHYS/EDGE/COUNT correctly when building SET/RST rules in other cards.",
+            what: "What this section does: shows which DI output to use in other cards.",
+            withConfig: "With this understanding, you can pick CMD, PHYS, EDGE, or COUNT correctly. PHYS HIGH/LOW is determined after SIG normalization (NORM/INV).",
           };
         }
         if (stepKey === "invert") {
           return {
-            what: "What this field does: chooses whether signal polarity is preserved or inverted before all logic checks.",
+            what: "What this field does: selects whether DI keeps the normalized signal as input (NORM) or flips it (INV).",
             withConfig: p.invert
-              ? "With this config, a physical HIGH is treated as LOW (and LOW as HIGH) for SET/RST and edge qualification."
-              : "With this config, physical signal is used directly before SET/RST and edge qualification.",
+              ? "With this config, INV is active, so input HIGH is treated as LOW and input LOW as HIGH before SET/RST, edge, and count logic."
+              : "With this config, NORM is active, so the normalized signal matches the input level before SET/RST, edge, and count logic.",
           };
         }
         if (stepKey === "edge") {
           return {
-            what: "What this field does: selects which transition is accepted as a qualifying edge.",
-            withConfig: `With this config, only ${edgeModeLongLabel(p.edgeMode)} can produce EDGE pulse and increment COUNT (after gate + debounce).`,
+            what: "What this field does: chooses which signal transition DI should count.",
+            withConfig: `With this config, only ${edgeModeLongLabel(p.edgeMode)} can fire EDGE and increment COUNT (after SET/RST gate and debounce).`,
           };
         }
         if (stepKey === "debounce") {
           const ms = Number(p.debounceMs || 0);
           return {
-            what: "What this field does: defines how long the signal must stay stable before edge acceptance.",
+            what: "What this field does: sets how long the signal must stay stable before DI accepts an edge.",
             withConfig: ms > 0
-              ? `With this config, signal must remain stable for ${ms} ms before the selected edge qualifies.`
-              : "With this config, selected edge qualifies immediately with no debounce delay.",
+              ? `With this config, DI waits ${ms} ms of stable signal before accepting the selected edge (use 10 ms steps).`
+              : "With this config, DI accepts the selected edge immediately (no debounce delay).",
           };
         }
         if (stepKey === "set_primary") {
           return {
-            what: "What this field does: defines when DI is allowed to turn ON and process edge qualification.",
-            withConfig: `With this config, SET evaluates as: ${formatConditionBlock(p.turnOnCondition)}.`,
+            what: "What this field does: defines when DI is allowed to qualify edges.",
+            withConfig: `With this config, SET logic is: ${formatConditionBlock(p.turnOnCondition)}.`,
           };
         }
         if (stepKey === "rst_primary") {
           return {
-            what: "What this field does: defines when DI is forced OFF and counting is reset.",
-            withConfig: `With this config, RST evaluates as: ${formatConditionBlock(p.turnOffCondition)}. Reset remains dominant when true.`,
+            what: "What this field does: defines when DI is forced OFF and COUNT is reset to zero.",
+            withConfig: `With this config, RST logic is: ${formatConditionBlock(p.turnOffCondition)}. If RST is true, it overrides SET in that scan.`,
           };
         }
         return {
-          what: "What this section does: summarizes deterministic DI behavior after save and reboot.",
-          withConfig: "With this config, behavior changes apply only after reboot. This wizard intentionally does not consume live runtime data.",
+          what: "What this section does: gives you a final DI behavior summary.",
+          withConfig: "Save writes config now, but runtime behavior changes only after reboot.",
         };
       }
 
@@ -1143,7 +1175,7 @@
           return `
             <div class="diwiz-concept-pane">
               <div class="diwiz-title">DI Core Concepts</div>
-              <div class="diwiz-sub">DI flow: interpret signal -> qualify edge -> apply gate -> publish outputs.</div>
+              <div class="diwiz-sub">DI flow: read signal -> check edge/debounce -> apply SET/RST gate -> publish outputs.</div>
               ${renderGateVisual()}
               <div class="diwiz-chipbar">
                 <span class="diwiz-term"><strong>CMD</strong> ${DI_TERM_DICTIONARY.CMD}</span>
@@ -1182,7 +1214,7 @@
             <label>Combiner</label>
             <select id="${rootPrefix}_comb">${wizardCombinerOptions(safe.combiner)}</select>
           </div>
-          <div class="diwiz-note"><strong>What this field does:</strong> choose primary-only logic or combine two clauses with AND/OR.</div>
+          <div class="diwiz-note">Choose primary-only logic, or add a secondary clause and combine them with AND/OR.</div>
           <div class="diwiz-row">
             <div class="diwiz-field"><label>Primary Source</label><select id="${rootPrefix}_a_src">${sourceOptionsA}</select></div>
             <div class="diwiz-field"><label>Primary Operator</label><select id="${rootPrefix}_a_op">${wizardOperatorOptions(a.operator)}</select></div>
@@ -1191,13 +1223,16 @@
             <div id="${rootPrefix}_a_thr_card_wrap" class="diwiz-field"><label>Primary Threshold Card</label><select id="${rootPrefix}_a_thr_card">${thresholdCardA}</select></div>
           </div>
           <div id="${rootPrefix}_secondary_wrap" class="${secondaryVisible ? "" : "wizard-hidden"}">
-            <div class="diwiz-row">
-              <div class="diwiz-field"><label>Secondary Source</label><select id="${rootPrefix}_b_src">${sourceOptionsB}</select></div>
-              <div class="diwiz-field"><label>Secondary Operator</label><select id="${rootPrefix}_b_op">${wizardOperatorOptions(b.operator)}</select></div>
-              <div class="diwiz-field"><label>Secondary Threshold Source</label><select id="${rootPrefix}_b_thr_mode"><option value="CONST" ${modeBConst}>Constant</option><option value="CARD" ${modeBCard}>Card</option></select></div>
-              <div id="${rootPrefix}_b_thr_val_wrap" class="diwiz-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
-              <div id="${rootPrefix}_b_thr_card_wrap" class="diwiz-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
-            </div>
+            <details class="wiz-advanced" ${secondaryVisible ? "open" : ""}>
+              <summary>Secondary Clause (AND/OR)</summary>
+              <div class="diwiz-row">
+                <div class="diwiz-field"><label>Secondary Source</label><select id="${rootPrefix}_b_src">${sourceOptionsB}</select></div>
+                <div class="diwiz-field"><label>Secondary Operator</label><select id="${rootPrefix}_b_op">${wizardOperatorOptions(b.operator)}</select></div>
+                <div class="diwiz-field"><label>Secondary Threshold Source</label><select id="${rootPrefix}_b_thr_mode"><option value="CONST" ${modeBConst}>Constant</option><option value="CARD" ${modeBCard}>Card</option></select></div>
+                <div id="${rootPrefix}_b_thr_val_wrap" class="diwiz-field"><label>Secondary Threshold Value</label><input id="${rootPrefix}_b_thr_val" type="number" value="${Number(b.thresholdValue || 0)}" /></div>
+                <div id="${rootPrefix}_b_thr_card_wrap" class="diwiz-field"><label>Secondary Threshold Card</label><select id="${rootPrefix}_b_thr_card">${thresholdCardB}</select></div>
+              </div>
+            </details>
           </div>
         `;
       }
@@ -1205,7 +1240,12 @@
       function toggleSecondaryClause(rootPrefix) {
         const wrap = document.getElementById(`${rootPrefix}_secondary_wrap`);
         const combiner = String(document.getElementById(`${rootPrefix}_comb`)?.value || "NONE");
-        if (wrap) wrap.classList.toggle("wizard-hidden", combiner === "NONE");
+        if (wrap) {
+          const show = combiner !== "NONE";
+          wrap.classList.toggle("wizard-hidden", !show);
+          const details = wrap.querySelector("details");
+          if (details && show) details.open = true;
+        }
       }
 
       function attachWizardClauseHandlers(prefix) {
@@ -1231,7 +1271,7 @@
         const outcome = diSetupOutcomeModel(stepKey, w.draft);
         const stepMetaMap = activeWizardStepMeta();
         const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
-        wizardTitleEl.textContent = `DI Card Edit - ${cardRef}`;
+        wizardTitleEl.textContent = `Configure ${formatWizardCardLabel("DI", cardRef, w.draft.index)}`;
         wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
         wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
         renderWizardStepper(flow, w.step);
@@ -1246,53 +1286,48 @@
             <div class="diwiz-title">DI Onboarding</div>
             ${renderDiPipeline(stepKey, w.draft.params)}
             <div class="diwiz-field"><label>Enabled</label><select id="wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            __WIZ_GUIDANCE__
             <div class="diwiz-row">
               <div class="diwiz-note"><strong>Card</strong>: ${cardRef}</div>
               <div class="diwiz-note"><strong>Hardware Channel</strong>: GPIO ${channel}</div>
             </div>
             <ul class="diwiz-list">
-              <li><strong>Gating:</strong> SET controls whether qualification is allowed.</li>
-              <li><strong>Reset logic:</strong> reset=true is dominant and clears COUNT to zero.</li>
+              <li><strong>SET gate:</strong> DI can count only when SET is true.</li>
+              <li><strong>Reset priority:</strong> if RST is true, it overrides SET and resets COUNT to 0.</li>
             </ul>
           `;
         } else if (stepKey === "intro_outputs") {
           editHtml = `
             <div class="diwiz-title">DI Outputs for Cross-Card Logic</div>
-            ${renderDiPipeline(stepKey, w.draft.params)}
             <ul class="diwiz-list">
-              <li>If you need <strong>state logic</strong> (ON/OFF), choose <strong>CMD</strong>.</li>
-              <li>If you need <strong>effective pin level</strong> (HIGH/LOW), choose <strong>PHYS</strong>.</li>
-              <li>If you need a <strong>single trigger pulse</strong>, choose <strong>EDGE</strong>.</li>
-              <li>If you need <strong>pulse totals</strong> for compare rules, choose <strong>COUNT</strong>.</li>
+              <li>Need ON/OFF logic? Use <strong>CMD</strong>.</li>
+              <li>Need final physical level (HIGH/LOW)? Use <strong>PHYS</strong> (computed after SIG NORM/INV).</li>
+              <li>Need one-scan trigger pulse? Use <strong>EDGE</strong>.</li>
+              <li>Need total pulse count? Use <strong>COUNT</strong> (range 0..1,000,000, then wraps to 0).</li>
             </ul>
           `;
         } else if (stepKey === "invert") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("invert")} Signal Interpretation (SIG)</div>
-            ${renderDiPipeline(stepKey, w.draft.params)}
-            <div class="diwiz-field"><label>Signal (SIG)</label><select id="wiz_invert"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select></div>
+            <div class="diwiz-field"><select id="wiz_invert" aria-label="Signal interpretation (SIG)"><option value="false" ${!w.draft.params.invert ? "selected" : ""}>NORM</option><option value="true" ${w.draft.params.invert ? "selected" : ""}>INV</option></select></div>
           `;
         } else if (stepKey === "edge") {
           const edgeMode = Number(w.draft.params.edgeMode || 0);
           editHtml = `
             <div class="diwiz-title">${lucideIcon("edge")} Edge Qualification (TRG)</div>
-            ${renderDiPipeline(stepKey, w.draft.params)}
-            <div class="diwiz-field"><label>Trigger (TRG)</label><select id="wiz_edge"><option value="0" ${edgeMode === 0 ? "selected" : ""}>RISE</option><option value="1" ${edgeMode === 1 ? "selected" : ""}>FALL</option><option value="2" ${edgeMode === 2 ? "selected" : ""}>CHG</option></select></div>
+            <div class="diwiz-field"><select id="wiz_edge" aria-label="Trigger mode (TRG)"><option value="0" ${edgeMode === 0 ? "selected" : ""}>RISE</option><option value="1" ${edgeMode === 1 ? "selected" : ""}>FALL</option><option value="2" ${edgeMode === 2 ? "selected" : ""}>CHG</option></select></div>
           `;
         } else if (stepKey === "debounce") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("debounce")} Debounce Window (DEB)</div>
-            ${renderDiPipeline(stepKey, w.draft.params)}
-            <div class="diwiz-field"><label>Debounce (ms)</label><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" /></div>
+            <div class="diwiz-field"><input id="wiz_db" type="number" min="0" step="10" value="${Number(w.draft.params.debounceMs || 0)}" aria-label="Debounce window in milliseconds (DEB)" /></div>
           `;
         } else if (stepKey === "set_primary") {
           editHtml = `
-            ${renderDiPipeline(stepKey, w.draft.params)}
             ${renderWizardConditionComposer("SET Condition", "wiz_set", w.draft.params.turnOnCondition, w.draft.id)}
           `;
         } else if (stepKey === "rst_primary") {
           editHtml = `
-            ${renderDiPipeline(stepKey, w.draft.params)}
             ${renderWizardConditionComposer("RST Condition", "wiz_rst", w.draft.params.turnOffCondition, w.draft.id)}
           `;
         } else {
@@ -1318,13 +1353,22 @@
           `;
         }
 
+        const conceptHtml = renderStepConceptInline(stepKey, w.draft);
+        const guidanceText = guidanceParagraph(outcome);
+        const learningHtml = `
+          <div class="diwiz-outcome">${guidanceText}</div>
+        `;
+        const editBody = stepKey === "intro"
+          ? editHtml.replace("__WIZ_GUIDANCE__", learningHtml)
+          : editHtml;
+        const postEditGuidance = stepKey === "intro" ? "" : learningHtml;
+
         wizardBodyEl.innerHTML = `
           <div class="diwiz">
             <section class="diwiz-edit">
-              ${editHtml}
-              ${renderStepConceptInline(stepKey, w.draft)}
-              <div class="diwiz-note"><strong>${outcome.what}</strong></div>
-              <div class="diwiz-outcome">${outcome.withConfig}</div>
+              ${editBody}
+              ${postEditGuidance}
+              ${conceptHtml}
             </section>
           </div>
         `;
@@ -1470,45 +1514,45 @@
         const p = draft.params || {};
         if (stepKey === "intro") {
           return {
-            what: "What this field does: enable/disable whether this AI participates in runtime sampling.",
+            what: "What this field does: turns this AI card ON or OFF for runtime sampling.",
             withConfig: draft.enabled
-              ? "With this config, AI card samples input, scales value, applies smoothing, and publishes liveValue."
-              : "With this config, AI card is disabled at runtime until re-enabled.",
+              ? "With this config, AI reads input, clamps range, scales output, smooths response, and publishes liveValue."
+              : "With this config, AI is skipped at runtime until you enable it again.",
           };
         }
         if (stepKey === "intro_outputs") {
           return {
-            what: "What this section does: explains where AI liveValue is used in cross-card numeric comparisons.",
-            withConfig: "With this understanding, you can use AI liveValue as threshold source in compare-based rules.",
+            what: "What this section does: shows how AI liveValue is used by other cards.",
+            withConfig: "Use AI liveValue when you need a changing numeric threshold; use a constant when the limit should stay fixed.",
           };
         }
         if (stepKey === "channel") {
           return {
-            what: "What this field does: selects which analog hardware channel is sampled.",
-            withConfig: `With this config, AI reads channel ${Number(p.channel || 0)} each scan cycle.`,
+            what: "What this field does: picks which analog channel this card reads.",
+            withConfig: `With this config, AI samples channel ${Number(p.channel || 0)} every scan.`,
           };
         }
         if (stepKey === "in_range") {
           return {
-            what: "What this field does: defines raw input bounds before scaling.",
-            withConfig: `With this config, raw samples are clamped to ${Number(p.inputMin || 0)}..${Number(p.inputMax || 0)}.`,
+            what: "What this field does: sets the raw input window before scaling.",
+            withConfig: `With this config, values below ${Number(p.inputMin || 0)} are treated as ${Number(p.inputMin || 0)}, and values above ${Number(p.inputMax || 0)} are treated as ${Number(p.inputMax || 0)}.`,
           };
         }
         if (stepKey === "out_range") {
           return {
-            what: "What this field does: defines output bounds after scaling.",
-            withConfig: `With this config, scaled output maps to ${formatCentiValue(p.outputMin || 0)}..${formatCentiValue(p.outputMax || 0)}.`,
+            what: "What this field does: sets the scaled output range that AI publishes.",
+            withConfig: `With this config, AI maps output to ${formatCentiValue(p.outputMin || 0)}..${formatCentiValue(p.outputMax || 0)}. Use non-negative values only, and keep within 0.00..1,000,000.00.`,
           };
         }
         if (stepKey === "smoothing") {
           return {
-            what: "What this field does: controls response speed of output stabilization.",
-            withConfig: `With this config, smoothing uses ${Number(p.smoothingFactorPct || 0)}% response speed.`,
+            what: "What this field does: controls how fast AI reacts to input changes.",
+            withConfig: `With this config, smoothing is ${Number(p.smoothingFactorPct || 0)}%. Higher % reacts faster; lower % is steadier.`,
           };
         }
         return {
-          what: "What this section does: summarizes deterministic AI behavior after save and reboot.",
-          withConfig: "With this config, AI behavior changes apply only after reboot. This wizard intentionally does not consume live runtime data.",
+          what: "What this section does: gives you a final AI behavior summary.",
+          withConfig: "Save writes config now, but runtime behavior changes only after reboot.",
         };
       }
 
@@ -1527,7 +1571,7 @@
           return `
             <div class="diwiz-concept-pane">
               <div class="diwiz-title">AI Output Usage</div>
-              <div class="diwiz-sub">AI publishes numeric <strong>liveValue</strong> for compare-driven logic in other cards.</div>
+              <div class="diwiz-sub">AI publishes numeric <strong>liveValue</strong> for compare-based logic in other cards.</div>
               <div class="diwiz-matrix">
                 <div class="diwiz-matrix-row"><span>Need numeric threshold from sensor</span><strong>Use AI liveValue</strong></div>
                 <div class="diwiz-matrix-row"><span>Need fixed limit</span><strong>Use constant threshold</strong></div>
@@ -1550,7 +1594,7 @@
         const outcome = aiSetupOutcomeModel(stepKey, w.draft);
         const stepMetaMap = activeWizardStepMeta();
         const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
-        wizardTitleEl.textContent = `AI Card Edit - ${cardRef}`;
+        wizardTitleEl.textContent = `Configure ${formatWizardCardLabel("AI", cardRef, w.draft.index)}`;
         wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
         wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
         renderWizardStepper(flow, w.step);
@@ -1564,31 +1608,30 @@
             <div class="diwiz-title">AI Onboarding</div>
             ${renderAiPipeline(stepKey)}
             <div class="diwiz-field"><label>Enabled</label><select id="ai_wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            __WIZ_GUIDANCE__
             <ul class="diwiz-list">
-              <li><strong>Sampling:</strong> reads configured analog channel every scan.</li>
-              <li><strong>Scaling:</strong> clamps raw input to input range, then maps to output range.</li>
-              <li><strong>Smoothing:</strong> response speed controls stabilization of published liveValue.</li>
+              <li><strong>Sampling:</strong> AI reads the selected analog channel every scan.</li>
+              <li><strong>Range mapping:</strong> input is clamped, then mapped to your output range.</li>
+              <li><strong>Smoothing:</strong> higher % responds faster, lower % is steadier.</li>
             </ul>
           `;
         } else if (stepKey === "intro_outputs") {
           editHtml = `
             <div class="diwiz-title">AI Output for Cross-Card Logic</div>
-            ${renderAiPipeline(stepKey)}
             <ul class="diwiz-list">
-              <li>AI provides numeric <strong>liveValue</strong> for compare operators.</li>
-              <li>Use AI liveValue as threshold source when you need dynamic limits.</li>
+              <li>AI publishes numeric <strong>liveValue</strong> for compare rules.</li>
+              <li>Use AI as threshold source when the limit should move with sensor value.</li>
+              <li>Numeric limits: non-negative only, max supported value is <strong>1,000,000.00</strong>.</li>
             </ul>
           `;
         } else if (stepKey === "channel") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("signal")} Input Channel</div>
-            ${renderAiPipeline(stepKey)}
-            <div class="diwiz-field"><label>Analog Channel</label><input id="ai_wiz_channel" type="number" min="0" step="1" value="${Number(w.draft.params.channel || 0)}" /></div>
+            <div class="diwiz-field"><input id="ai_wiz_channel" type="number" min="0" step="1" value="${Number(w.draft.params.channel || 0)}" aria-label="Analog input channel" /></div>
           `;
         } else if (stepKey === "in_range") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("gate")} Input Range (Raw)</div>
-            ${renderAiPipeline(stepKey)}
             <div class="diwiz-row">
               <div class="diwiz-field"><label>Input Min</label><input id="ai_wiz_in_min" type="number" min="0" step="1" value="${Number(w.draft.params.inputMin || 0)}" /></div>
               <div class="diwiz-field"><label>Input Max</label><input id="ai_wiz_in_max" type="number" min="0" step="1" value="${Number(w.draft.params.inputMax || 0)}" /></div>
@@ -1597,7 +1640,6 @@
         } else if (stepKey === "out_range") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("output")} Output Range (Scaled)</div>
-            ${renderAiPipeline(stepKey)}
             <div class="diwiz-row">
               <div class="diwiz-field"><label>Output Min</label><input id="ai_wiz_out_min" type="number" min="0" step="0.01" value="${formatCentiValue(w.draft.params.outputMin || 0)}" /></div>
               <div class="diwiz-field"><label>Output Max</label><input id="ai_wiz_out_max" type="number" min="0" step="0.01" value="${formatCentiValue(w.draft.params.outputMax || 0)}" /></div>
@@ -1606,8 +1648,7 @@
         } else if (stepKey === "smoothing") {
           editHtml = `
             <div class="diwiz-title">${lucideIcon("debounce")} Response Speed</div>
-            ${renderAiPipeline(stepKey)}
-            <div class="diwiz-field"><label>Smoothing Factor (%)</label><input id="ai_wiz_smooth" type="number" min="0" max="100" step="1" value="${Number(w.draft.params.smoothingFactorPct || 0)}" /></div>
+            <div class="diwiz-field"><input id="ai_wiz_smooth" type="number" min="0" max="100" step="1" value="${Number(w.draft.params.smoothingFactorPct || 0)}" aria-label="Smoothing factor percent" /></div>
           `;
         } else {
           editHtml = `
@@ -1624,13 +1665,22 @@
           `;
         }
 
+        const conceptHtml = renderAiConceptInline(stepKey, w.draft);
+        const guidanceText = guidanceParagraph(outcome);
+        const learningHtml = `
+          <div class="diwiz-outcome">${guidanceText}</div>
+        `;
+        const editBody = stepKey === "intro"
+          ? editHtml.replace("__WIZ_GUIDANCE__", learningHtml)
+          : editHtml;
+        const postEditGuidance = stepKey === "intro" ? "" : learningHtml;
+
         wizardBodyEl.innerHTML = `
           <div class="diwiz">
             <section class="diwiz-edit">
-              ${editHtml}
-              ${renderAiConceptInline(stepKey, w.draft)}
-              <div class="diwiz-note"><strong>${outcome.what}</strong></div>
-              <div class="diwiz-outcome">${outcome.withConfig}</div>
+              ${editBody}
+              ${postEditGuidance}
+              ${conceptHtml}
             </section>
           </div>
         `;
@@ -2214,4 +2264,3 @@
     </script>
   </body>
 </html>
-

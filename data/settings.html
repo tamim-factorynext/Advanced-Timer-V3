@@ -335,7 +335,7 @@
         }
 
         function syncScanPeriodLabel() {
-          const seconds = Number(fScanSec.value || 0.01);
+          const seconds = Number(fScanSec.value || 0.50);
           fScanSecValue.textContent = `${seconds.toFixed(2)} s`;
         }
 
@@ -355,11 +355,11 @@
         }
 
         function loadFormFromConfig(cfg) {
-          const scanMs = Number(cfg.scanPeriodMs || 10);
+          const scanMs = Number(cfg.scanPeriodMs || 500);
           const clampedMs = Math.min(1000, Math.max(10, scanMs));
           fScanSec.value = (clampedMs / 1000).toFixed(2);
           syncScanPeriodLabel();
-          fDebugMode.checked = !!cfg.debugModeEnabled;
+          fDebugMode.checked = cfg.debugModeEnabled == null ? true : !!cfg.debugModeEnabled;
           syncDebugModeLabel();
           const wifi = cfg.wifi || {};
           const t = cfg.time || {};
@@ -373,7 +373,7 @@
 
         function applyFormToConfig(cfg) {
           cfg.schemaVersion = Number(cfg.schemaVersion || 301);
-          const scanSec = Number(fScanSec.value || 0.01);
+          const scanSec = Number(fScanSec.value || 0.50);
           const scanMs = Math.round(scanSec * 1000);
           cfg.scanPeriodMs = Math.min(1000, Math.max(10, scanMs));
           cfg.debugModeEnabled = !!fDebugMode.checked;

@@ -1057,7 +1057,7 @@
           activeVersion: settingsData.activeVersion,
           config: {
             schemaVersion: settingsData.settings?.schemaVersion ?? 301,
-            scanPeriodMs: settingsData.settings?.scanPeriodMs ?? 10,
+            scanPeriodMs: settingsData.settings?.scanPeriodMs ?? 500,
             system: {
               wifi: settingsData.settings?.wifi || {},
               time: settingsData.settings?.time || {},
@@ -1079,7 +1079,7 @@
         showActivity("Loading config...", "Reading active settings and cards...");
         setBusy(true);
         const data = await loadConfigFromSplit();
-        currentConfig = data.config || { schemaVersion: 301, scanPeriodMs: 10, system: {}, cards: [] };
+        currentConfig = data.config || { schemaVersion: 301, scanPeriodMs: 500, system: {}, cards: [] };
         selectedCardIndex = 0;
         renderCardList();
         loadSelectedCardToForm();
