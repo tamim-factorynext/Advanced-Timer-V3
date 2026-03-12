@@ -1,29 +1,36 @@
 # Portal Card + Wizard Pattern v1
 
-Date: 2026-03-11  
-Status: Active implementation reference (DI completed baseline).  
+Date: 2026-03-12  
+Status: Active implementation reference (DI/AI/DO/SIO/MATH/ALARM live + wizard implemented).  
 Audience: Engineers extending Live Card and Wizard UX to AI/DO/SIO/MATH/RTC.
 
 ## 1. Purpose
 
-This document captures the current DI implementation state across both:
+This document captures the current family implementation state across both:
 
 - Live Card (runtime view on Live page)
 - Card Wizard (guided setup/edit flow)
 
-Use this as the replication blueprint for other card families.
+Use this as the maintenance and refinement baseline.
 
-## 2. Current DI Live Card State (Implemented)
+## 2. Live Card State (Implemented Families)
 
-DI live card is implemented in `data/index.html` (`renderDiCard`) and follows these contracts.
+Live cards are implemented in `data/index.html` with family renderers:
+
+- `renderDiCard`
+- `renderAiCard`
+- `renderDoCard`
+- `renderSioCard`
+- `renderMathCard`
+- `renderAlarmCard`
 
 ### 2.1 Live Card Structure
 
 - Header: family title + logical index + dominant state token.
-- Zone 1: static config badges (`SIG`, `TRG`, `DEB`).
-- Zone 2: runtime output badges (`CMD`, `PHYS`, `EDGE`, `COUNT`).
-- Zone 3: logic expression badges (`SET`, `RST`) with evaluation color.
-- Zone 4 (debug only): force controls (`LOW/REAL/HIGH`) + `Edit` entry button.
+- Zone 1: static config badges (family specific).
+- Zone 2: runtime output badges (family specific).
+- Zone 3: logic expression badges (`SET`, `RST`) where supported.
+- Zone 4 (debug only): family action row + `Edit` entry button.
 
 ### 2.2 Live Card Behavior Rules
 
@@ -39,17 +46,15 @@ DI live card is implemented in `data/index.html` (`renderDiCard`) and follows th
 - `EDGE`: one-scan trigger pulse.
 - `COUNT`: qualified edge counter.
 
-## 3. Current DI Wizard State (Implemented)
+## 3. Wizard State (Implemented Families)
 
-DI wizard is implemented in `data/index.html` and follows these principles:
+Wizards are implemented in `data/index.html` and follow these principles:
 
 - Single-mode flow: configuration + guided learning in one experience.
 - Setup-only guidance: no live runtime stream inside wizard pages.
 - Low-segmentation visual style: reduced nested container chrome.
-- Inline SVG concept visuals for teaching behavior.
-- Deterministic helper copy per step:
-  - `What this field does`
-  - `With this config, ...`
+- Humanized one-line guidance near the active control.
+- Reduced segmentation and tighter vertical coupling for related controls.
 
 ### 3.0 Onboarding Pattern Decision (Locked)
 
@@ -58,16 +63,13 @@ DI wizard is implemented in `data/index.html` and follows these principles:
 - `Intro B` is for output literacy (`CMD/PHYS/EDGE/COUNT`) and cross-card usage.
 - Rationale: this improves first-time user intuitiveness before field-level editing.
 
-### 3.1 Step Model (8 Steps)
+### 3.1 Step Models
 
-1. `Intro A`: DI flow + gating/reset basics + enable state.
-2. `Intro B`: DI outputs (`CMD/PHYS/EDGE/COUNT`) and usage guidance.
-3. `Signal`: `invert` behavior.
-4. `Edge`: edge qualification mode.
-5. `Debounce`: stability window.
-6. `SET`: turn-on condition authoring.
-7. `RST`: turn-off/reset condition authoring.
-8. `Review`: deterministic summary + reboot reminder.
+- DI: 8 steps
+- AI: 7 steps
+- DO/SIO: 10 steps
+- MATH: 12 steps
+- Alarm (RTC): 4 steps
 
 ### 3.2 Wizard UX Contracts
 
@@ -78,43 +80,22 @@ DI wizard is implemented in `data/index.html` and follows these principles:
 - Stepper, Back/Next, Save & Reboot flow remains stable.
 - Wizard panel is viewport-capped and body-scrollable.
 
-## 4. Replication Blueprint (Other Families)
+## 4. Implementation Notes (Current)
 
-Use DI as the canonical template and split work into Live Card + Wizard.
+- Step text row is hidden in UI; stepper pills remain visible.
+- Header hierarchy uses de-emphasized card title + emphasized instructional subtitle.
+- Guidance is rendered immediately below key action/edit control on intro pages.
+- Dashed separators in guidance blocks are removed in single-action layouts.
+- Save semantics are unchanged: save writes config, reboot activates behavior.
 
-### 4.1 Keep (Shared Infrastructure)
+## 5. Next Refinement Checklist
 
-- Same modal shell and stepper behavior for all family wizards.
-- Same compact visual language and spacing rules.
-- Same deterministic copy slots per wizard step.
-- Same two-intro-step onboarding pattern (`Intro A` + `Intro B`) before edit steps.
-- Same live-card zone ordering pattern where family behavior allows it.
-- Same debug gating model for actions.
+- Tune per-family text density for DO/SIO/MATH/Alarm.
+- Validate mobile spacing for long subtitle lines.
+- Add consistency pass for remaining icon/label language.
+- Re-check all live card badges against runtime data in field tests.
 
-### 4.2 Replace (Family-Specific Content)
-
-- Live card runtime badges and expression grammar.
-- Pipeline labels and active-node mapping.
-- Concept visuals and instructional copy.
-- Condition/control composer sections (if family uses set/reset).
-- Review profile fields tied to family semantics.
-
-## 5. Implementation Checklist (Per New Family)
-
-- Live Card:
-  - define header token + runtime badges + logic badges + debug zone behavior
-  - enforce muted disabled state behavior
-  - map tokens to canonical naming
-- Wizard:
-  - define step metadata + flow
-  - implement step field sync
-  - add concept visuals + deterministic outcome copy
-  - implement review profile summary + reboot note
-- Integration:
-  - ensure save path uses existing API contract
-  - ensure live card reflects saved config after reboot
-
-## 6. Acceptance Criteria (Per New Family)
+## 6. Acceptance Criteria (Refinement)
 
 - Live Card:
   - operators can read dominant state and key outputs quickly

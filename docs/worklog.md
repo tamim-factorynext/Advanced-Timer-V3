@@ -4,6 +4,59 @@ Status: Canonical consolidated session log for rewrite documentation and impleme
 
 Naming Baseline (2026-02-28): Rewrite track is now `V3`; frozen PoC code/contracts are `V2`.
 
+## 2026-03-12
+
+### Live Page + Wizard Simplification Pass (DI/AI/DO/SIO/MATH/ALARM)
+
+### Completed
+
+- Reworked wizard storytelling and visual flow to reduce clutter:
+  - hidden explicit step text row (`Step X of Y`) in UI,
+  - promoted two-line header hierarchy (`title` + stronger instructional subtitle),
+  - guidance copy moved to follow field context order with tighter spacing.
+- Applied copy humanization pass across wizard guidance:
+  - merged rigid "What this field does + With this config" style into concise paragraph flow,
+  - clarified DI `SIG`/invert semantics around normalized signal and downstream behavior.
+- Removed excess visual separators in single-action steps:
+  - removed dashed guidance separator usage where redundant.
+- Standardized card titles to operator-facing labels:
+  - examples: `Configure Digital Input 0`, `Configure Analog Input 0`.
+- Tightened intro-page coupling:
+  - guidance line is rendered immediately after primary enable/action control on intro steps.
+
+### Family Rollout State
+
+- DI: completed simplification and copy cleanup baseline.
+- AI: aligned to the same wizard narrative structure and header emphasis policy.
+- DO/SIO:
+  - live cards implemented with dedicated compact zones and runtime badges,
+  - full wizard flow added (`Intro A/B`, signal/mode/timing/set/rst/review),
+  - save+reboot path wired.
+- MATH/ALARM:
+  - dedicated live cards implemented,
+  - full wizard flows implemented:
+    - MATH: source A/B, operation, ranges, smoothing, fallback, set/rst, review
+    - ALARM: intro, schedule filters, duration, review
+  - save+reboot path wired.
+
+### Bug Fix (Post-Implementation)
+
+- Fixed MATH live-card fallback rendering issue caused by runtime type-token mismatch.
+- `runtimeTypeToFamily` now handles normalized tokens including:
+  - `MATH`/`Math`/`MathCard`
+  - `RTC`/`RtcCard`
+  - robust uppercase mapping for DI/DO/AI/SIO families.
+
+### Defaults Updated for Current Development Phase
+
+- System defaults and UI fallbacks aligned to:
+  - `scanPeriodMs = 500`
+  - `debugModeEnabled = true`
+- Updated in:
+  - `src/storage/v3_config_contract.cpp`
+  - `data/settings.html`
+  - `data/config.html`
+
 ## 2026-03-09
 
 ### DI Live Card UX Decision Finalization (Operator-Focused Pass)

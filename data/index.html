@@ -428,7 +428,9 @@
           AnalogInput: "Analog Input",
           SoftIO: "Soft IO",
           Math: "Math",
+          MATH: "Math",
           RTC: "Alarm",
+          RtcCard: "Alarm",
         };
         el.cards.innerHTML = cards.map((c) => {
           const family = runtimeTypeToFamily(c.type);
@@ -436,6 +438,8 @@
           if (family === "AI") return renderAiCard(c);
           if (family === "DO") return renderDoCard(c);
           if (family === "SIO") return renderSioCard(c);
+          if (family === "MATH") return renderMathCard(c);
+          if (family === "RTC") return renderAlarmCard(c);
           const truth = c.actualState ? "ON" : "OFF";
           const truthClass = c.actualState ? "ok" : "warn";
           const typeLabel = runtimeTypeLabelMap[c.type] || c.type || "Card";
@@ -454,12 +458,13 @@
       }
 
       function runtimeTypeToFamily(type) {
-        if (type === "DigitalInput") return "DI";
-        if (type === "DigitalOutput") return "DO";
-        if (type === "AnalogInput") return "AI";
-        if (type === "SoftIO") return "SIO";
-        if (type === "Math") return "MATH";
-        if (type === "RTC") return "RTC";
+        const token = String(type || "").toUpperCase();
+        if (token === "DIGITALINPUT" || token === "DI") return "DI";
+        if (token === "DIGITALOUTPUT" || token === "DO") return "DO";
+        if (token === "ANALOGINPUT" || token === "AI") return "AI";
+        if (token === "SOFTIO" || token === "SIO") return "SIO";
+        if (token === "MATH" || token === "MATHCARD") return "MATH";
+        if (token === "RTC" || token === "RTCCARD") return "RTC";
         return "UNKNOWN";
       }
 
@@ -1006,6 +1011,176 @@
         `;
       }
 
+      function mathOperationLabel(operationValue) {
+        const op = Number(operationValue || 0);
+        if (op === 1) return "SUB";
+        if (op === 2) return "MUL";
+        if (op === 3) return "DIV";
+        return "ADD";
+      }
+
+      function mathInputToken(useCard, cardId, fallbackValue) {
+        if (useCard) return sourceRef(cardId);
+        return formatCentiValue(fallbackValue);
+      }
+
+      function weekdayShortName(weekday) {
+        const n = Number(weekday);
+        if (n === 0) return "Sun";
+        if (n === 1) return "Mon";
+        if (n === 2) return "Tue";
+        if (n === 3) return "Wed";
+        if (n === 4) return "Thu";
+        if (n === 5) return "Fri";
+        if (n === 6) return "Sat";
+        return "?";
+      }
+
+      function twoDigit(v) {
+        const n = Number(v || 0);
+        return String(Math.max(0, n)).padStart(2, "0");
+      }
+
+      function alarmScheduleLabel(params) {
+        const filters = [];
+        if (!!params?.hasYear) filters.push(String(Number(params.year || 0)));
+        if (!!params?.hasMonth) filters.push(`M${twoDigit(params.month)}`);
+        if (!!params?.hasDay) filters.push(`D${twoDigit(params.day)}`);
+        if (!!params?.hasWeekday) filters.push(weekdayShortName(params.weekday));
+        if (!!params?.hasHour) filters.push(`${twoDigit(params.hour)}:${twoDigit(params.minute)}`);
+        if (!filters.length) return `Every hour at :${twoDigit(params?.minute)}`;
+        if (!!params?.hasHour) return filters.join(" ");
+        return `${filters.join(" ")} :${twoDigit(params?.minute)}`;
+      }
+
+      function renderMathCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
+        const setExpr = formatConditionBlock(params.turnOnCondition);
+        const resetExpr = formatConditionBlock(params.turnOffCondition);
+        const cardRef = state.cardRefById.get(Number(c.id)) || `MATH${Number(c.index || 0)}`;
+        const logicalIndexMatch = cardRef.match(/^MATH(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
+        const headerValue = isEnabled ? formatCentiValue(c.liveValue) : "DISABLED";
+        const headerClass = isEnabled ? "ok" : "warn";
+        const zoneMutedClass = isEnabled ? "" : " muted";
+        const setBadgeClass = isEnabled
+          ? (c.turnOnConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const resetBadgeClass = isEnabled
+          ? (c.turnOffConditionMet ? "text-bg-success" : "text-bg-danger")
+          : "text-bg-dark";
+        const opToken = mathOperationLabel(params.operation);
+        const inputAToken = mathInputToken(!!params.inputAUseCard, params.inputACardId, params.inputA);
+        const inputBToken = mathInputToken(!!params.inputBUseCard, params.inputBCardId, params.inputB);
+        const inRangeToken = `${formatCentiValue(params.inputMin)}-${formatCentiValue(params.inputMax)}`;
+        const outRangeToken = `${formatCentiValue(params.outputMin)}-${formatCentiValue(params.outputMax)}`;
+        const smoothToken = `${Math.max(0, Math.min(100, Number(params.smoothingFactorPct || 0)))}%`;
+        const fallbackToken = formatCentiValue(params.fallbackValue);
+        const edgeToken = isEnabled ? truthToken(!!c.edgePulse, "TRIG", "CLR") : "--";
+        const valueToken = isEnabled ? formatCentiValue(c.liveValue) : "--";
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-zone">
+            <div class="debug-row">
+              <span class="badge text-bg-dark">Math Runtime</span>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-math-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
+          </div>
+        ` : "";
+
+        return `
+          <article class="node ${isEnabled ? "" : "is-disabled"}">
+            <div class="node-head">
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x2211;</span>
+                  <span class="node-title-main">Math ${logicalIndex}</span>
+                </div>
+              </div>
+              <span class="node-state ${headerClass}">${headerValue}</span>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-secondary">OP:${opToken}</span>
+                <span class="badge text-bg-secondary">A:${inputAToken}</span>
+                <span class="badge text-bg-secondary">B:${inputBToken}</span>
+                <span class="badge text-bg-secondary">IN:${inRangeToken}</span>
+                <span class="badge text-bg-secondary">OUT:${outRangeToken}</span>
+                <span class="badge text-bg-secondary">SMOOTH:${smoothToken}</span>
+                <span class="badge text-bg-secondary">FB:${fallbackToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                <span class="badge text-bg-info">VALUE:${valueToken}</span>
+                <span class="badge text-bg-info">EDGE:${edgeToken}</span>
+              </div>
+            </div>
+            <div class="node-zone${zoneMutedClass}">
+              <div class="node-row">
+                ${isEnabled ? "" : '<span class="badge text-bg-dark">Disabled</span>'}
+                <span class="badge badge-formula ${setBadgeClass}">SET: ${setExpr}</span>
+                <span class="badge badge-formula ${resetBadgeClass}">RST: ${resetExpr}</span>
+              </div>
+            </div>
+            ${zone4Html}
+          </article>
+        `;
+      }
+
+      function renderAlarmCard(c) {
+        const staticCard = state.staticCardsById.get(Number(c.id));
+        const params = staticCard?.params || {};
+        const isEnabled = !!(staticCard ? staticCard.enabled : true);
+        const cardRef = state.cardRefById.get(Number(c.id)) || `Alarm${Number(c.index || 0)}`;
+        const logicalIndexMatch = cardRef.match(/^Alarm(\d+)$/);
+        const logicalIndex = logicalIndexMatch ? Number(logicalIndexMatch[1]) : Number(c.id || 0);
+        const activeToken = isEnabled ? truthToken(!!c.commandState, "ACTIVE", "IDLE") : "DISABLED";
+        const headerClass = isEnabled ? (c.commandState ? "ok" : "warn") : "warn";
+        const durationToken = debounceSecondsLabel(params.triggerDurationMs);
+        const minuteToken = twoDigit(params.minute);
+        const schedToken = alarmScheduleLabel(params);
+        const edgeToken = isEnabled ? truthToken(!!c.edgePulse, "TRIG", "CLR") : "--";
+        const zone4Html = state.debugModeEnabled ? `
+          <div class="node-zone">
+            <div class="debug-row">
+              <span class="badge text-bg-dark">Schedule Runtime</span>
+              <button type="button" class="icon-btn edit-btn" title="Open Card Editor" data-action="open-alarm-wizard" data-card-id="${c.id}">&#9881; Edit</button>
+            </div>
+          </div>
+        ` : "";
+
+        return `
+          <article class="node ${isEnabled ? "" : "is-disabled"}">
+            <div class="node-head">
+              <div>
+                <div class="node-title">
+                  <span class="node-icon">&#x23F0;</span>
+                  <span class="node-title-main">Alarm ${logicalIndex}</span>
+                </div>
+              </div>
+              <span class="node-state ${headerClass}">${activeToken}</span>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-secondary">MIN:${minuteToken}</span>
+                <span class="badge text-bg-secondary">DUR:${durationToken}</span>
+                <span class="badge text-bg-secondary">${schedToken}</span>
+              </div>
+            </div>
+            <div class="node-zone">
+              <div class="node-row">
+                <span class="badge text-bg-info">CMD:${isEnabled ? truthToken(!!c.commandState, "ON", "OFF") : "--"}</span>
+                <span class="badge text-bg-info">PHYS:${isEnabled ? truthToken(!!c.actualState, "HIGH", "LOW") : "--"}</span>
+                <span class="badge text-bg-info">EDGE:${edgeToken}</span>
+              </div>
+            </div>
+            ${zone4Html}
+          </article>
+        `;
+      }
+
       function sortedCardsFromStore() {
         return Array.from(state.cardsById.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
       }
@@ -1089,6 +1264,26 @@
         rst_primary: { short: "9", name: "RST", subtitle: "Define when mission is aborted and reset." },
         review: { short: "10", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
       };
+      const WIZ_STEP_META_MATH = {
+        intro: { short: "1", name: "Intro A", subtitle: "Understand math pipeline, gating, and fallback behavior." },
+        intro_outputs: { short: "2", name: "Intro B", subtitle: "Learn how MATH liveValue is used by other cards." },
+        input_a: { short: "3", name: "Input A", subtitle: "Set Input A source as fixed value or another card." },
+        input_b: { short: "4", name: "Input B", subtitle: "Set Input B source as fixed value or another card." },
+        operation: { short: "5", name: "Operation", subtitle: "Choose arithmetic operation for A and B." },
+        in_range: { short: "6", name: "Input Range", subtitle: "Set clamp range before scaling." },
+        out_range: { short: "7", name: "Output Range", subtitle: "Set mapped output range for liveValue." },
+        smoothing: { short: "8", name: "Smoothing", subtitle: "Set response speed for output stabilization." },
+        fallback: { short: "9", name: "Fallback", subtitle: "Set safe fallback value when blocked or invalid." },
+        set_primary: { short: "10", name: "SET", subtitle: "Define when math calculation is allowed to run." },
+        rst_primary: { short: "11", name: "RST", subtitle: "Define when output is forced to fallback value." },
+        review: { short: "12", name: "Review", subtitle: "Confirm deterministic behavior before save and reboot." },
+      };
+      const WIZ_STEP_META_ALARM = {
+        intro: { short: "1", name: "Intro", subtitle: "Understand minute-based schedule trigger behavior." },
+        schedule: { short: "2", name: "Schedule", subtitle: "Set minute and optional date/time filters." },
+        duration: { short: "3", name: "Duration", subtitle: "Set pulse window after schedule match." },
+        review: { short: "4", name: "Review", subtitle: "Confirm schedule behavior before save and reboot." },
+      };
 
       const DI_TERM_DICTIONARY = {
         CMD: "Qualified logical state after DI processing.",
@@ -1123,6 +1318,8 @@
       function activeWizardStepMeta() {
         if (state.wizard.family === "AI") return WIZ_STEP_META_AI;
         if (state.wizard.family === "DO" || state.wizard.family === "SIO") return WIZ_STEP_META_DO_SIO;
+        if (state.wizard.family === "MATH") return WIZ_STEP_META_MATH;
+        if (state.wizard.family === "RTC") return WIZ_STEP_META_ALARM;
         return WIZ_STEP_META_DI;
       }
 
@@ -1136,6 +1333,10 @@
         if (family === "DO" && doMatch) return `Digital Output ${Number(doMatch[1])}`;
         const sioMatch = ref.match(/^SIO(\d+)$/i);
         if (family === "SIO" && sioMatch) return `Soft IO ${Number(sioMatch[1])}`;
+        const mathMatch = ref.match(/^MATH(\d+)$/i);
+        if (family === "MATH" && mathMatch) return `Math ${Number(mathMatch[1])}`;
+        const rtcMatch = ref.match(/^Alarm(\d+)$/i);
+        if (family === "RTC" && rtcMatch) return `Alarm ${Number(rtcMatch[1])}`;
         if (family === "DI" && Number.isFinite(Number(fallbackIndex))) {
           return `Digital Input ${Number(fallbackIndex)}`;
         }
@@ -1147,6 +1348,12 @@
         }
         if (family === "SIO" && Number.isFinite(Number(fallbackIndex))) {
           return `Soft IO ${Number(fallbackIndex)}`;
+        }
+        if (family === "MATH" && Number.isFinite(Number(fallbackIndex))) {
+          return `Math ${Number(fallbackIndex)}`;
+        }
+        if (family === "RTC" && Number.isFinite(Number(fallbackIndex))) {
+          return `Alarm ${Number(fallbackIndex)}`;
         }
         return ref || `${family} Card`;
       }
@@ -1198,6 +1405,12 @@
         }
         if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
           return ["intro", "intro_outputs", "invert", "mode", "delay", "duration", "repeat", "set_primary", "rst_primary", "review"];
+        }
+        if (state.wizard.family === "MATH") {
+          return ["intro", "intro_outputs", "input_a", "input_b", "operation", "in_range", "out_range", "smoothing", "fallback", "set_primary", "rst_primary", "review"];
+        }
+        if (state.wizard.family === "RTC") {
+          return ["intro", "schedule", "duration", "review"];
         }
         return ["intro", "intro_outputs", "invert", "edge", "debounce", "set_primary", "rst_primary", "review"];
       }
@@ -2284,6 +2497,374 @@
         return true;
       }
 
+      function mathOperationOptions(selectedValue) {
+        const selected = Number(selectedValue || 0);
+        const rows = [
+          [0, "Add (A + B)"],
+          [1, "Subtract Saturating (A - B, min 0)"],
+          [2, "Multiply (A * B)"],
+          [3, "Divide Safe (A / B, fallback when B=0)"],
+        ];
+        return rows.map(([v, label]) => `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`).join("");
+      }
+
+      function refreshMathInputSourceUi(prefix) {
+        const modeEl = document.getElementById(`math_wiz_${prefix}_mode`);
+        const valWrap = document.getElementById(`math_wiz_${prefix}_val_wrap`);
+        const cardWrap = document.getElementById(`math_wiz_${prefix}_card_wrap`);
+        if (!modeEl || !valWrap || !cardWrap) return;
+        const useCard = modeEl.value === "CARD";
+        valWrap.classList.toggle("wizard-hidden", useCard);
+        cardWrap.classList.toggle("wizard-hidden", !useCard);
+      }
+
+      function clampInt(v, min, max) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return min;
+        return Math.max(min, Math.min(max, Math.round(n)));
+      }
+
+      function toggleRtcOptionalField(prefix) {
+        const enableEl = document.getElementById(`${prefix}_en`);
+        const valueWrap = document.getElementById(`${prefix}_wrap`);
+        if (!enableEl || !valueWrap) return;
+        valueWrap.classList.toggle("wizard-hidden", enableEl.value !== "true");
+      }
+
+      function renderMathWizardStep() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        const flow = wizardFlowForDraft();
+        if (w.step >= flow.length) w.step = flow.length - 1;
+        const stepKey = flow[w.step];
+        const cardRef = state.cardRefById.get(Number(w.cardId)) || `MATH ${Number(w.draft.index || 0)}`;
+        const p = w.draft.params || {};
+        const stepMetaMap = activeWizardStepMeta();
+        const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
+        wizardTitleEl.textContent = `Configure ${formatWizardCardLabel("MATH", cardRef, w.draft.index)}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
+        wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
+        renderWizardStepper(flow, w.step);
+        wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
+        wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
+        wizNextEl.disabled = false;
+
+        let editHtml = "";
+        let guidanceText = "";
+        if (stepKey === "intro") {
+          editHtml = `
+            <div class="diwiz-title">Math Onboarding</div>
+            <div class="diwiz-field"><label>Enabled</label><select id="math_wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            __WIZ_GUIDANCE__
+          `;
+          guidanceText = w.draft.enabled
+            ? "turns this Math card ON for runtime calculation. output runs through SET/RST gating, operation, clamp/scale, smoothing, then liveValue publish."
+            : "turns this Math card OFF so it is skipped at runtime until re-enabled.";
+        } else if (stepKey === "intro_outputs") {
+          editHtml = `
+            <div class="diwiz-title">Math Output for Cross-Card Logic</div>
+            <ul class="diwiz-list">
+              <li>Math publishes numeric <strong>liveValue</strong> for compare and threshold logic.</li>
+              <li>Use Math when you need derived values from multiple sources.</li>
+              <li>Numeric range is non-negative, up to <strong>1,000,000.00</strong>.</li>
+            </ul>
+          `;
+          guidanceText = "explains where Math liveValue should be used downstream in other cards.";
+        } else if (stepKey === "input_a" || stepKey === "input_b") {
+          const key = stepKey === "input_a" ? "a" : "b";
+          const isA = key === "a";
+          const useCard = isA ? !!p.inputAUseCard : !!p.inputBUseCard;
+          const val = isA ? formatCentiValue(p.inputA) : formatCentiValue(p.inputB);
+          const cardId = isA ? p.inputACardId : p.inputBCardId;
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("signal")} Input ${isA ? "A" : "B"} Source</div>
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Source Type</label><select id="math_wiz_${key}_mode"><option value="CONST" ${useCard ? "" : "selected"}>Fixed Value</option><option value="CARD" ${useCard ? "selected" : ""}>Card liveValue</option></select></div>
+              <div class="diwiz-field" id="math_wiz_${key}_val_wrap"><label>Fixed Value</label><input id="math_wiz_${key}_val" type="number" min="0" step="0.01" value="${val}" /></div>
+              <div class="diwiz-field" id="math_wiz_${key}_card_wrap"><label>Source Card</label><select id="math_wiz_${key}_card">${wizardCardSelectOptions(cardId, w.draft.id)}</select></div>
+            </div>
+          `;
+          guidanceText = useCard
+            ? `selects Input ${isA ? "A" : "B"} from another card liveValue.`
+            : `sets Input ${isA ? "A" : "B"} as fixed numeric value.`;
+        } else if (stepKey === "operation") {
+          editHtml = `<div class="diwiz-title">${lucideIcon("output")} Operation</div><div class="diwiz-field"><select id="math_wiz_operation">${mathOperationOptions(p.operation)}</select></div>`;
+          guidanceText = `chooses arithmetic operation for A and B. current mode is ${mathOperationLabel(p.operation)}.`;
+        } else if (stepKey === "in_range") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("gate")} Input Clamp Range</div>
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Input Min</label><input id="math_wiz_in_min" type="number" min="0" step="0.01" value="${formatCentiValue(p.inputMin)}" /></div>
+              <div class="diwiz-field"><label>Input Max</label><input id="math_wiz_in_max" type="number" min="0" step="0.01" value="${formatCentiValue(p.inputMax)}" /></div>
+            </div>
+          `;
+          guidanceText = "sets clamp range before scaling. result is limited to this range first.";
+        } else if (stepKey === "out_range") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("output")} Output Range</div>
+            <div class="diwiz-row">
+              <div class="diwiz-field"><label>Output Min</label><input id="math_wiz_out_min" type="number" min="0" step="0.01" value="${formatCentiValue(p.outputMin)}" /></div>
+              <div class="diwiz-field"><label>Output Max</label><input id="math_wiz_out_max" type="number" min="0" step="0.01" value="${formatCentiValue(p.outputMax)}" /></div>
+            </div>
+          `;
+          guidanceText = "maps clamped value into final liveValue range used by downstream logic.";
+        } else if (stepKey === "smoothing") {
+          editHtml = `<div class="diwiz-title">${lucideIcon("debounce")} Smoothing</div><div class="diwiz-field"><input id="math_wiz_smooth" type="number" min="0" max="100" step="1" value="${Number(p.smoothingFactorPct || 0)}" /></div>`;
+          guidanceText = `sets response speed to ${Number(p.smoothingFactorPct || 0)}%.`;
+        } else if (stepKey === "fallback") {
+          editHtml = `<div class="diwiz-title">${lucideIcon("warning")} Fallback Value</div><div class="diwiz-field"><input id="math_wiz_fallback" type="number" min="0" step="0.01" value="${formatCentiValue(p.fallbackValue)}" /></div>`;
+          guidanceText = `sets fallback value used on reset or invalid divide. now ${formatCentiValue(p.fallbackValue)}.`;
+        } else if (stepKey === "set_primary") {
+          editHtml = `${renderWizardConditionComposer("SET Condition", "wiz_set", p.turnOnCondition, w.draft.id)}`;
+          guidanceText = `defines when Math is allowed to calculate. SET is ${formatConditionBlock(p.turnOnCondition)}.`;
+        } else if (stepKey === "rst_primary") {
+          editHtml = `${renderWizardConditionComposer("RST Condition", "wiz_rst", p.turnOffCondition, w.draft.id)}`;
+          guidanceText = `defines when Math output is forced to fallback. RST is ${formatConditionBlock(p.turnOffCondition)}.`;
+        } else {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Review</div>
+            <div class="diwiz-chipbar">
+              <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
+              <span class="badge text-bg-secondary">OP:${mathOperationLabel(p.operation)}</span>
+              <span class="badge text-bg-secondary">A:${mathInputToken(!!p.inputAUseCard, p.inputACardId, p.inputA)}</span>
+              <span class="badge text-bg-secondary">B:${mathInputToken(!!p.inputBUseCard, p.inputBCardId, p.inputB)}</span>
+              <span class="badge text-bg-secondary">IN:${formatCentiValue(p.inputMin)}-${formatCentiValue(p.inputMax)}</span>
+              <span class="badge text-bg-secondary">OUT:${formatCentiValue(p.outputMin)}-${formatCentiValue(p.outputMax)}</span>
+              <span class="badge text-bg-secondary">SM:${Number(p.smoothingFactorPct || 0)}%</span>
+              <span class="badge text-bg-secondary">FB:${formatCentiValue(p.fallbackValue)}</span>
+              <span class="badge badge-formula text-bg-secondary">SET:${formatConditionBlock(p.turnOnCondition)}</span>
+              <span class="badge badge-formula text-bg-secondary">RST:${formatConditionBlock(p.turnOffCondition)}</span>
+            </div>
+            <div class="diwiz-note"><strong>Reboot required:</strong> saved Math configuration takes effect only after reboot.</div>
+          `;
+          guidanceText = "summarizes final Math behavior before save and reboot.";
+        }
+
+        const learningHtml = `<div class="diwiz-outcome">${guidanceText}</div>`;
+        const editBody = stepKey === "intro" ? editHtml.replace("__WIZ_GUIDANCE__", learningHtml) : editHtml;
+        const postEditGuidance = stepKey === "intro" ? "" : learningHtml;
+        wizardBodyEl.innerHTML = `<div class="diwiz"><section class="diwiz-edit">${editBody}${postEditGuidance}</section></div>`;
+
+        if (stepKey === "input_a") {
+          const modeEl = document.getElementById("math_wiz_a_mode");
+          if (modeEl) modeEl.addEventListener("change", () => refreshMathInputSourceUi("a"));
+          refreshMathInputSourceUi("a");
+        } else if (stepKey === "input_b") {
+          const modeEl = document.getElementById("math_wiz_b_mode");
+          if (modeEl) modeEl.addEventListener("change", () => refreshMathInputSourceUi("b"));
+          refreshMathInputSourceUi("b");
+        } else if (stepKey === "set_primary") {
+          const combinerEl = document.getElementById("wiz_set_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_set"));
+          toggleSecondaryClause("wiz_set");
+          attachWizardClauseHandlers("wiz_set_a");
+          attachWizardClauseHandlers("wiz_set_b");
+        } else if (stepKey === "rst_primary") {
+          const combinerEl = document.getElementById("wiz_rst_comb");
+          if (combinerEl) combinerEl.addEventListener("change", () => toggleSecondaryClause("wiz_rst"));
+          toggleSecondaryClause("wiz_rst");
+          attachWizardClauseHandlers("wiz_rst_a");
+          attachWizardClauseHandlers("wiz_rst_b");
+        }
+      }
+
+      function syncMathWizardDraftFromStepFields() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return true;
+        const flow = wizardFlowForDraft();
+        const stepKey = flow[w.step] || "review";
+        if (stepKey === "intro") {
+          const enabledEl = document.getElementById("math_wiz_enabled");
+          if (enabledEl) w.draft.enabled = enabledEl.value === "true";
+          return true;
+        }
+        if (stepKey === "input_a" || stepKey === "input_b") {
+          const key = stepKey === "input_a" ? "a" : "b";
+          const modeEl = document.getElementById(`math_wiz_${key}_mode`);
+          const valEl = document.getElementById(`math_wiz_${key}_val`);
+          const cardEl = document.getElementById(`math_wiz_${key}_card`);
+          const useCard = modeEl ? modeEl.value === "CARD" : false;
+          if (key === "a") {
+            w.draft.params.inputAUseCard = useCard;
+            if (useCard && cardEl) w.draft.params.inputACardId = Number(cardEl.value || 0);
+            if (!useCard && valEl) w.draft.params.inputA = parseUnitToCenti(valEl.value);
+          } else {
+            w.draft.params.inputBUseCard = useCard;
+            if (useCard && cardEl) w.draft.params.inputBCardId = Number(cardEl.value || 0);
+            if (!useCard && valEl) w.draft.params.inputB = parseUnitToCenti(valEl.value);
+          }
+          return true;
+        }
+        if (stepKey === "operation") {
+          const opEl = document.getElementById("math_wiz_operation");
+          if (opEl) w.draft.params.operation = clampInt(opEl.value, 0, 3);
+          return true;
+        }
+        if (stepKey === "in_range") {
+          const minEl = document.getElementById("math_wiz_in_min");
+          const maxEl = document.getElementById("math_wiz_in_max");
+          if (minEl) w.draft.params.inputMin = parseUnitToCenti(minEl.value);
+          if (maxEl) w.draft.params.inputMax = parseUnitToCenti(maxEl.value);
+          return true;
+        }
+        if (stepKey === "out_range") {
+          const minEl = document.getElementById("math_wiz_out_min");
+          const maxEl = document.getElementById("math_wiz_out_max");
+          if (minEl) w.draft.params.outputMin = parseUnitToCenti(minEl.value);
+          if (maxEl) w.draft.params.outputMax = parseUnitToCenti(maxEl.value);
+          return true;
+        }
+        if (stepKey === "smoothing") {
+          const smEl = document.getElementById("math_wiz_smooth");
+          if (smEl) w.draft.params.smoothingFactorPct = clampInt(smEl.value, 0, 100);
+          return true;
+        }
+        if (stepKey === "fallback") {
+          const fbEl = document.getElementById("math_wiz_fallback");
+          if (fbEl) w.draft.params.fallbackValue = parseUnitToCenti(fbEl.value);
+          return true;
+        }
+        if (stepKey === "set_primary") {
+          const setComb = String(document.getElementById("wiz_set_comb")?.value || "NONE");
+          w.draft.params.turnOnCondition = {
+            combiner: WIZ_COMBINERS.includes(setComb) ? setComb : "NONE",
+            clauseA: wizardReadClause("wiz_set_a"),
+            clauseB: setComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOnCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_set_b"),
+          };
+          return true;
+        }
+        if (stepKey === "rst_primary") {
+          const rstComb = String(document.getElementById("wiz_rst_comb")?.value || "NONE");
+          w.draft.params.turnOffCondition = {
+            combiner: WIZ_COMBINERS.includes(rstComb) ? rstComb : "NONE",
+            clauseA: wizardReadClause("wiz_rst_a"),
+            clauseB: rstComb === "NONE"
+              ? normalizeConditionClause(w.draft.params.turnOffCondition?.clauseB, w.draft.id)
+              : wizardReadClause("wiz_rst_b"),
+          };
+          return true;
+        }
+        return true;
+      }
+
+      function renderAlarmWizardStep() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return;
+        const flow = wizardFlowForDraft();
+        if (w.step >= flow.length) w.step = flow.length - 1;
+        const stepKey = flow[w.step];
+        const cardRef = state.cardRefById.get(Number(w.cardId)) || `Alarm ${Number(w.draft.index || 0)}`;
+        const p = w.draft.params || {};
+        const stepMetaMap = activeWizardStepMeta();
+        const stepMeta = stepMetaMap[stepKey] || { name: "Step" };
+        wizardTitleEl.textContent = `Configure ${formatWizardCardLabel("RTC", cardRef, w.draft.index)}`;
+        wizardStepEl.textContent = `Step ${w.step + 1} of ${flow.length} (${stepMeta.name})`;
+        wizardSubtitleEl.textContent = (stepMetaMap[stepKey] && stepMetaMap[stepKey].subtitle) || "Guided configuration step.";
+        renderWizardStepper(flow, w.step);
+        wizBackEl.style.visibility = w.step === 0 ? "hidden" : "visible";
+        wizNextEl.textContent = w.step === (flow.length - 1) ? "Save & Reboot" : "Next";
+        wizNextEl.disabled = false;
+
+        let editHtml = "";
+        let guidanceText = "";
+        if (stepKey === "intro") {
+          editHtml = `
+            <div class="diwiz-title">Alarm Onboarding</div>
+            <div class="diwiz-field"><label>Enabled</label><select id="rtc_wiz_enabled"><option value="true" ${w.draft.enabled ? "selected" : ""}>Enabled</option><option value="false" ${!w.draft.enabled ? "selected" : ""}>Disabled</option></select></div>
+            __WIZ_GUIDANCE__
+          `;
+          guidanceText = w.draft.enabled
+            ? "turns Alarm ON for minute-based schedule matching."
+            : "turns Alarm OFF so schedule checks are skipped.";
+        } else if (stepKey === "schedule") {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("signal")} Schedule Filters</div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Minute (required)</label><input id="rtc_wiz_minute" type="number" min="0" max="59" step="1" value="${clampInt(p.minute, 0, 59)}" /></div></div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Year filter</label><select id="rtc_year_en"><option value="false" ${!p.hasYear ? "selected" : ""}>Any</option><option value="true" ${p.hasYear ? "selected" : ""}>Specific</option></select></div><div class="diwiz-field" id="rtc_year_wrap"><label>Year</label><input id="rtc_wiz_year" type="number" min="2000" max="2099" step="1" value="${clampInt(p.year || 2026, 2000, 2099)}" /></div></div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Month filter</label><select id="rtc_month_en"><option value="false" ${!p.hasMonth ? "selected" : ""}>Any</option><option value="true" ${p.hasMonth ? "selected" : ""}>Specific</option></select></div><div class="diwiz-field" id="rtc_month_wrap"><label>Month</label><input id="rtc_wiz_month" type="number" min="1" max="12" step="1" value="${clampInt(p.month || 1, 1, 12)}" /></div></div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Day filter</label><select id="rtc_day_en"><option value="false" ${!p.hasDay ? "selected" : ""}>Any</option><option value="true" ${p.hasDay ? "selected" : ""}>Specific</option></select></div><div class="diwiz-field" id="rtc_day_wrap"><label>Day</label><input id="rtc_wiz_day" type="number" min="1" max="31" step="1" value="${clampInt(p.day || 1, 1, 31)}" /></div></div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Weekday filter</label><select id="rtc_weekday_en"><option value="false" ${!p.hasWeekday ? "selected" : ""}>Any</option><option value="true" ${p.hasWeekday ? "selected" : ""}>Specific</option></select></div><div class="diwiz-field" id="rtc_weekday_wrap"><label>Weekday</label><select id="rtc_wiz_weekday"><option value="0" ${Number(p.weekday || 0) === 0 ? "selected" : ""}>Sun</option><option value="1" ${Number(p.weekday || 0) === 1 ? "selected" : ""}>Mon</option><option value="2" ${Number(p.weekday || 0) === 2 ? "selected" : ""}>Tue</option><option value="3" ${Number(p.weekday || 0) === 3 ? "selected" : ""}>Wed</option><option value="4" ${Number(p.weekday || 0) === 4 ? "selected" : ""}>Thu</option><option value="5" ${Number(p.weekday || 0) === 5 ? "selected" : ""}>Fri</option><option value="6" ${Number(p.weekday || 0) === 6 ? "selected" : ""}>Sat</option></select></div></div>
+            <div class="diwiz-row"><div class="diwiz-field"><label>Hour filter</label><select id="rtc_hour_en"><option value="false" ${!p.hasHour ? "selected" : ""}>Any Hour</option><option value="true" ${p.hasHour ? "selected" : ""}>Specific Hour</option></select></div><div class="diwiz-field" id="rtc_hour_wrap"><label>Hour (24h)</label><input id="rtc_wiz_hour" type="number" min="0" max="23" step="1" value="${clampInt(p.hour || 0, 0, 23)}" /></div></div>
+          `;
+          guidanceText = `sets minute plus optional date/time filters. current schedule: ${alarmScheduleLabel(p)}.`;
+        } else if (stepKey === "duration") {
+          editHtml = `<div class="diwiz-title">${lucideIcon("output")} Trigger Duration</div><div class="diwiz-field"><input id="rtc_wiz_duration" type="number" min="0" step="10" value="${Number(p.triggerDurationMs || 0)}" /></div>`;
+          guidanceText = `sets pulse window in milliseconds after each schedule match.`;
+        } else {
+          editHtml = `
+            <div class="diwiz-title">${lucideIcon("save")} Review</div>
+            <div class="diwiz-chipbar">
+              <span class="badge text-bg-secondary">Enabled:${w.draft.enabled ? "YES" : "NO"}</span>
+              <span class="badge text-bg-secondary">Schedule:${alarmScheduleLabel(p)}</span>
+              <span class="badge text-bg-secondary">Duration:${debounceSecondsLabel(p.triggerDurationMs)}</span>
+            </div>
+            <div class="diwiz-note"><strong>Reboot required:</strong> saved Alarm configuration takes effect only after reboot.</div>
+          `;
+          guidanceText = "summarizes final Alarm schedule behavior before save and reboot.";
+        }
+
+        const learningHtml = `<div class="diwiz-outcome">${guidanceText}</div>`;
+        const editBody = stepKey === "intro" ? editHtml.replace("__WIZ_GUIDANCE__", learningHtml) : editHtml;
+        const postEditGuidance = stepKey === "intro" ? "" : learningHtml;
+        wizardBodyEl.innerHTML = `<div class="diwiz"><section class="diwiz-edit">${editBody}${postEditGuidance}</section></div>`;
+
+        if (stepKey === "schedule") {
+          ["rtc_year", "rtc_month", "rtc_day", "rtc_weekday", "rtc_hour"].forEach((prefix) => {
+            const el = document.getElementById(`${prefix}_en`);
+            if (el) el.addEventListener("change", () => toggleRtcOptionalField(prefix));
+            toggleRtcOptionalField(prefix);
+          });
+        }
+      }
+
+      function syncAlarmWizardDraftFromStepFields() {
+        const w = state.wizard;
+        if (!w.open || !w.draft) return true;
+        const flow = wizardFlowForDraft();
+        const stepKey = flow[w.step] || "review";
+        if (stepKey === "intro") {
+          const enabledEl = document.getElementById("rtc_wiz_enabled");
+          if (enabledEl) w.draft.enabled = enabledEl.value === "true";
+          return true;
+        }
+        if (stepKey === "schedule") {
+          const minuteEl = document.getElementById("rtc_wiz_minute");
+          if (minuteEl) w.draft.params.minute = clampInt(minuteEl.value, 0, 59);
+          const yearEn = document.getElementById("rtc_year_en");
+          const yearEl = document.getElementById("rtc_wiz_year");
+          w.draft.params.hasYear = !!(yearEn && yearEn.value === "true");
+          if (yearEl) w.draft.params.year = clampInt(yearEl.value, 2000, 2099);
+          const monthEn = document.getElementById("rtc_month_en");
+          const monthEl = document.getElementById("rtc_wiz_month");
+          w.draft.params.hasMonth = !!(monthEn && monthEn.value === "true");
+          if (monthEl) w.draft.params.month = clampInt(monthEl.value, 1, 12);
+          const dayEn = document.getElementById("rtc_day_en");
+          const dayEl = document.getElementById("rtc_wiz_day");
+          w.draft.params.hasDay = !!(dayEn && dayEn.value === "true");
+          if (dayEl) w.draft.params.day = clampInt(dayEl.value, 1, 31);
+          const wdEn = document.getElementById("rtc_weekday_en");
+          const wdEl = document.getElementById("rtc_wiz_weekday");
+          w.draft.params.hasWeekday = !!(wdEn && wdEn.value === "true");
+          if (wdEl) w.draft.params.weekday = clampInt(wdEl.value, 0, 6);
+          const hourEn = document.getElementById("rtc_hour_en");
+          const hourEl = document.getElementById("rtc_wiz_hour");
+          w.draft.params.hasHour = !!(hourEn && hourEn.value === "true");
+          if (hourEl) w.draft.params.hour = clampInt(hourEl.value, 0, 23);
+          return true;
+        }
+        if (stepKey === "duration") {
+          const durEl = document.getElementById("rtc_wiz_duration");
+          if (durEl) {
+            const n = Number(durEl.value || 0);
+            w.draft.params.triggerDurationMs = Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+          }
+          return true;
+        }
+        return true;
+      }
+
       function renderActiveWizardStep() {
         if (state.wizard.family === "AI") {
           renderAiWizardStep();
@@ -2291,6 +2872,14 @@
         }
         if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
           renderDoSioWizardStep();
+          return;
+        }
+        if (state.wizard.family === "MATH") {
+          renderMathWizardStep();
+          return;
+        }
+        if (state.wizard.family === "RTC") {
+          renderAlarmWizardStep();
           return;
         }
         renderDiWizardStep();
@@ -2301,6 +2890,8 @@
         if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
           return syncDoSioWizardDraftFromStepFields();
         }
+        if (state.wizard.family === "MATH") return syncMathWizardDraftFromStepFields();
+        if (state.wizard.family === "RTC") return syncAlarmWizardDraftFromStepFields();
         return syncDiWizardDraftFromStepFields();
       }
 
@@ -2403,6 +2994,54 @@
           state.wizard.draft.params.turnOffCondition,
           state.wizard.draft.id,
         );
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
+        wizardOverlayEl.classList.add("show");
+        renderActiveWizardStep();
+      }
+
+      function openMathWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "MATH") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.family = "MATH";
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
+        state.wizard.draft.params.turnOnCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOnCondition,
+          state.wizard.draft.id,
+        );
+        state.wizard.draft.params.turnOffCondition = normalizeConditionBlock(
+          state.wizard.draft.params.turnOffCondition,
+          state.wizard.draft.id,
+        );
+        state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
+        wizardOverlayEl.classList.add("show");
+        renderActiveWizardStep();
+      }
+
+      function openAlarmWizard(cardId) {
+        const staticCard = state.staticCardsById.get(Number(cardId));
+        const runtimeCard = state.cardsById.get(Number(cardId));
+        if (!staticCard || String(staticCard.family || "") !== "RTC") return;
+        state.wizard.open = true;
+        state.wizard.step = 0;
+        state.wizard.family = "RTC";
+        state.wizard.cardId = Number(cardId);
+        state.wizard.draft = {
+          id: staticCard.id,
+          family: staticCard.family,
+          enabled: !!staticCard.enabled,
+          index: runtimeCard ? Number(runtimeCard.index || 0) : 0,
+          params: JSON.parse(JSON.stringify(staticCard.params || {})),
+        };
         state.wizard.original = JSON.parse(JSON.stringify(state.wizard.draft));
         wizardOverlayEl.classList.add("show");
         renderActiveWizardStep();
@@ -2544,6 +3183,94 @@
         }
       }
 
+      async function saveMathWizardDraftAndReboot() {
+        const w = state.wizard;
+        if (!w.open || !w.draft || !Number.isFinite(Number(w.cardId))) return;
+        if (!confirm("Save MATH card changes and reboot now?")) return;
+        const requestId = `live-math-edit-${Date.now()}`;
+        showActivity("Saving MATH card...", "Validating and committing card changes.");
+        try {
+          const payload = {
+            requestId,
+            card: {
+              id: Number(w.draft.id),
+              family: "MATH",
+              enabled: !!w.draft.enabled,
+              params: w.draft.params,
+            },
+          };
+          const resp = await fetch(`/api/v3/cards/${Number(w.cardId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify(payload),
+          });
+          let body = {};
+          try { body = await resp.json(); } catch (_) { body = {}; }
+          if (!resp.ok || body?.ok === false) {
+            const msg = String(body?.error?.message || body?.message || body?.reason || `HTTP ${resp.status}`);
+            throw new Error(msg);
+          }
+          state.staticCardsById.set(Number(w.cardId), {
+            ...state.staticCardsById.get(Number(w.cardId)),
+            id: Number(w.draft.id),
+            family: "MATH",
+            enabled: !!w.draft.enabled,
+            params: JSON.parse(JSON.stringify(w.draft.params)),
+          });
+          hideActivity();
+          closeDiWizard();
+          await requestRebootAndReconnect(true);
+        } catch (err) {
+          hideActivity();
+          alert(`Save failed: ${String(err && err.message ? err.message : err)}`);
+        }
+      }
+
+      async function saveAlarmWizardDraftAndReboot() {
+        const w = state.wizard;
+        if (!w.open || !w.draft || !Number.isFinite(Number(w.cardId))) return;
+        if (!confirm("Save Alarm card changes and reboot now?")) return;
+        const requestId = `live-alarm-edit-${Date.now()}`;
+        showActivity("Saving Alarm card...", "Validating and committing card changes.");
+        try {
+          const payload = {
+            requestId,
+            card: {
+              id: Number(w.draft.id),
+              family: "RTC",
+              enabled: !!w.draft.enabled,
+              params: w.draft.params,
+            },
+          };
+          const resp = await fetch(`/api/v3/cards/${Number(w.cardId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify(payload),
+          });
+          let body = {};
+          try { body = await resp.json(); } catch (_) { body = {}; }
+          if (!resp.ok || body?.ok === false) {
+            const msg = String(body?.error?.message || body?.message || body?.reason || `HTTP ${resp.status}`);
+            throw new Error(msg);
+          }
+          state.staticCardsById.set(Number(w.cardId), {
+            ...state.staticCardsById.get(Number(w.cardId)),
+            id: Number(w.draft.id),
+            family: "RTC",
+            enabled: !!w.draft.enabled,
+            params: JSON.parse(JSON.stringify(w.draft.params)),
+          });
+          hideActivity();
+          closeDiWizard();
+          await requestRebootAndReconnect(true);
+        } catch (err) {
+          hideActivity();
+          alert(`Save failed: ${String(err && err.message ? err.message : err)}`);
+        }
+      }
+
       async function submitDiForce(cardId, mode) {
         const id = Number(cardId);
         if (!Number.isFinite(id)) return;
@@ -2644,6 +3371,14 @@
         }
         if (state.wizard.family === "DO" || state.wizard.family === "SIO") {
           await saveMissionWizardDraftAndReboot();
+          return;
+        }
+        if (state.wizard.family === "MATH") {
+          await saveMathWizardDraftAndReboot();
+          return;
+        }
+        if (state.wizard.family === "RTC") {
+          await saveAlarmWizardDraftAndReboot();
           return;
         }
         await saveDiWizardDraftAndReboot();
@@ -2880,6 +3615,16 @@
         if (action === "open-sio-wizard") {
           const id = Number(target.getAttribute("data-card-id"));
           if (Number.isFinite(id)) openSioWizard(id);
+          return;
+        }
+        if (action === "open-math-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openMathWizard(id);
+          return;
+        }
+        if (action === "open-alarm-wizard") {
+          const id = Number(target.getAttribute("data-card-id"));
+          if (Number.isFinite(id)) openAlarmWizard(id);
           return;
         }
       });

@@ -1,6 +1,6 @@
 ﻿# Advanced Timer V3 User Guide (Draft)
 
-Date: 2026-03-02  
+Date: 2026-03-12  
 Status: Draft reference for end-user documentation.  
 Audience: Operators, technicians, and engineers using the completed V3 product.
 
@@ -160,6 +160,34 @@ Identity rule:
 
 - primary operator-facing card reference uses logical terminal labels (`DI0/DO1/...`),
 - raw GPIO/pin numbers are treated as advanced detail.
+
+## 2.11 Development Defaults (Current Build Track)
+
+For the current development track, default settings are:
+
+- `scanPeriodMs = 500`
+- `debugModeEnabled = true`
+
+Notes:
+
+- These defaults are intended for active commissioning and UI iteration.
+- Runtime behavior changes still require save + reboot.
+
+## 2.12 Wizard Flow Baseline (Current Portal)
+
+Current wizard step counts:
+
+- DI: 8 steps
+- AI: 7 steps
+- DO: 10 steps
+- SIO: 10 steps
+- MATH: 12 steps
+- Alarm (RTC): 4 steps
+
+Narrative model:
+
+- Intro-first pattern is used before detailed field editing.
+- Instructional line is placed close to the related control to reduce visual scanning.
 
 ## 3. DI Card (Digital Input)
 
@@ -349,7 +377,7 @@ Difference from DO:
 
 - SIO does not issue physical GPIO/relay writes.
 
-## 7. MATH Card (Draft Behavior)
+## 7. MATH Card
 
 ## 7.1 MATH Purpose
 
@@ -383,7 +411,7 @@ Condition blocks on MATH (when configured) follow the same numeric compare-sourc
 - Config/API payloads should carry raw integer centiunits, not float text.
 - MATH numeric fields are capped to `0..100,000,000` centiunits (`0.00..1,000,000.00`) for V3 safety envelope.
 
-## 7.4 Proposed Control Behavior
+## 7.4 Control Behavior
 
 - `reset=true`:
   - force output to `fallbackValue`.
@@ -392,7 +420,7 @@ Condition blocks on MATH (when configured) follow the same numeric compare-sourc
 - `set=true` and `reset=false`:
   - run compute pipeline and update output.
 
-## 7.5 Proposed Compute Pipeline
+## 7.5 Compute Pipeline
 
 1. Compute base result from selected operation.
 2. Clamp base result to input range:
@@ -415,7 +443,7 @@ Operator enum mapping used by backend/config:
 - Example: `inputMin < inputMax` and `outputMin > outputMax` maps higher input to lower output.
 - This is valid and intentional.
 
-## 7.7 Proposed Safety Rules
+## 7.7 Safety Rules
 
 - No negative values anywhere.
 - All MATH fields are unsigned.
@@ -452,26 +480,26 @@ Not finalized yet:
 
 Planned direction is to use onboard display + buttons for live status and network info pages.
 
-## 9. RTC Card (Scheduler)
+## 9. Alarm (RTC Scheduler)
 
-## 9.1 RTC Purpose
+## 9.1 Alarm Purpose
 
-RTC is a time scheduler card.  
+Alarm (RTC family) is a time scheduler card.  
 It does not represent hardware I/O and does not use set/reset condition blocks.
 
-## 9.2 RTC Outputs
+## 9.2 Alarm Outputs
 
-RTC exposes:
+Alarm exposes:
 
 - `commandState`
 - `edgePulse`
 
-RTC does not expose meaningful:
+Alarm does not expose meaningful:
 
 - `actualState`
 - `liveValue`
 
-## 9.3 RTC Schedule Fields
+## 9.3 Alarm Schedule Fields
 
 Required:
 
@@ -490,7 +518,7 @@ Wildcard behavior:
 - if `hasX=false`, that field is ignored for matching.
 - no negative sentinel values are used.
 
-## 9.4 RTC Trigger Behavior
+## 9.4 Alarm Trigger Behavior
 
 - When schedule match occurs, `edgePulse` pulses high for one scan.
 - At the same moment, `commandState` becomes true.
@@ -506,9 +534,9 @@ Retrigger policy:
 - If device time is not valid, RTC scheduler does not fire.
 - Existing active duration handling remains runtime-local once started.
 
-## 9.6 Disable RTC Card
+## 9.6 Disable Alarm Card
 
-RTC firing is gated by base card enable:
+Alarm firing is gated by base card enable:
 
 - `enabled=false` means scheduler never fires.
 
